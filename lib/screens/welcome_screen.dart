@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'dart:math' as math;
 import 'login_screen.dart';
 import 'signup_screen.dart';
 import 'auth_service.dart';
@@ -258,7 +259,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   Widget _buildButtons() {
     return Column(
       children: [
-        // Email sign up
         _PressableButton(
           onTap: () => _navigateTo(const SignupScreen()),
           color: const Color(0xFF6366F1),
@@ -266,7 +266,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           textColor: Colors.white,
         ),
         const SizedBox(height: 12),
-        // Email sign in
         _PressableButton(
           onTap: () => _navigateTo(const LoginScreen()),
           color: Colors.white.withOpacity(0.06),
@@ -275,7 +274,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           border: Border.all(color: Colors.white.withOpacity(0.1)),
         ),
         const SizedBox(height: 24),
-        // Divider
         Row(
           children: [
             Expanded(
@@ -295,7 +293,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           ],
         ),
         const SizedBox(height: 20),
-        // Google button — full width
         _GoogleButton(
           isLoading: _googleLoading,
           onTap: _handleGoogle,
@@ -430,10 +427,7 @@ class _GoogleButton extends StatefulWidget {
   final bool isLoading;
   final VoidCallback onTap;
 
-  const _GoogleButton({
-    required this.isLoading,
-    required this.onTap,
-  });
+  const _GoogleButton({required this.isLoading, required this.onTap});
 
   @override
   State<_GoogleButton> createState() => _GoogleButtonState();
@@ -494,14 +488,7 @@ class _GoogleButtonState extends State<_GoogleButton>
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Google G icon using coloured squares
-                    SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CustomPaint(
-                        painter: _GoogleLogoPainter(),
-                      ),
-                    ),
+                    const _GoogleLogo(size: 22),
                     const SizedBox(width: 10),
                     const Text(
                       'Continue with Google',
@@ -520,39 +507,80 @@ class _GoogleButtonState extends State<_GoogleButton>
   }
 }
 
-// Google G logo painter
+// Accurate Google G logo using official colours
+class _GoogleLogo extends StatelessWidget {
+  final double size;
+  const _GoogleLogo({this.size = 24});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(painter: _GoogleLogoPainter()),
+    );
+  }
+}
+
 class _GoogleLogoPainter extends CustomPainter {
+  static const _blue = Color(0xFF4285F4);
+  static const _red = Color(0xFFEA4335);
+  static const _yellow = Color(0xFFFBBC05);
+  static const _green = Color(0xFF34A853);
+
   @override
   void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final cx = w / 2;
+    final cy = h / 2;
+    final r = w / 2;
+
     final paint = Paint()..style = PaintingStyle.fill;
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
 
-    // Draw circle background
+    // White circle background
     paint.color = Colors.white;
-    canvas.drawCircle(center, radius, paint);
+    canvas.drawCircle(Offset(cx, cy), r, paint);
 
-    // Draw Google G
-    final rect = Rect.fromCircle(center: center, radius: radius * 0.7);
-    const startAngle = -0.3;
-    const sweepAngle = 3.8;
+    // Clip to circle
+    canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: r)));
 
-    paint.color = const Color(0xFF4285F4);
-    paint.style = PaintingStyle.stroke;
-    paint.strokeWidth = size.width * 0.25;
-    paint.strokeCap = StrokeCap.round;
-    canvas.drawArc(rect, startAngle, sweepAngle, false, paint);
+    final strokeW = w * 0.22;
+    final innerR = r * 0.62;
+    final arcRect = Rect.fromCircle(center: Offset(cx, cy), radius: innerR);
 
-    // White horizontal bar for G
+    final arcPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeW
+      ..strokeCap = StrokeCap.butt;
+
+    // Blue arc — right side (top-right to bottom-right)
+    arcPaint.color = _blue;
+    canvas.drawArc(arcRect, -0.52, 1.74, false, arcPaint);
+
+    // Green arc — bottom
+    arcPaint.color = _green;
+    canvas.drawArc(arcRect, 1.22, 1.05, false, arcPaint);
+
+    // Yellow arc — bottom-left
+    arcPaint.color = _yellow;
+    canvas.drawArc(arcRect, 2.27, 0.79, false, arcPaint);
+
+    // Red arc — top-left
+    arcPaint.color = _red;
+    canvas.drawArc(arcRect, 3.06, 1.14, false, arcPaint);
+
+    // White horizontal bar (the crossbar of the G)
     paint.color = Colors.white;
-    paint.style = PaintingStyle.fill;
     canvas.drawRect(
-      Rect.fromLTWH(
-        center.dx,
-        center.dy - size.height * 0.13,
-        radius * 0.7,
-        size.height * 0.26,
-      ),
+      Rect.fromLTWH(cx, cy - strokeW / 2, r * 0.88, strokeW),
+      paint,
+    );
+
+    // Blue fill for right portion of crossbar
+    paint.color = _blue;
+    canvas.drawRect(
+      Rect.fromLTWH(cx, cy - strokeW / 2, r * 0.88, strokeW),
       paint,
     );
   }
