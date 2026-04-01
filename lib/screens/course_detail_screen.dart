@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'lesson_screen.dart';
 
 class CourseDetailScreen extends StatefulWidget {
@@ -28,6 +29,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
   late Animation<double> _headerFade;
   late Animation<Offset> _headerSlide;
 
+  List<Map<String, dynamic>> _modules = [];
+  bool _loading = true;
+
   @override
   void initState() {
     super.initState();
@@ -47,6 +51,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
       curve: Curves.easeOutCubic,
     ));
     _headerController.forward();
+    _loadModules();
   }
 
   @override
@@ -55,9 +60,52 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
     super.dispose();
   }
 
+  String get _courseId {
+    switch (widget.tag) {
+      case 'ITIL V4':
+        return 'itil-v4';
+      case 'CSM':
+        return 'csm';
+      case 'Networking':
+        return 'networking';
+      default:
+        return widget.tag.toLowerCase().replaceAll(' ', '-');
+    }
+  }
+
+  Future<void> _loadModules() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('courses')
+          .doc(_courseId)
+          .collection('modules')
+          .orderBy('order')
+          .get();
+
+      final modules = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'id': doc.id,
+          'title': data['title'] ?? '',
+          'sub': data['subtitle'] ?? '',
+          'status': data['status'] ?? 'locked',
+          'order': data['order'] ?? 0,
+        };
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _modules = modules;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final modules = _getModules();
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0F),
       body: CustomScrollView(
@@ -65,7 +113,17 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
         slivers: [
           _buildAppBar(context),
           _buildProgressBar(),
-          _buildModuleList(context, modules),
+          if (_loading)
+            const SliverFillRemaining(
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF6366F1),
+                  strokeWidth: 2,
+                ),
+              ),
+            )
+          else
+            _buildModuleList(context, _modules),
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ],
       ),
@@ -76,7 +134,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
     return SliverToBoxAdapter(
       child: Stack(
         children: [
-          // Background gradient
           Container(
             height: 300,
             decoration: BoxDecoration(
@@ -102,7 +159,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Animated back button
                       _BackButton(
                         color: widget.color,
                         onTap: () {
@@ -111,10 +167,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                         },
                       ),
                       const SizedBox(height: 32),
-                      // Tag pill
                       _TagPill(tag: widget.tag, color: widget.color),
                       const SizedBox(height: 14),
-                      // Title
                       Text(
                         widget.title,
                         style: const TextStyle(
@@ -192,6 +246,23 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
 
   Widget _buildModuleList(
       BuildContext context, List<Map<String, dynamic>> modules) {
+    if (modules.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: Text(
+              'No modules found.',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white.withOpacity(0.3),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       sliver: SliverList(
@@ -233,6 +304,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                     moduleTitle: module['title'],
                     courseTag: widget.tag,
                     color: widget.color,
+                    moduleId: module['id'],
+                    courseId: _courseId,
                   ),
                   transitionsBuilder: (_, animation, __, child) {
                     return SlideTransition(
@@ -243,8 +316,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                         parent: animation,
                         curve: Curves.easeOutCubic,
                       )),
-                      child:
-                          FadeTransition(opacity: animation, child: child),
+                      child: FadeTransition(
+                          opacity: animation, child: child),
                     );
                   },
                   transitionDuration: const Duration(milliseconds: 400),
@@ -276,7 +349,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
               ),
               child: Center(
                 child: isDone
-                    ? Icon(Icons.check_rounded, size: 18, color: statusColor)
+                    ? Icon(Icons.check_rounded,
+                        size: 18, color: statusColor)
                     : isLocked
                         ? Icon(Icons.lock_outline_rounded,
                             size: 15, color: statusColor)
@@ -320,8 +394,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
             const SizedBox(width: 12),
             if (isDone)
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFF10B981).withOpacity(0.12),
                   borderRadius: BorderRadius.circular(8),
@@ -337,8 +411,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
               )
             else if (isActive)
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 7),
                 decoration: BoxDecoration(
                   color: widget.color,
                   borderRadius: BorderRadius.circular(10),
@@ -361,42 +435,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
       ),
     );
   }
-
-  List<Map<String, dynamic>> _getModules() {
-    if (widget.tag == 'ITIL V4') {
-      return [
-        {'title': 'What is ITIL?', 'sub': '5 flashcards · quiz', 'status': 'done'},
-        {'title': 'Key Concepts', 'sub': '6 flashcards · quiz', 'status': 'done'},
-        {'title': 'Service Value System', 'sub': '8 flashcards · quiz', 'status': 'active'},
-        {'title': '4 Dimensions Model', 'sub': '5 flashcards · quiz', 'status': 'locked'},
-        {'title': 'Guiding Principles', 'sub': '7 flashcards · quiz', 'status': 'locked'},
-        {'title': 'Practices Overview', 'sub': '6 flashcards · quiz', 'status': 'locked'},
-        {'title': 'Final Quiz', 'sub': '20 questions', 'status': 'locked'},
-      ];
-    } else if (widget.tag == 'CSM') {
-      return [
-        {'title': 'What is Scrum?', 'sub': '5 flashcards · quiz', 'status': 'active'},
-        {'title': 'The Scrum Team', 'sub': '6 flashcards · quiz', 'status': 'locked'},
-        {'title': 'Scrum Events', 'sub': '5 flashcards · quiz', 'status': 'locked'},
-        {'title': 'Scrum Artifacts', 'sub': '4 flashcards · quiz', 'status': 'locked'},
-        {'title': 'Definition of Done', 'sub': '3 flashcards · quiz', 'status': 'locked'},
-        {'title': 'Final Quiz', 'sub': '20 questions', 'status': 'locked'},
-      ];
-    } else {
-      return [
-        {'title': 'What is a Network?', 'sub': '5 flashcards · quiz', 'status': 'active'},
-        {'title': 'IP Addresses', 'sub': '6 flashcards · quiz', 'status': 'locked'},
-        {'title': 'DNS & Routing', 'sub': '5 flashcards · quiz', 'status': 'locked'},
-        {'title': 'TCP/IP Deep Dive', 'sub': '7 flashcards · quiz', 'status': 'locked'},
-        {'title': 'Subnetting', 'sub': '6 flashcards · quiz', 'status': 'locked'},
-        {'title': 'Network Security', 'sub': '5 flashcards · quiz', 'status': 'locked'},
-        {'title': 'Final Quiz', 'sub': '20 questions', 'status': 'locked'},
-      ];
-    }
-  }
 }
 
-// Animated back button with press scale effect
+// Animated back button
 class _BackButton extends StatefulWidget {
   final Color color;
   final VoidCallback onTap;
@@ -418,8 +459,6 @@ class _BackButtonState extends State<_BackButton>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 120),
-      lowerBound: 0.0,
-      upperBound: 1.0,
     );
     _scale = Tween<double>(begin: 1.0, end: 0.88).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
@@ -444,7 +483,8 @@ class _BackButtonState extends State<_BackButton>
       child: ScaleTransition(
         scale: _scale,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: widget.color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(20),
@@ -453,11 +493,8 @@ class _BackButtonState extends State<_BackButton>
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.arrow_back_ios_new_rounded,
-                size: 13,
-                color: widget.color,
-              ),
+              Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 13, color: widget.color),
               const SizedBox(width: 5),
               Text(
                 'Courses',
@@ -476,7 +513,7 @@ class _BackButtonState extends State<_BackButton>
   }
 }
 
-// Tag pill with fade-in animation
+// Tag pill with animation
 class _TagPill extends StatefulWidget {
   final String tag;
   final Color color;
@@ -497,13 +534,10 @@ class _TagPillState extends State<_TagPill>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
+        vsync: this, duration: const Duration(milliseconds: 500));
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
     _scale = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
-    );
+        CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
     Future.delayed(const Duration(milliseconds: 150), () {
       if (mounted) _controller.forward();
     });
@@ -523,8 +557,7 @@ class _TagPillState extends State<_TagPill>
         scale: _scale,
         alignment: Alignment.centerLeft,
         child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
             color: widget.color.withOpacity(0.12),
             borderRadius: BorderRadius.circular(20),
@@ -545,7 +578,7 @@ class _TagPillState extends State<_TagPill>
   }
 }
 
-// Scroll-reveal animation wrapper for modules
+// Scroll-reveal animation
 class _AnimatedModule extends StatefulWidget {
   final Widget child;
   final Duration delay;
@@ -566,16 +599,13 @@ class _AnimatedModuleState extends State<_AnimatedModule>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 450),
-    );
+        vsync: this, duration: const Duration(milliseconds: 450));
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
     _slide = Tween<Offset>(
       begin: const Offset(0, 0.05),
       end: Offset.zero,
-    ).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
-
+    ).animate(CurvedAnimation(
+        parent: _controller, curve: Curves.easeOutCubic));
     Future.delayed(widget.delay, () {
       if (mounted) _controller.forward();
     });
