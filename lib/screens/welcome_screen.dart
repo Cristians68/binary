@@ -19,7 +19,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   late Animation<double> _fade;
   late Animation<Offset> _slide;
   bool _googleLoading = false;
-  bool _appleLoading = false;
 
   @override
   void initState() {
@@ -51,8 +50,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         pageBuilder: (_, animation, __) => screen,
         transitionsBuilder: (_, animation, __, child) {
           return FadeTransition(
-            opacity:
-                CurvedAnimation(parent: animation, curve: Curves.easeOut),
+            opacity: CurvedAnimation(
+                parent: animation, curve: Curves.easeOut),
             child: SlideTransition(
               position: Tween<Offset>(
                 begin: const Offset(0, 0.03),
@@ -74,8 +73,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       PageRouteBuilder(
         pageBuilder: (_, animation, __) => const MainNavigation(),
         transitionsBuilder: (_, animation, __, child) => FadeTransition(
-          opacity:
-              CurvedAnimation(parent: animation, curve: Curves.easeOut),
+          opacity: CurvedAnimation(
+              parent: animation, curve: Curves.easeOut),
           child: child,
         ),
         transitionDuration: const Duration(milliseconds: 500),
@@ -85,19 +84,24 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   }
 
   Future<void> _handleGoogle() async {
+    HapticFeedback.selectionClick();
     setState(() => _googleLoading = true);
     final result = await AuthService.signInWithGoogle();
     if (!mounted) return;
     setState(() => _googleLoading = false);
-    if (result != null) _goToHome();
-  }
-
-  Future<void> _handleApple() async {
-    setState(() => _appleLoading = true);
-    final result = await AuthService.signInWithApple();
-    if (!mounted) return;
-    setState(() => _appleLoading = false);
-    if (result != null) _goToHome();
+    if (result != null) {
+      _goToHome();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Google sign-in failed. Please try again.'),
+          backgroundColor: Colors.white.withOpacity(0.1),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
   }
 
   @override
@@ -291,27 +295,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           ],
         ),
         const SizedBox(height: 20),
-        // Social buttons
-        Row(
-          children: [
-            Expanded(
-              child: _SocialButton(
-                label: 'Google',
-                icon: Icons.g_mobiledata_rounded,
-                isLoading: _googleLoading,
-                onTap: _handleGoogle,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _SocialButton(
-                label: 'Apple',
-                icon: Icons.apple,
-                isLoading: _appleLoading,
-                onTap: _handleApple,
-              ),
-            ),
-          ],
+        // Google button — full width
+        _GoogleButton(
+          isLoading: _googleLoading,
+          onTap: _handleGoogle,
         ),
       ],
     );
@@ -438,25 +425,21 @@ class _PressableButtonState extends State<_PressableButton>
   }
 }
 
-// Social sign-in button
-class _SocialButton extends StatefulWidget {
-  final String label;
-  final IconData icon;
+// Google sign-in button
+class _GoogleButton extends StatefulWidget {
   final bool isLoading;
   final VoidCallback onTap;
 
-  const _SocialButton({
-    required this.label,
-    required this.icon,
+  const _GoogleButton({
     required this.isLoading,
     required this.onTap,
   });
 
   @override
-  State<_SocialButton> createState() => _SocialButtonState();
+  State<_GoogleButton> createState() => _GoogleButtonState();
 }
 
-class _SocialButtonState extends State<_SocialButton>
+class _GoogleButtonState extends State<_GoogleButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scale;
@@ -466,7 +449,7 @@ class _SocialButtonState extends State<_SocialButton>
     super.initState();
     _controller = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 100));
-    _scale = Tween<double>(begin: 1.0, end: 0.95).animate(
+    _scale = Tween<double>(begin: 1.0, end: 0.96).animate(
         CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
@@ -490,17 +473,18 @@ class _SocialButtonState extends State<_SocialButton>
       child: ScaleTransition(
         scale: _scale,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 15),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: Colors.white.withOpacity(0.1)),
           ),
           child: widget.isLoading
               ? const Center(
                   child: SizedBox(
-                    width: 18,
-                    height: 18,
+                    width: 20,
+                    height: 20,
                     child: CircularProgressIndicator(
                       color: Colors.white,
                       strokeWidth: 2,
@@ -510,13 +494,20 @@ class _SocialButtonState extends State<_SocialButton>
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(widget.icon, color: Colors.white, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      widget.label,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                    // Google G icon using coloured squares
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CustomPaint(
+                        painter: _GoogleLogoPainter(),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Continue with Google',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                         color: Colors.white,
                         letterSpacing: -0.2,
                       ),
@@ -527,4 +518,45 @@ class _SocialButtonState extends State<_SocialButton>
       ),
     );
   }
+}
+
+// Google G logo painter
+class _GoogleLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    // Draw circle background
+    paint.color = Colors.white;
+    canvas.drawCircle(center, radius, paint);
+
+    // Draw Google G
+    final rect = Rect.fromCircle(center: center, radius: radius * 0.7);
+    const startAngle = -0.3;
+    const sweepAngle = 3.8;
+
+    paint.color = const Color(0xFF4285F4);
+    paint.style = PaintingStyle.stroke;
+    paint.strokeWidth = size.width * 0.25;
+    paint.strokeCap = StrokeCap.round;
+    canvas.drawArc(rect, startAngle, sweepAngle, false, paint);
+
+    // White horizontal bar for G
+    paint.color = Colors.white;
+    paint.style = PaintingStyle.fill;
+    canvas.drawRect(
+      Rect.fromLTWH(
+        center.dx,
+        center.dy - size.height * 0.13,
+        radius * 0.7,
+        size.height * 0.26,
+      ),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
