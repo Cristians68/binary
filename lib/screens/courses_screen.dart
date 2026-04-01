@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'course_detail_screen.dart';
 
 class CoursesScreen extends StatefulWidget {
@@ -11,48 +13,52 @@ class CoursesScreen extends StatefulWidget {
 class _CoursesScreenState extends State<CoursesScreen>
     with SingleTickerProviderStateMixin {
   final ScrollController _scrollController = ScrollController();
-
-  static const _courses = [
-    _Course(
-      title: 'ITIL V4 Foundation',
-      subtitle: '7 modules · Service management',
-      icon: '📋',
-      color: Color(0xFF6366F1),
-      tag: 'ITIL V4',
-      progress: 0.35,
-    ),
-    _Course(
-      title: 'CSM Fundamentals',
-      subtitle: '6 modules · Scrum & agile',
-      icon: '🤝',
-      color: Color(0xFF10B981),
-      tag: 'CSM',
-      progress: 0.10,
-    ),
-    _Course(
-      title: 'Networking Basics',
-      subtitle: '8 modules · TCP/IP, DNS, subnets',
-      icon: '🌐',
-      color: Color(0xFFF59E0B),
-      tag: 'Networking',
-      progress: 0.05,
-    ),
-    _Course(
-      title: 'Slack for IT Teams',
-      subtitle: '4 modules · Collaboration tools',
-      icon: '💬',
-      color: Color(0xFFEC4899),
-      tag: 'Slack',
-      progress: 0.0,
-    ),
-  ];
+  List<_Course> _courses = [];
+  bool _loading = true;
 
   static const _comingSoon = [
-    _ComingSoon(title: 'CompTIA Security+', icon: '🔐', color: Color(0xFFEF4444)),
-    _ComingSoon(title: 'CompTIA Network+', icon: '🌐', color: Color(0xFF3B82F6)),
-    _ComingSoon(title: 'Cloud Fundamentals', icon: '☁️', color: Color(0xFF06B6D4)),
-    _ComingSoon(title: 'Cybersecurity Basics', icon: '🛡️', color: Color(0xFF8B5CF6)),
+    _ComingSoon(title: 'CompTIA Security+', color: Color(0xFFEF4444)),
+    _ComingSoon(title: 'CompTIA Network+', color: Color(0xFF3B82F6)),
+    _ComingSoon(title: 'Cloud Fundamentals', color: Color(0xFF06B6D4)),
+    _ComingSoon(title: 'Cybersecurity Basics', color: Color(0xFF8B5CF6)),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCourses();
+  }
+
+  Future<void> _loadCourses() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('courses')
+          .orderBy('order')
+          .get();
+
+      final courses = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return _Course(
+          id: doc.id,
+          title: data['title'] ?? '',
+          subtitle: data['subtitle'] ?? '',
+          tag: data['tag'] ?? '',
+          color: Color(data['color'] ?? 0xFF6366F1),
+          progress: (data['progress'] ?? 0.0).toDouble(),
+          isComingSoon: data['isComingSoon'] ?? false,
+        );
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _courses = courses;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   void _openCourse(BuildContext context, _Course course) {
     Navigator.push(
@@ -82,6 +88,29 @@ class _CoursesScreenState extends State<CoursesScreen>
     );
   }
 
+  IconData _iconForTag(String tag) {
+    switch (tag) {
+      case 'ITIL V4':
+        return CupertinoIcons.doc_text_fill;
+      case 'CSM':
+        return CupertinoIcons.person_2_fill;
+      case 'Networking':
+        return CupertinoIcons.antenna_radiowaves_left_right;
+      case 'Slack':
+        return CupertinoIcons.chat_bubble_2_fill;
+      default:
+        return CupertinoIcons.book_fill;
+    }
+  }
+
+  IconData _iconForComingSoon(String title) {
+    if (title.contains('Security')) return CupertinoIcons.lock_shield_fill;
+    if (title.contains('Network')) return CupertinoIcons.wifi;
+    if (title.contains('Cloud')) return CupertinoIcons.cloud_fill;
+    if (title.contains('Cyber')) return CupertinoIcons.shield_fill;
+    return CupertinoIcons.book_fill;
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -90,6 +119,9 @@ class _CoursesScreenState extends State<CoursesScreen>
 
   @override
   Widget build(BuildContext context) {
+    final availableCourses =
+        _courses.where((c) => !c.isComingSoon).toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0F),
       body: CustomScrollView(
@@ -98,12 +130,26 @@ class _CoursesScreenState extends State<CoursesScreen>
         slivers: [
           _buildHeader(),
           _buildSearchBar(),
-          _buildSectionLabel('Available now'),
-          _buildFeaturedCourse(context, _courses.first),
-          _buildCourseList(context),
-          _buildSectionLabel('Coming soon'),
-          _buildComingSoonGrid(),
-          const SliverToBoxAdapter(child: SizedBox(height: 40)),
+          if (_loading)
+            const SliverFillRemaining(
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF6366F1),
+                  strokeWidth: 2,
+                ),
+              ),
+            )
+          else ...[
+            _buildSectionLabel('Available now'),
+            if (availableCourses.isNotEmpty)
+              _buildFeaturedCourse(context, availableCourses.first),
+            if (availableCourses.length > 1)
+              _buildCourseList(
+                  context, availableCourses.skip(1).toList()),
+            _buildSectionLabel('Coming soon'),
+            _buildComingSoonList(),
+            const SliverToBoxAdapter(child: SizedBox(height: 40)),
+          ],
         ],
       ),
     );
@@ -118,7 +164,7 @@ class _CoursesScreenState extends State<CoursesScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'Courses',
                 style: TextStyle(
                   fontSize: 40,
@@ -150,7 +196,8 @@ class _CoursesScreenState extends State<CoursesScreen>
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.06),
             borderRadius: BorderRadius.circular(16),
@@ -193,13 +240,12 @@ class _CoursesScreenState extends State<CoursesScreen>
     );
   }
 
-  // Large featured card for the first course
   Widget _buildFeaturedCourse(BuildContext context, _Course course) {
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: _AnimatedCard(
-          delay: const Duration(milliseconds: 0),
+          delay: Duration.zero,
           child: GestureDetector(
             onTap: () => _openCourse(context, course),
             child: Container(
@@ -207,7 +253,8 @@ class _CoursesScreenState extends State<CoursesScreen>
               decoration: BoxDecoration(
                 color: course.color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: course.color.withOpacity(0.3)),
+                border:
+                    Border.all(color: course.color.withOpacity(0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -221,10 +268,8 @@ class _CoursesScreenState extends State<CoursesScreen>
                           color: course.color.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Center(
-                          child: Text(course.icon,
-                              style: const TextStyle(fontSize: 26)),
-                        ),
+                        child: Icon(_iconForTag(course.tag),
+                            color: course.color, size: 26),
                       ),
                       const Spacer(),
                       Container(
@@ -237,7 +282,7 @@ class _CoursesScreenState extends State<CoursesScreen>
                               color: course.color.withOpacity(0.3)),
                         ),
                         child: Text(
-                          'IN PROGRESS',
+                          course.progress > 0 ? 'IN PROGRESS' : 'START',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
@@ -274,7 +319,8 @@ class _CoursesScreenState extends State<CoursesScreen>
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
                             value: course.progress,
-                            backgroundColor: Colors.white.withOpacity(0.08),
+                            backgroundColor:
+                                Colors.white.withOpacity(0.08),
                             valueColor: AlwaysStoppedAnimation<Color>(
                                 course.color),
                             minHeight: 5,
@@ -300,10 +346,12 @@ class _CoursesScreenState extends State<CoursesScreen>
                       color: course.color,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Text(
-                        'Continue learning',
-                        style: TextStyle(
+                        course.progress > 0
+                            ? 'Continue learning'
+                            : 'Start course',
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -321,13 +369,12 @@ class _CoursesScreenState extends State<CoursesScreen>
     );
   }
 
-  // Remaining courses as compact cards
-  Widget _buildCourseList(BuildContext context) {
-    final rest = _courses.skip(1).toList();
+  Widget _buildCourseList(
+      BuildContext context, List<_Course> courses) {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
-          final course = rest[index];
+          final course = courses[index];
           return _AnimatedCard(
             delay: Duration(milliseconds: 80 * (index + 1)),
             child: Padding(
@@ -351,10 +398,8 @@ class _CoursesScreenState extends State<CoursesScreen>
                           color: course.color.withOpacity(0.18),
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: Center(
-                          child: Text(course.icon,
-                              style: const TextStyle(fontSize: 22)),
-                        ),
+                        child: Icon(_iconForTag(course.tag),
+                            color: course.color, size: 22),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -419,72 +464,72 @@ class _CoursesScreenState extends State<CoursesScreen>
             ),
           );
         },
-        childCount: rest.length,
+        childCount: courses.length,
       ),
     );
   }
 
-  Widget _buildComingSoonGrid() {
+  Widget _buildComingSoonList() {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.3,
-        ),
+      sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             final item = _comingSoon[index];
             return _AnimatedCard(
               delay: Duration(milliseconds: 60 * index),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: item.color.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(20),
-                  border:
-                      Border.all(color: item.color.withOpacity(0.15)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(item.icon,
-                        style: const TextStyle(fontSize: 26)),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: item.color.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                        color: item.color.withOpacity(0.15)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: item.color.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(_iconForComingSoon(item.title),
+                            color: item.color, size: 18),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
                           item.title,
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
                             color: Colors.white.withOpacity(0.5),
                             letterSpacing: -0.2,
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: item.color.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'Coming soon',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                              color: item.color.withOpacity(0.8),
-                            ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: item.color.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Soon',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: item.color.withOpacity(0.8),
                           ),
                         ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -524,8 +569,8 @@ class _AnimatedCardState extends State<_AnimatedCard>
     _slide = Tween<Offset>(
       begin: const Offset(0, 0.06),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
-
+    ).animate(CurvedAnimation(
+        parent: _controller, curve: Curves.easeOutCubic));
     Future.delayed(widget.delay, () {
       if (mounted) _controller.forward();
     });
@@ -548,31 +593,31 @@ class _AnimatedCardState extends State<_AnimatedCard>
 
 // Data classes
 class _Course {
+  final String id;
   final String title;
   final String subtitle;
-  final String icon;
   final Color color;
   final String tag;
   final double progress;
+  final bool isComingSoon;
 
   const _Course({
+    required this.id,
     required this.title,
     required this.subtitle,
-    required this.icon,
     required this.color,
     required this.tag,
     required this.progress,
+    required this.isComingSoon,
   });
 }
 
 class _ComingSoon {
   final String title;
-  final String icon;
   final Color color;
 
   const _ComingSoon({
     required this.title,
-    required this.icon,
     required this.color,
   });
 }
