@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'auth_service.dart';
 import 'welcome_screen.dart';
 import 'course_detail_screen.dart';
+import 'app_router.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,6 +16,35 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  List<Map<String, dynamic>> _courses = [];
+  bool _loadingCourses = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCourses();
+  }
+
+  Future<void> _loadCourses() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('courses')
+          .orderBy('order')
+          .get();
+      if (mounted) {
+        setState(() {
+          _courses = snapshot.docs
+              .where((d) => !(d.data()['isComingSoon'] ?? false))
+              .map((d) => {'id': d.id, ...d.data()})
+              .toList();
+          _loadingCourses = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingCourses = false);
+    }
+  }
+
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Good morning';
@@ -29,30 +60,86 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'there';
   }
 
-  void _navigateToCourse({
-    required String title,
-    required String subtitle,
-    required double progress,
-    required Color color,
-    required String tag,
-  }) {
+  void _navigateToCourse(Map<String, dynamic> course) {
     HapticFeedback.selectionClick();
     Navigator.push(
       context,
-      PageRouteBuilder(
-        pageBuilder: (_, animation, __) => CourseDetailScreen(
-          title: title,
-          subtitle: subtitle,
-          progress: progress,
-          color: color,
-          tag: tag,
+      AppRouter.push(CourseDetailScreen(
+        title: course['title'] ?? '',
+        subtitle: course['subtitle'] ?? '',
+        progress: (course['progress'] ?? 0.0).toDouble(),
+        color: Color(course['color'] ?? 0xFF6366F1),
+        tag: course['tag'] ?? '',
+      )),
+    );
+  }
+
+  void _showComingSoonSheet(String feature) {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF13131A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 48),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 28),
+            Container(
+              width: 64, height: 64,
+              decoration: BoxDecoration(
+                color: const Color(0xFF6366F1).withOpacity(0.12),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Icon(CupertinoIcons.rocket_fill,
+                  color: Color(0xFF6366F1), size: 30),
+            ),
+            const SizedBox(height: 16),
+            Text(feature,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                  letterSpacing: -0.4,
+                )),
+            const SizedBox(height: 8),
+            Text('This feature is coming soon!',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white.withOpacity(0.4),
+                )),
+            const SizedBox(height: 28),
+            GestureDetector(
+              onTap: () => Navigator.pop(ctx),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                ),
+                child: Text('Got it',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withOpacity(0.7),
+                    )),
+              ),
+            ),
+          ],
         ),
-        transitionsBuilder: (_, animation, __, child) => SlideTransition(
-          position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
-              .animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
-          child: FadeTransition(opacity: animation, child: child),
-        ),
-        transitionDuration: const Duration(milliseconds: 400),
       ),
     );
   }
@@ -70,8 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 36,
-              height: 4,
+              width: 36, height: 4,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(2),
@@ -86,30 +172,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? _getFirstName()[0].toUpperCase()
                     : 'U',
                 style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                ),
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600),
               ),
             ),
             const SizedBox(height: 12),
-            Text(
-              _getFirstName(),
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-                letterSpacing: -0.4,
-              ),
-            ),
+            Text(_getFirstName(),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                  letterSpacing: -0.4,
+                )),
             const SizedBox(height: 4),
-            Text(
-              FirebaseAuth.instance.currentUser?.email ?? '',
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.white.withOpacity(0.4),
-              ),
-            ),
+            Text(FirebaseAuth.instance.currentUser?.email ?? '',
+                style: TextStyle(
+                    fontSize: 13, color: Colors.white.withOpacity(0.4))),
             const SizedBox(height: 32),
             GestureDetector(
               onTap: () async {
@@ -118,16 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (mounted) {
                   Navigator.pushAndRemoveUntil(
                     context,
-                    PageRouteBuilder(
-                      pageBuilder: (_, animation, __) => const WelcomeScreen(),
-                      transitionsBuilder: (_, animation, __, child) =>
-                          FadeTransition(
-                        opacity: CurvedAnimation(
-                            parent: animation, curve: Curves.easeOut),
-                        child: child,
-                      ),
-                      transitionDuration: const Duration(milliseconds: 500),
-                    ),
+                    AppRouter.fade(const WelcomeScreen()),
                     (route) => false,
                   );
                 }
@@ -141,21 +211,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   border: Border.all(
                       color: const Color(0xFFEF4444).withOpacity(0.25)),
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(CupertinoIcons.square_arrow_left,
+                    Icon(CupertinoIcons.square_arrow_left,
                         color: Color(0xFFEF4444), size: 18),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Sign out',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFFEF4444),
-                        letterSpacing: -0.2,
-                      ),
-                    ),
+                    SizedBox(width: 8),
+                    Text('Sign out',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFEF4444),
+                          letterSpacing: -0.2,
+                        )),
                   ],
                 ),
               ),
@@ -164,6 +232,15 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  IconData _iconForTag(String tag) {
+    switch (tag) {
+      case 'ITIL V4': return CupertinoIcons.doc_text_fill;
+      case 'CSM': return CupertinoIcons.person_2_fill;
+      case 'Networking': return CupertinoIcons.antenna_radiowaves_left_right;
+      default: return CupertinoIcons.book_fill;
+    }
   }
 
   @override
@@ -185,50 +262,45 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 28),
               _buildSectionTitle('Continue learning'),
               const SizedBox(height: 12),
-              _buildCourseCard(
-                title: 'ITIL V4 Foundation',
-                subtitle: 'Service management basics',
-                progress: 0.35,
-                color: const Color(0xFF6366F1),
-                tag: 'ITIL V4',
-                icon: CupertinoIcons.doc_text_fill,
-              ),
-              const SizedBox(height: 10),
-              _buildCourseCard(
-                title: 'CSM Fundamentals',
-                subtitle: 'Scrum & agile methods',
-                progress: 0.10,
-                color: const Color(0xFF10B981),
-                tag: 'CSM',
-                icon: CupertinoIcons.person_2_fill,
-              ),
-              const SizedBox(height: 10),
-              _buildCourseCard(
-                title: 'Networking Basics',
-                subtitle: 'TCP/IP, DNS, subnets',
-                progress: 0.05,
-                color: const Color(0xFFF59E0B),
-                tag: 'Networking',
-                icon: CupertinoIcons.antenna_radiowaves_left_right,
-              ),
+              if (_loadingCourses)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF6366F1), strokeWidth: 2),
+                  ),
+                )
+              else
+                ..._courses.map((course) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _buildCourseCard(course),
+                )),
               const SizedBox(height: 28),
               _buildSectionTitle("Today's picks"),
               const SizedBox(height: 12),
-              _buildTodayCard(
-                icon: CupertinoIcons.layers_fill,
-                title: 'Service Value System',
-                sub: 'ITIL V4 · Module 3',
-                color: const Color(0xFF6366F1),
-                tag: 'ITIL V4',
-              ),
+              if (_courses.isNotEmpty)
+                _buildTodayCard(
+                  icon: CupertinoIcons.layers_fill,
+                  title: 'Service Value System',
+                  sub: 'ITIL V4 · Module 3',
+                  color: const Color(0xFF6366F1),
+                  course: _courses.firstWhere(
+                    (c) => c['tag'] == 'ITIL V4',
+                    orElse: () => _courses.first,
+                  ),
+                ),
               const SizedBox(height: 8),
-              _buildTodayCard(
-                icon: CupertinoIcons.arrow_2_circlepath,
-                title: 'What is Scrum?',
-                sub: 'CSM · Module 1',
-                color: const Color(0xFF10B981),
-                tag: 'CSM',
-              ),
+              if (_courses.length > 1)
+                _buildTodayCard(
+                  icon: CupertinoIcons.arrow_2_circlepath,
+                  title: 'What is Scrum?',
+                  sub: 'CSM · Module 1',
+                  color: const Color(0xFF10B981),
+                  course: _courses.firstWhere(
+                    (c) => c['tag'] == 'CSM',
+                    orElse: () => _courses.first,
+                  ),
+                ),
               const SizedBox(height: 28),
               _buildSectionTitle('Stats'),
               const SizedBox(height: 12),
@@ -252,32 +324,25 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Row(
               children: [
-                Text(
-                  _getGreeting(),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withOpacity(0.45),
-                    letterSpacing: -0.2,
-                  ),
-                ),
+                Text(_getGreeting(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.45),
+                      letterSpacing: -0.2,
+                    )),
                 const SizedBox(width: 6),
-                const Icon(
-                  CupertinoIcons.hand_raised_fill,
-                  size: 15,
-                  color: Color(0xFFF59E0B),
-                ),
+                const Icon(CupertinoIcons.hand_raised_fill,
+                    size: 15, color: Color(0xFFF59E0B)),
               ],
             ),
-            Text(
-              _getFirstName(),
-              style: const TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                letterSpacing: -1.0,
-                height: 1.1,
-              ),
-            ),
+            Text(_getFirstName(),
+                style: const TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: -1.0,
+                  height: 1.1,
+                )),
           ],
         ),
         GestureDetector(
@@ -290,10 +355,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? _getFirstName()[0].toUpperCase()
                   : 'U',
               style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600),
             ),
           ),
         ),
@@ -312,40 +376,30 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 48, height: 48,
             decoration: BoxDecoration(
               color: const Color(0xFFF59E0B).withOpacity(0.15),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(
-              CupertinoIcons.flame_fill,
-              color: Color(0xFFF59E0B),
-              size: 24,
-            ),
+            child: const Icon(CupertinoIcons.flame_fill,
+                color: Color(0xFFF59E0B), size: 24),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '7 day streak!',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    letterSpacing: -0.3,
-                  ),
-                ),
+                const Text('7 day streak!',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      letterSpacing: -0.3,
+                    )),
                 const SizedBox(height: 2),
-                Text(
-                  'Keep it up — you\'re on a roll!',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withOpacity(0.4),
-                  ),
-                ),
+                Text('Keep it up — you\'re on a roll!',
+                    style: TextStyle(
+                        fontSize: 12, color: Colors.white.withOpacity(0.4))),
               ],
             ),
           ),
@@ -355,20 +409,18 @@ class _HomeScreenState extends State<HomeScreen> {
               color: const Color(0xFF6366F1).withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Row(
+            child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(CupertinoIcons.rosette,
+                Icon(CupertinoIcons.rosette,
                     size: 13, color: Color(0xFF6366F1)),
-                const SizedBox(width: 4),
-                const Text(
-                  '7',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF6366F1),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                SizedBox(width: 4),
+                Text('7',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF6366F1),
+                      fontWeight: FontWeight.w700,
+                    )),
               ],
             ),
           ),
@@ -391,29 +443,23 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Daily goal',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                  letterSpacing: -0.3,
-                ),
-              ),
-              Text(
-                '2 / 3 lessons',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.4),
-                ),
-              ),
+              const Text('Daily goal',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    letterSpacing: -0.3,
+                  )),
+              Text('0 / 3 lessons',
+                  style: TextStyle(
+                      fontSize: 12, color: Colors.white.withOpacity(0.4))),
             ],
           ),
           const SizedBox(height: 14),
           ClipRRect(
             borderRadius: BorderRadius.circular(5),
             child: LinearProgressIndicator(
-              value: 2 / 3,
+              value: 0,
               backgroundColor: Colors.white.withOpacity(0.08),
               valueColor: const AlwaysStoppedAnimation<Color>(
                   Color(0xFF6366F1)),
@@ -423,9 +469,9 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 14),
           Row(
             children: [
-              _buildGoalDot(true, 'Lesson 1'),
+              _buildGoalDot(false, 'Lesson 1'),
               const SizedBox(width: 8),
-              _buildGoalDot(true, 'Lesson 2'),
+              _buildGoalDot(false, 'Lesson 2'),
               const SizedBox(width: 8),
               _buildGoalDot(false, 'Lesson 3'),
             ],
@@ -453,47 +499,34 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           children: [
             Icon(
-              done
-                  ? CupertinoIcons.checkmark_circle_fill
-                  : CupertinoIcons.circle,
+              done ? CupertinoIcons.checkmark_circle_fill : CupertinoIcons.circle,
               size: 20,
               color: done
                   ? const Color(0xFF6366F1)
                   : Colors.white.withOpacity(0.2),
             ),
             const SizedBox(height: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                color: done
-                    ? const Color(0xFF6366F1)
-                    : Colors.white.withOpacity(0.3),
-              ),
-            ),
+            Text(label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  color: done
+                      ? const Color(0xFF6366F1)
+                      : Colors.white.withOpacity(0.3),
+                )),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCourseCard({
-    required String title,
-    required String subtitle,
-    required double progress,
-    required Color color,
-    required String tag,
-    required IconData icon,
-  }) {
+  Widget _buildCourseCard(Map<String, dynamic> course) {
+    final color = Color(course['color'] ?? 0xFF6366F1);
+    final progress = (course['progress'] ?? 0.0).toDouble();
+    final tag = course['tag'] ?? '';
+
     return GestureDetector(
-      onTap: () => _navigateToCourse(
-        title: title,
-        subtitle: subtitle,
-        progress: progress,
-        color: color,
-        tag: tag,
-      ),
+      onTap: () => _navigateToCourse(course),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -504,36 +537,30 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 48, height: 48,
               decoration: BoxDecoration(
                 color: color.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(icon, color: color, size: 22),
+              child: Icon(_iconForTag(tag), color: color, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
+                  Text(course['title'] ?? '',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        letterSpacing: -0.3,
+                      )),
                   const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withOpacity(0.4),
-                    ),
-                  ),
+                  Text(course['subtitle'] ?? '',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withOpacity(0.4))),
                   const SizedBox(height: 10),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
@@ -551,20 +578,15 @@ class _HomeScreenState extends State<HomeScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  '${(progress * 100).toInt()}%',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text('${(progress * 100).toInt()}%',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                    )),
                 const SizedBox(height: 4),
-                Icon(
-                  CupertinoIcons.chevron_right,
-                  size: 12,
-                  color: Colors.white.withOpacity(0.25),
-                ),
+                Icon(CupertinoIcons.chevron_right,
+                    size: 12, color: Colors.white.withOpacity(0.25)),
               ],
             ),
           ],
@@ -578,16 +600,10 @@ class _HomeScreenState extends State<HomeScreen> {
     required String title,
     required String sub,
     required Color color,
-    required String tag,
+    required Map<String, dynamic> course,
   }) {
     return GestureDetector(
-      onTap: () => _navigateToCourse(
-        title: tag == 'ITIL V4' ? 'ITIL V4 Foundation' : 'CSM Fundamentals',
-        subtitle: sub,
-        progress: tag == 'ITIL V4' ? 0.35 : 0.10,
-        color: color,
-        tag: tag,
-      ),
+      onTap: () => _navigateToCourse(course),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
@@ -598,8 +614,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 44, height: 44,
               decoration: BoxDecoration(
                 color: color.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(13),
@@ -611,42 +626,34 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
+                  Text(title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                        letterSpacing: -0.2,
+                      )),
                   const SizedBox(height: 2),
-                  Text(
-                    sub,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.white.withOpacity(0.4),
-                    ),
-                  ),
+                  Text(sub,
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.white.withOpacity(0.4))),
                 ],
               ),
             ),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
                 color: color.withOpacity(0.18),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Text(
-                'Start',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.1,
-                ),
-              ),
+              child: Text('Start',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.1,
+                  )),
             ),
           ],
         ),
@@ -655,43 +662,41 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(
-      title.toUpperCase(),
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        color: Colors.white.withOpacity(0.35),
-        letterSpacing: 1.1,
-      ),
-    );
+    return Text(title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: Colors.white.withOpacity(0.35),
+          letterSpacing: 1.1,
+        ));
   }
 
   Widget _buildStatsRow() {
     return Row(
       children: [
         _buildStatCard(
-          icon: CupertinoIcons.rosette,
-          iconColor: const Color(0xFFF59E0B),
-          bgColor: const Color(0xFFF59E0B),
-          label: 'Badges',
-          value: '3',
-        ),
+            icon: CupertinoIcons.rosette,
+            iconColor: const Color(0xFFF59E0B),
+            bgColor: const Color(0xFFF59E0B),
+            label: 'Badges',
+            value: '0',
+            onTap: () => _showComingSoonSheet('Badges')),
         const SizedBox(width: 10),
         _buildStatCard(
-          icon: CupertinoIcons.checkmark_seal_fill,
-          iconColor: const Color(0xFF10B981),
-          bgColor: const Color(0xFF10B981),
-          label: 'Lessons',
-          value: '12',
-        ),
+            icon: CupertinoIcons.checkmark_seal_fill,
+            iconColor: const Color(0xFF10B981),
+            bgColor: const Color(0xFF10B981),
+            label: 'Lessons',
+            value: '0',
+            onTap: () => _showComingSoonSheet('Lesson tracking')),
         const SizedBox(width: 10),
         _buildStatCard(
-          icon: Icons.track_changes_rounded,
-          iconColor: const Color(0xFF6366F1),
-          bgColor: const Color(0xFF6366F1),
-          label: 'Quiz score',
-          value: '84%',
-        ),
+            icon: Icons.track_changes_rounded,
+            iconColor: const Color(0xFF6366F1),
+            bgColor: const Color(0xFF6366F1),
+            label: 'Quiz score',
+            value: '-',
+            onTap: () => _showComingSoonSheet('Quiz scores')),
       ],
     );
   }
@@ -702,47 +707,44 @@ class _HomeScreenState extends State<HomeScreen> {
     required Color bgColor,
     required String label,
     required String value,
+    required VoidCallback onTap,
   }) {
     return Expanded(
-      child: Container(
-        padding:
-            const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withOpacity(0.07)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: bgColor.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(11),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withOpacity(0.07)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 38, height: 38,
+                decoration: BoxDecoration(
+                  color: bgColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(icon, color: iconColor, size: 19),
               ),
-              child: Icon(icon, color: iconColor, size: 19),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.white.withOpacity(0.4),
-                letterSpacing: 0.1,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                letterSpacing: -0.5,
-              ),
-            ),
-          ],
+              const SizedBox(height: 10),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.white.withOpacity(0.4),
+                      letterSpacing: 0.1)),
+              const SizedBox(height: 3),
+              Text(value,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                  )),
+            ],
+          ),
         ),
       ),
     );
@@ -771,71 +773,60 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
-              Icon(
-                CupertinoIcons.rocket_fill,
-                size: 15,
-                color: Colors.white.withOpacity(0.5),
-              ),
+              Icon(CupertinoIcons.rocket_fill,
+                  size: 15, color: Colors.white.withOpacity(0.5)),
               const SizedBox(width: 8),
-              Text(
-                'Coming soon',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white.withOpacity(0.5),
-                  letterSpacing: -0.2,
-                ),
-              ),
+              Text('Coming soon',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withOpacity(0.5),
+                    letterSpacing: -0.2,
+                  )),
             ],
           ),
           const SizedBox(height: 14),
-          ...items.map((item) =>
-              _buildComingItem(item.$1, item.$2, item.$3)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildComingItem(IconData icon, String label, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Icon(icon, size: 15, color: color.withOpacity(0.8)),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.white.withOpacity(0.45),
-              letterSpacing: -0.1,
-            ),
-          ),
-          const Spacer(),
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              'Soon',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withOpacity(0.3),
+          ...items.map((item) => GestureDetector(
+            onTap: () => _showComingSoonSheet(item.$2),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(
+                      color: item.$3.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(item.$1,
+                        size: 15, color: item.$3.withOpacity(0.8)),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(item.$2,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.45),
+                        letterSpacing: -0.1,
+                      )),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text('Soon',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withOpacity(0.3),
+                        )),
+                  ),
+                ],
               ),
             ),
-          ),
+          )),
         ],
       ),
     );

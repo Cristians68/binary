@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'course_detail_screen.dart';
+import 'app_router.dart';
 
 class ProgressScreen extends StatefulWidget {
   const ProgressScreen({super.key});
@@ -13,6 +16,7 @@ class _ProgressScreenState extends State<ProgressScreen>
   late AnimationController _controller;
   late Animation<double> _fade;
   late Animation<Offset> _slide;
+  List<Map<String, dynamic>> _courses = [];
 
   @override
   void initState() {
@@ -24,12 +28,39 @@ class _ProgressScreenState extends State<ProgressScreen>
         .animate(CurvedAnimation(
             parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
+    _loadCourses();
+  }
+
+  Future<void> _loadCourses() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('courses')
+          .orderBy('order')
+          .get();
+      if (mounted) {
+        setState(() {
+          _courses = snapshot.docs
+              .where((d) => !(d.data()['isComingSoon'] ?? false))
+              .map((d) => {'id': d.id, ...d.data()})
+              .toList();
+        });
+      }
+    } catch (_) {}
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  IconData _iconForTag(String tag) {
+    switch (tag) {
+      case 'ITIL V4': return CupertinoIcons.doc_text_fill;
+      case 'CSM': return CupertinoIcons.person_2_fill;
+      case 'Networking': return CupertinoIcons.antenna_radiowaves_left_right;
+      default: return CupertinoIcons.book_fill;
+    }
   }
 
   @override
@@ -68,25 +99,21 @@ class _ProgressScreenState extends State<ProgressScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Progress',
-                style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  letterSpacing: -1.2,
-                  height: 1.05,
-                ),
-              ),
+              const Text('Progress',
+                  style: TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: -1.2,
+                    height: 1.05,
+                  )),
               const SizedBox(height: 6),
-              Text(
-                'Your learning journey.',
-                style: TextStyle(
-                  fontSize: 17,
-                  color: Colors.white.withOpacity(0.45),
-                  letterSpacing: -0.2,
-                ),
-              ),
+              Text('Your learning journey.',
+                  style: TextStyle(
+                    fontSize: 17,
+                    color: Colors.white.withOpacity(0.45),
+                    letterSpacing: -0.2,
+                  )),
               const SizedBox(height: 28),
             ],
           ),
@@ -110,28 +137,25 @@ class _ProgressScreenState extends State<ProgressScreen>
           child: Row(
             children: [
               SizedBox(
-                width: 88,
-                height: 88,
+                width: 88, height: 88,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     CircularProgressIndicator(
-                      value: 0.17,
+                      value: 0.0,
                       backgroundColor: Colors.white.withOpacity(0.08),
                       valueColor: const AlwaysStoppedAnimation<Color>(
                           Color(0xFF6366F1)),
                       strokeWidth: 7,
                     ),
                     const Center(
-                      child: Text(
-                        '17%',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
+                      child: Text('0%',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: -0.5,
+                          )),
                     ),
                   ],
                 ),
@@ -141,24 +165,21 @@ class _ProgressScreenState extends State<ProgressScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Overall progress',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
+                    const Text('Overall progress',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          letterSpacing: -0.3,
+                        )),
                     const SizedBox(height: 10),
                     _statRow(CupertinoIcons.checkmark_seal_fill,
-                        '12 lessons completed',
-                        const Color(0xFF10B981)),
+                        '0 lessons completed', const Color(0xFF10B981)),
                     const SizedBox(height: 6),
-                    _statRow(CupertinoIcons.rosette, '3 badges earned',
+                    _statRow(CupertinoIcons.rosette, '0 badges earned',
                         const Color(0xFFF59E0B)),
                     const SizedBox(height: 6),
-                    _statRow(CupertinoIcons.flame_fill, '7 day streak',
+                    _statRow(CupertinoIcons.flame_fill, '0 day streak',
                         const Color(0xFFEF4444)),
                   ],
                 ),
@@ -175,14 +196,12 @@ class _ProgressScreenState extends State<ProgressScreen>
       children: [
         Icon(icon, size: 13, color: color),
         const SizedBox(width: 6),
-        Text(
-          text,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.white.withOpacity(0.5),
-            letterSpacing: -0.1,
-          ),
-        ),
+        Text(text,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.5),
+              letterSpacing: -0.1,
+            )),
       ],
     );
   }
@@ -191,234 +210,183 @@ class _ProgressScreenState extends State<ProgressScreen>
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 32, 24, 14),
-        child: Text(
-          label.toUpperCase(),
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.white.withOpacity(0.35),
-            letterSpacing: 1.2,
-          ),
-        ),
+        child: Text(label.toUpperCase(),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withOpacity(0.35),
+              letterSpacing: 1.2,
+            )),
       ),
     );
   }
 
   Widget _buildCourseBreakdown() {
-    final courses = [
-      ('ITIL V4 Foundation', 0.35, const Color(0xFF6366F1),
-          CupertinoIcons.doc_text_fill),
-      ('CSM Fundamentals', 0.10, const Color(0xFF10B981),
-          CupertinoIcons.person_2_fill),
-      ('Networking Basics', 0.05, const Color(0xFFF59E0B),
-          CupertinoIcons.antenna_radiowaves_left_right),
-    ];
+    if (_courses.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Center(
+            child: Text('No courses yet',
+                style: TextStyle(
+                    fontSize: 14, color: Colors.white.withOpacity(0.3))),
+          ),
+        ),
+      );
+    }
 
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
-            final course = courses[index];
+            final course = _courses[index];
+            final color = Color(course['color'] ?? 0xFF6366F1);
+            final progress = (course['progress'] ?? 0.0).toDouble();
+            final tag = course['tag'] ?? '';
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: course.$3.withOpacity(0.07),
-                  borderRadius: BorderRadius.circular(18),
-                  border:
-                      Border.all(color: course.$3.withOpacity(0.2)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: course.$3.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(12),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    AppRouter.push(CourseDetailScreen(
+                      title: course['title'] ?? '',
+                      subtitle: course['subtitle'] ?? '',
+                      progress: progress,
+                      color: color,
+                      tag: tag,
+                    )),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.07),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: color.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40, height: 40,
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(_iconForTag(tag), color: color, size: 18),
                       ),
-                      child: Icon(course.$4,
-                          color: course.$3, size: 18),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            course.$1,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                              letterSpacing: -0.3,
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(course['title'] ?? '',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                  letterSpacing: -0.3,
+                                )),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: progress,
+                                backgroundColor:
+                                    Colors.white.withOpacity(0.08),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(color),
+                                minHeight: 5,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: course.$2,
-                              backgroundColor:
-                                  Colors.white.withOpacity(0.08),
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(
-                                      course.$3),
-                              minHeight: 5,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 14),
-                    Text(
-                      '${(course.$2 * 100).toInt()}%',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: course.$3,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                  ],
+                      const SizedBox(width: 14),
+                      Text('${(progress * 100).toInt()}%',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: color,
+                            letterSpacing: -0.3,
+                          )),
+                    ],
+                  ),
                 ),
               ),
             );
           },
-          childCount: courses.length,
+          childCount: _courses.length,
         ),
       ),
     );
   }
 
   Widget _buildBadges() {
-    final badges = [
-      ('First lesson', CupertinoIcons.star_fill,
-          const Color(0xFFF59E0B)),
-      ('7 day streak', CupertinoIcons.flame_fill,
-          const Color(0xFFEF4444)),
-      ('Quiz master', Icons.track_changes_rounded,
-          const Color(0xFF6366F1)),
-    ];
-
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Row(
-          children: badges.asMap().entries.map((entry) {
-            final badge = entry.value;
-            final isLast = entry.key == badges.length - 1;
-            return Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(right: isLast ? 0 : 10),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: badge.$3.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                        color: badge.$3.withOpacity(0.2)),
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: badge.$3.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(13),
-                        ),
-                        child: Icon(badge.$2,
-                            color: badge.$3, size: 22),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        badge.$1,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white.withOpacity(0.6),
-                          letterSpacing: -0.1,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.03),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withOpacity(0.07)),
+          ),
+          child: Column(
+            children: [
+              Icon(CupertinoIcons.rosette,
+                  size: 36, color: Colors.white.withOpacity(0.15)),
+              const SizedBox(height: 12),
+              Text('No badges yet',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withOpacity(0.4),
+                    letterSpacing: -0.3,
+                  )),
+              const SizedBox(height: 4),
+              Text('Complete lessons to earn badges',
+                  style: TextStyle(
+                      fontSize: 12, color: Colors.white.withOpacity(0.25))),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildActivity() {
-    final activities = [
-      (CupertinoIcons.book_fill, 'Completed: Key Concepts',
-          '2h ago', const Color(0xFF6366F1)),
-      (CupertinoIcons.checkmark_seal_fill, 'Quiz passed: SVS Module',
-          'Yesterday', const Color(0xFF10B981)),
-      (CupertinoIcons.flame_fill, 'Streak reached 7 days',
-          '2 days ago', const Color(0xFFF59E0B)),
-      (CupertinoIcons.rosette, 'Badge earned: First lesson',
-          '3 days ago', const Color(0xFFEC4899)),
-    ];
-
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final a = activities[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.03),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: Colors.white.withOpacity(0.07)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: a.$4.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(11),
-                      ),
-                      child:
-                          Icon(a.$1, color: a.$4, size: 17),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        a.$2,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.white,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      a.$3,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.white.withOpacity(0.35),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-          childCount: activities.length,
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.03),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withOpacity(0.07)),
+          ),
+          child: Column(
+            children: [
+              Icon(CupertinoIcons.time,
+                  size: 36, color: Colors.white.withOpacity(0.15)),
+              const SizedBox(height: 12),
+              Text('No activity yet',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withOpacity(0.4),
+                    letterSpacing: -0.3,
+                  )),
+              const SizedBox(height: 4),
+              Text('Start a lesson to see your activity here',
+                  style: TextStyle(
+                      fontSize: 12, color: Colors.white.withOpacity(0.25))),
+            ],
+          ),
         ),
       ),
     );
