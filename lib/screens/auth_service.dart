@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart';
 
 class AuthService {
   static final _auth = FirebaseAuth.instance;
@@ -14,14 +15,30 @@ class AuthService {
 
   static Future<UserCredential?> signInWithGoogle() async {
     try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      return await _auth.signInWithCredential(credential);
+      // Use redirect on mobile web, popup on desktop
+      if (kIsWeb) {
+        final provider = GoogleAuthProvider();
+        provider.addScope('email');
+        provider.addScope('profile');
+
+        try {
+          // Try popup first (works on desktop)
+          return await _auth.signInWithPopup(provider);
+        } catch (e) {
+          // Fall back to redirect (works on mobile)
+          await _auth.signInWithRedirect(provider);
+          return await _auth.getRedirectResult();
+        }
+      } else {
+        final googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) return null;
+        final googleAuth = await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        return await _auth.signInWithCredential(credential);
+      }
     } catch (e) {
       print('Google sign-in error: $e');
       return null;
