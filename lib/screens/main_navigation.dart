@@ -4,6 +4,7 @@ import 'home_screen.dart';
 import 'courses_screen.dart';
 import 'progress_screen.dart';
 import 'profile_screen.dart';
+import 'app_theme.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -63,14 +64,12 @@ class _MainNavigationState extends State<MainNavigation>
 
   @override
   Widget build(BuildContext context) {
+    final theme = AppTheme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0F),
+      backgroundColor: theme.bg,
       body: FadeTransition(
         opacity: _fadeAnimation,
-        child: IndexedStack(
-          index: _currentIndex,
-          children: _screens,
-        ),
+        child: IndexedStack(index: _currentIndex, children: _screens),
       ),
       bottomNavigationBar: _BottomNavBar(
         currentIndex: _currentIndex,
@@ -81,11 +80,9 @@ class _MainNavigationState extends State<MainNavigation>
   }
 }
 
-// Simple data class to hold tab info
 class _TabItem {
   final IconData icon;
   final String label;
-
   const _TabItem({required this.icon, required this.label});
 }
 
@@ -102,6 +99,7 @@ class _BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = AppTheme.of(context);
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Container(
@@ -110,10 +108,8 @@ class _BottomNavBar extends StatelessWidget {
         bottom: bottomPadding > 0 ? bottomPadding : 12,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFF0A0A0F),
-        border: Border(
-          top: BorderSide(color: Colors.white.withOpacity(0.08)),
-        ),
+        color: theme.navBg,
+        border: Border(top: BorderSide(color: theme.border)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -143,10 +139,11 @@ class _NavTab extends StatelessWidget {
   final bool active;
   final VoidCallback onTap;
 
-  static const _purple = Color(0xFF6366F1);
+  static const _purple = AppColors.primary;
 
   @override
   Widget build(BuildContext context) {
+    final theme = AppTheme.of(context);
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -161,18 +158,14 @@ class _NavTab extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: active ? _purple : Colors.white.withOpacity(0.3),
-              size: 22,
-            ),
+            Icon(icon, color: active ? _purple : theme.subtext, size: 22),
             const SizedBox(height: 3),
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 200),
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                color: active ? _purple : Colors.white.withOpacity(0.3),
+                color: active ? _purple : theme.subtext,
                 letterSpacing: active ? 0.2 : 0,
               ),
               child: Text(label),

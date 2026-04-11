@@ -5,6 +5,7 @@ import 'login_screen.dart';
 import 'signup_screen.dart';
 import 'auth_service.dart';
 import 'main_navigation.dart';
+import 'app_theme.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -31,8 +32,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     _slide = Tween<Offset>(
       begin: const Offset(0, 0.06),
       end: Offset.zero,
-    ).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
   }
 
@@ -48,20 +48,22 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       context,
       PageRouteBuilder(
         pageBuilder: (_, animation, __) => screen,
-        transitionsBuilder: (_, animation, __, child) {
-          return FadeTransition(
-            opacity: CurvedAnimation(
-                parent: animation, curve: Curves.easeOut),
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.03),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                  parent: animation, curve: Curves.easeOutCubic)),
-              child: child,
-            ),
-          );
-        },
+        transitionsBuilder: (_, animation, __, child) => FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+          child: SlideTransition(
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0, 0.03),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ),
+                ),
+            child: child,
+          ),
+        ),
         transitionDuration: const Duration(milliseconds: 450),
       ),
     );
@@ -73,8 +75,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       PageRouteBuilder(
         pageBuilder: (_, animation, __) => const MainNavigation(),
         transitionsBuilder: (_, animation, __, child) => FadeTransition(
-          opacity: CurvedAnimation(
-              parent: animation, curve: Curves.easeOut),
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
           child: child,
         ),
         transitionDuration: const Duration(milliseconds: 500),
@@ -98,7 +99,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           backgroundColor: Colors.white.withOpacity(0.1),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }
@@ -106,8 +108,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = AppTheme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0F),
+      backgroundColor: theme.bg,
       body: SafeArea(
         child: FadeTransition(
           opacity: _fade,
@@ -119,11 +122,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Spacer(flex: 2),
-                  _buildLogo(),
+                  _buildLogo(theme),
                   const SizedBox(height: 48),
-                  _buildFeatures(),
+                  _buildFeatures(theme),
                   const Spacer(flex: 3),
-                  _buildButtons(),
+                  _buildButtons(theme),
                   const SizedBox(height: 32),
                 ],
               ),
@@ -134,7 +137,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 
-  Widget _buildLogo() {
+  Widget _buildLogo(ThemeNotifier theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -142,7 +145,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           width: 72,
           height: 72,
           decoration: BoxDecoration(
-            color: const Color(0xFF6366F1),
+            color: AppColors.primary,
             borderRadius: BorderRadius.circular(20),
           ),
           child: const Center(
@@ -158,12 +161,12 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           ),
         ),
         const SizedBox(height: 20),
-        const Text(
+        Text(
           'Binary.',
           style: TextStyle(
             fontSize: 48,
             fontWeight: FontWeight.w700,
-            color: Colors.white,
+            color: theme.text,
             letterSpacing: -2.0,
             height: 1.0,
           ),
@@ -173,7 +176,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           'Master IT. Get certified.',
           style: TextStyle(
             fontSize: 18,
-            color: Colors.white.withOpacity(0.4),
+            color: theme.subtext,
             letterSpacing: -0.4,
             fontWeight: FontWeight.w400,
           ),
@@ -182,25 +185,25 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 
-  Widget _buildFeatures() {
+  Widget _buildFeatures(ThemeNotifier theme) {
     final features = [
       (
         CupertinoIcons.doc_text_fill,
         'Structured courses',
         'ITIL V4, CSM, Networking & more',
-        const Color(0xFF6366F1)
+        AppColors.primary,
       ),
       (
         CupertinoIcons.rectangle_stack_fill,
         'Flashcard learning',
         'Learn concepts fast and effectively',
-        const Color(0xFF10B981)
+        AppColors.green,
       ),
       (
         Icons.track_changes_rounded,
         'Quizzes & tracking',
         'Test yourself and track progress',
-        const Color(0xFFF59E0B)
+        AppColors.amber,
       ),
     ];
 
@@ -230,20 +233,17 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   children: [
                     Text(
                       f.$2,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: theme.text,
                         letterSpacing: -0.3,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       f.$3,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.white.withOpacity(0.4),
-                      ),
+                      style: TextStyle(fontSize: 13, color: theme.subtext),
                     ),
                   ],
                 ),
@@ -255,59 +255,52 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 
-  Widget _buildButtons() {
+  Widget _buildButtons(ThemeNotifier theme) {
     return Column(
       children: [
         _PressableButton(
           onTap: () => _navigateTo(const SignupScreen()),
-          color: const Color(0xFF6366F1),
+          color: AppColors.primary,
           label: 'Get started',
           textColor: Colors.white,
         ),
         const SizedBox(height: 12),
         _PressableButton(
           onTap: () => _navigateTo(const LoginScreen()),
-          color: Colors.white.withOpacity(0.06),
+          color: theme.surface,
           label: 'I already have an account',
-          textColor: Colors.white,
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          textColor: theme.text,
+          border: Border.all(color: theme.border),
         ),
         const SizedBox(height: 24),
         Row(
           children: [
-            Expanded(
-                child: Divider(color: Colors.white.withOpacity(0.1))),
+            Expanded(child: Divider(color: theme.border)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Text(
                 'or continue with',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.3),
-                ),
+                style: TextStyle(fontSize: 12, color: theme.subtext),
               ),
             ),
-            Expanded(
-                child: Divider(color: Colors.white.withOpacity(0.1))),
+            Expanded(child: Divider(color: theme.border)),
           ],
         ),
         const SizedBox(height: 20),
         _GoogleButton(
           isLoading: _googleLoading,
           onTap: _handleGoogle,
+          theme: theme,
         ),
       ],
     );
   }
 }
 
-// Staggered feature animation
 class _AnimatedFeature extends StatefulWidget {
   final Widget child;
   final Duration delay;
-
   const _AnimatedFeature({required this.child, required this.delay});
-
   @override
   State<_AnimatedFeature> createState() => _AnimatedFeatureState();
 }
@@ -322,11 +315,14 @@ class _AnimatedFeatureState extends State<_AnimatedFeature>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _slide = Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
-        .animate(CurvedAnimation(
-            parent: _controller, curve: Curves.easeOutCubic));
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.05),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     Future.delayed(widget.delay, () {
       if (mounted) _controller.forward();
     });
@@ -339,21 +335,18 @@ class _AnimatedFeatureState extends State<_AnimatedFeature>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-        opacity: _fade,
-        child: SlideTransition(position: _slide, child: widget.child));
-  }
+  Widget build(BuildContext context) => FadeTransition(
+    opacity: _fade,
+    child: SlideTransition(position: _slide, child: widget.child),
+  );
 }
 
-// Pressable button with scale animation
 class _PressableButton extends StatefulWidget {
   final VoidCallback onTap;
   final Color color;
   final String label;
   final Color textColor;
   final BoxBorder? border;
-
   const _PressableButton({
     required this.onTap,
     required this.color,
@@ -361,7 +354,6 @@ class _PressableButton extends StatefulWidget {
     required this.textColor,
     this.border,
   });
-
   @override
   State<_PressableButton> createState() => _PressableButtonState();
 }
@@ -375,9 +367,13 @@ class _PressableButtonState extends State<_PressableButton>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 100));
-    _scale = Tween<double>(begin: 1.0, end: 0.96).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.96,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -421,13 +417,15 @@ class _PressableButtonState extends State<_PressableButton>
   }
 }
 
-// Google sign-in button
 class _GoogleButton extends StatefulWidget {
   final bool isLoading;
   final VoidCallback onTap;
-
-  const _GoogleButton({required this.isLoading, required this.onTap});
-
+  final ThemeNotifier theme;
+  const _GoogleButton({
+    required this.isLoading,
+    required this.onTap,
+    required this.theme,
+  });
   @override
   State<_GoogleButton> createState() => _GoogleButtonState();
 }
@@ -441,9 +439,13 @@ class _GoogleButtonState extends State<_GoogleButton>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 100));
-    _scale = Tween<double>(begin: 1.0, end: 0.96).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.96,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -469,9 +471,9 @@ class _GoogleButtonState extends State<_GoogleButton>
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.06),
+            color: widget.theme.surface,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            border: Border.all(color: widget.theme.border),
           ),
           child: widget.isLoading
               ? const Center(
@@ -479,7 +481,7 @@ class _GoogleButtonState extends State<_GoogleButton>
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
-                      color: Colors.white,
+                      color: AppColors.primary,
                       strokeWidth: 2,
                     ),
                   ),
@@ -489,12 +491,12 @@ class _GoogleButtonState extends State<_GoogleButton>
                   children: [
                     const _GoogleLogo(size: 22),
                     const SizedBox(width: 10),
-                    const Text(
+                    Text(
                       'Continue with Google',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: widget.theme.text,
                         letterSpacing: -0.2,
                       ),
                     ),
@@ -506,19 +508,15 @@ class _GoogleButtonState extends State<_GoogleButton>
   }
 }
 
-// Accurate Google G logo using official colours
 class _GoogleLogo extends StatelessWidget {
   final double size;
   const _GoogleLogo({this.size = 24});
-
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(painter: _GoogleLogoPainter()),
-    );
-  }
+  Widget build(BuildContext context) => SizedBox(
+    width: size,
+    height: size,
+    child: CustomPaint(painter: _GoogleLogoPainter()),
+  );
 }
 
 class _GoogleLogoPainter extends CustomPainter {
@@ -534,49 +532,27 @@ class _GoogleLogoPainter extends CustomPainter {
     final cx = w / 2;
     final cy = h / 2;
     final r = w / 2;
-
     final paint = Paint()..style = PaintingStyle.fill;
-
-    // White circle background
     paint.color = Colors.white;
     canvas.drawCircle(Offset(cx, cy), r, paint);
-
-    // Clip to circle
-    canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: r)));
-
+    canvas.clipPath(
+      Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: r)),
+    );
     final strokeW = w * 0.22;
     final innerR = r * 0.62;
     final arcRect = Rect.fromCircle(center: Offset(cx, cy), radius: innerR);
-
     final arcPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeW
       ..strokeCap = StrokeCap.butt;
-
-    // Blue arc — right side (top-right to bottom-right)
     arcPaint.color = _blue;
     canvas.drawArc(arcRect, -0.52, 1.74, false, arcPaint);
-
-    // Green arc — bottom
     arcPaint.color = _green;
     canvas.drawArc(arcRect, 1.22, 1.05, false, arcPaint);
-
-    // Yellow arc — bottom-left
     arcPaint.color = _yellow;
     canvas.drawArc(arcRect, 2.27, 0.79, false, arcPaint);
-
-    // Red arc — top-left
     arcPaint.color = _red;
     canvas.drawArc(arcRect, 3.06, 1.14, false, arcPaint);
-
-    // White horizontal bar (the crossbar of the G)
-    paint.color = Colors.white;
-    canvas.drawRect(
-      Rect.fromLTWH(cx, cy - strokeW / 2, r * 0.88, strokeW),
-      paint,
-    );
-
-    // Blue fill for right portion of crossbar
     paint.color = _blue;
     canvas.drawRect(
       Rect.fromLTWH(cx, cy - strokeW / 2, r * 0.88, strokeW),

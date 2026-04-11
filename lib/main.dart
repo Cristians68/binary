@@ -1,39 +1,150 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'screens/welcome_screen.dart';
+import 'screens/onboarding_screen.dart';
+import 'screens/app_theme.dart';
+import 'screens/subscription_service.dart';
+import 'screens/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await SubscriptionService.configure();
+  await NotificationService.init();
   runApp(const BinaryApp());
 }
 
-class BinaryApp extends StatelessWidget {
+class BinaryApp extends StatefulWidget {
   const BinaryApp({super.key});
 
   @override
+  State<BinaryApp> createState() => _BinaryAppState();
+}
+
+class _BinaryAppState extends State<BinaryApp> {
+  final ThemeNotifier _themeNotifier = ThemeNotifier();
+
+  @override
+  void initState() {
+    super.initState();
+    // Rebuild once prefs have loaded so we never flash the wrong theme
+    _themeNotifier.addListener(_onThemeLoaded);
+  }
+
+  void _onThemeLoaded() {
+    if (_themeNotifier.isLoaded && mounted) {
+      setState(() {});
+      _themeNotifier.removeListener(_onThemeLoaded);
+    }
+  }
+
+  @override
+  void dispose() {
+    _themeNotifier.removeListener(_onThemeLoaded);
+    _themeNotifier.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Binary',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0A0A0F),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF6366F1),
-          surface: Color(0xFF0A0A0F),
-        ),
-        pageTransitionsTheme: const PageTransitionsTheme(
-          builders: {
-            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
-          },
-        ),
-      ),
-      home: const WelcomeScreen(),
+    // Block render until SharedPreferences has been read
+    if (!_themeNotifier.isLoaded) {
+      return const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(backgroundColor: Colors.black, body: SizedBox.shrink()),
+      );
+    }
+
+    return ListenableBuilder(
+      listenable: _themeNotifier,
+      builder: (context, _) {
+        final isDark = _themeNotifier.isDark;
+        return MaterialApp(
+          title: 'Binary',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            brightness: isDark ? Brightness.dark : Brightness.light,
+            scaffoldBackgroundColor: isDark
+                ? AppColors.darkBg
+                : AppColors.lightBg,
+            colorScheme: ColorScheme(
+              brightness: isDark ? Brightness.dark : Brightness.light,
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              secondary: AppColors.primary,
+              onSecondary: Colors.white,
+              error: AppColors.red,
+              onError: Colors.white,
+              surface: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+              onSurface: isDark ? AppColors.darkText : AppColors.lightText,
+            ),
+            textTheme:
+                GoogleFonts.interTextTheme(
+                  isDark
+                      ? ThemeData.dark().textTheme
+                      : ThemeData.light().textTheme,
+                ).apply(
+                  bodyColor: isDark ? AppColors.darkText : AppColors.lightText,
+                  displayColor: isDark
+                      ? AppColors.darkText
+                      : AppColors.lightText,
+                ),
+            pageTransitionsTheme: const PageTransitionsTheme(
+              builders: {
+                TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+                TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+                TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
+              },
+            ),
+          ),
+          // AppTheme wraps every route so AppTheme.of(context) works everywhere
+          builder: (context, child) =>
+              AppTheme(notifier: _themeNotifier, child: child!),
+          home: const _AppEntry(),
+        );
+      },
     );
+  }
+}
+
+// ── Shows onboarding on first launch, then WelcomeScreen ─────────────────────
+class _AppEntry extends StatefulWidget {
+  const _AppEntry();
+  @override
+  State<_AppEntry> createState() => _AppEntryState();
+}
+
+class _AppEntryState extends State<_AppEntry> {
+  bool? _showOnboarding;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+  }
+
+  Future<void> _check() async {
+    final prefs = await SharedPreferences.getInstance();
+    final done = prefs.getBool('onboardingComplete') ?? false;
+    if (mounted) setState(() => _showOnboarding = !done);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_showOnboarding == null) {
+      final theme = AppTheme.of(context);
+      return Scaffold(backgroundColor: theme.bg);
+    }
+    if (_showOnboarding!) {
+      return OnboardingScreen(
+        onComplete: () {
+          if (mounted) setState(() => _showOnboarding = false);
+        },
+      );
+    }
+    return const WelcomeScreen();
   }
 }
