@@ -36,6 +36,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
     final plan = await SubscriptionService.getCurrentPlan();
     if (plan == SubscriptionPlan.single) {
       final info = await SubscriptionService.getCustomerInfo();
+      if (info == null) {
+        if (mounted) setState(() => _plan = plan);
+        return;
+      }
       // Pull subscribed course from Firestore
       final uid = info.originalAppUserId;
       final snap = await FirebaseFirestore.instance
@@ -350,7 +354,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         ),
                       ),
                       const Spacer(),
-                      // Lock badge or status pill
                       if (locked)
                         _lockBadge(theme)
                       else

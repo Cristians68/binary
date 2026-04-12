@@ -21,15 +21,21 @@ class AuthService {
       UserCredential? credential;
 
       if (kIsWeb) {
+        // Use redirect on web to avoid COOP/popup issues
         final provider = GoogleAuthProvider();
         provider.addScope('email');
         provider.addScope('profile');
-        try {
-          credential = await _auth.signInWithPopup(provider);
-        } catch (e) {
-          await _auth.signInWithRedirect(provider);
-          credential = await _auth.getRedirectResult();
+
+        // Check if we're returning from a redirect first
+        final redirectResult = await _auth.getRedirectResult();
+        if (redirectResult.user != null) {
+          await _onSignInSuccess();
+          return redirectResult;
         }
+
+        // Otherwise kick off the redirect
+        await _auth.signInWithRedirect(provider);
+        return null; // Page will reload after redirect
       } else {
         final googleUser = await _googleSignIn.signIn();
         if (googleUser == null) return null;

@@ -15,55 +15,41 @@ class AppColors {
   static const darkNavBg = Color(0xFF0B0B0F);
 
   // ── Light mode — vibrant, Apple.com-inspired ──
-  // Deep white backgrounds with strong contrast and rich accent pops
-  static const lightBg = Color(0xFFFFFFFF); // Pure white base (apple.com bg)
-  static const lightSurface = Color(
-    0xFFF5F5F7,
-  ); // Apple's signature light grey surface
-  static const lightCard = Color(0xFFFFFFFF); // Clean white cards
-  static const lightBorder = Color(
-    0xFFD2D2D7,
-  ); // Apple's visible, crisp border grey
-  static const lightText = Color(
-    0xFF1D1D1F,
-  ); // Apple's near-black headline text
-  static const lightSubtext = Color(
-    0xFF6E6E73,
-  ); // Apple's secondary text — legible grey
-  static const lightNavBg = Color(
-    0xFFF5F5F7,
-  ); // Matches surface for nav cohesion
+  static const lightBg = Color(0xFFFFFFFF);
+  static const lightSurface = Color(0xFFF5F5F7);
+  static const lightCard = Color(0xFFFFFFFF);
+  static const lightBorder = Color(0xFFD2D2D7);
+  static const lightText = Color(0xFF1D1D1F);
+  static const lightSubtext = Color(0xFF6E6E73);
+  static const lightNavBg = Color(0xFFF5F5F7);
 
-  // ── Apple-style accent colors (same in both modes — vivid & saturated) ──
-  static const primary = Color(0xFF0071E3); // Apple's signature blue (CTA blue)
-  static const blue = Color(0xFF0077ED); // Slightly richer interactive blue
-  static const green = Color(0xFF1DB954); // Rich, vivid green
-  static const amber = Color(0xFFFF9500); // Deep amber/orange
-  static const red = Color(0xFFFF3B30); // Apple red
-  static const indigo = Color(
-    0xFF5E5CE6,
-  ); // iOS Indigo (kept as secondary accent)
+  // ── Apple-style accent colors ──
+  static const primary = Color(0xFF0071E3);
+  static const blue = Color(0xFF0077ED);
+  static const green = Color(0xFF1DB954);
+  static const amber = Color(0xFFFF9500);
+  static const red = Color(0xFFFF3B30);
+  static const indigo = Color(0xFF5E5CE6);
 }
 
 // ── Theme notifier ────────────────────────────────────────────────────────────
 class ThemeNotifier extends ChangeNotifier {
-  // Null means "not yet loaded from prefs" — prevents premature dark flash
+  // Null means "not yet loaded from prefs"
   bool? _isDark;
 
-  bool get isDark => _isDark ?? true;
+  bool get isDark => _isDark ?? false; // ← default light mode
 
   /// True only after SharedPreferences has been read.
-  /// Widgets can gate rendering on this to avoid a flash.
   bool get isLoaded => _isDark != null;
 
   ThemeNotifier() {
     _loadFromPrefs();
   }
 
-  /// Reads the persisted preference. Falls back to dark mode if never set.
+  /// Reads the persisted preference. Falls back to light mode if never set.
   Future<void> _loadFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
-    _isDark = prefs.getBool('isDarkMode') ?? true;
+    _isDark = prefs.getBool('isDarkMode') ?? false; // ← default light mode
     notifyListeners();
   }
 

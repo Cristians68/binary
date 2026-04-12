@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -16,6 +17,9 @@ class SubscriptionService {
 
   // ── Configure RevenueCat — call once in main() after Firebase.initializeApp ─
   static Future<void> configure() async {
+    // RevenueCat does not support web — skip on web platform
+    if (kIsWeb) return;
+
     await Purchases.setLogLevel(LogLevel.debug);
     final config = PurchasesConfiguration(kRevenueCatApiKey);
     await Purchases.configure(config);
@@ -28,6 +32,7 @@ class SubscriptionService {
 
   // ── Call after Firebase sign-in to link the two identities ───────────────────
   static Future<void> identifyUser() async {
+    if (kIsWeb) return;
     final uid = _uid;
     if (uid != null) {
       await Purchases.logIn(uid);
@@ -36,6 +41,7 @@ class SubscriptionService {
 
   // ── Fetch available packages from RevenueCat ─────────────────────────────────
   static Future<List<Package>> getPackages() async {
+    if (kIsWeb) return [];
     try {
       final offerings = await Purchases.getOfferings();
       return offerings.current?.availablePackages ?? [];
@@ -46,6 +52,7 @@ class SubscriptionService {
 
   // ── Purchase a package (v9 API) ───────────────────────────────────────────────
   static Future<bool> purchase(Package package, {String? courseId}) async {
+    if (kIsWeb) return false;
     try {
       final purchaseParams = PurchaseParams.package(package);
       final result = await Purchases.purchase(purchaseParams);
@@ -60,6 +67,7 @@ class SubscriptionService {
 
   // ── Restore purchases (required by Apple) ────────────────────────────────────
   static Future<bool> restore() async {
+    if (kIsWeb) return false;
     try {
       final info = await Purchases.restorePurchases();
       await _syncToFirestore(info);
@@ -70,11 +78,13 @@ class SubscriptionService {
   }
 
   // ── Get current subscription status ──────────────────────────────────────────
-  static Future<CustomerInfo> getCustomerInfo() async {
+  static Future<CustomerInfo?> getCustomerInfo() async {
+    if (kIsWeb) return null;
     return await Purchases.getCustomerInfo();
   }
 
   static Future<SubscriptionPlan> getCurrentPlan() async {
+    if (kIsWeb) return SubscriptionPlan.none;
     try {
       final info = await Purchases.getCustomerInfo();
       return _planFromInfo(info);
@@ -85,6 +95,8 @@ class SubscriptionService {
 
   // ── Check if a specific course is accessible ─────────────────────────────────
   static Future<bool> canAccessCourse(String courseId) async {
+    // On web, grant access freely (no purchases on web)
+    if (kIsWeb) return true;
     try {
       final info = await Purchases.getCustomerInfo();
       final plan = _planFromInfo(info);
@@ -105,6 +117,7 @@ class SubscriptionService {
 
   // ── Check if user has ever started a trial ────────────────────────────────────
   static Future<bool> hasUsedTrial() async {
+    if (kIsWeb) return false;
     final uid = _uid;
     if (uid == null) return false;
     final snap = await _db.collection('users').doc(uid).get();
@@ -113,6 +126,7 @@ class SubscriptionService {
 
   // ── Stream subscription state for real-time UI updates ───────────────────────
   static Stream<SubscriptionPlan> planStream() {
+    if (kIsWeb) return Stream.value(SubscriptionPlan.none);
     final uid = _uid;
     if (uid == null) return const Stream.empty();
     return _db.collection('users').doc(uid).snapshots().map((snap) {
