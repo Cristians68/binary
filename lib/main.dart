@@ -30,7 +30,6 @@ class _BinaryAppState extends State<BinaryApp> {
   @override
   void initState() {
     super.initState();
-    // Rebuild once prefs have loaded so we never flash the wrong theme
     _themeNotifier.addListener(_onThemeLoaded);
   }
 
@@ -50,7 +49,6 @@ class _BinaryAppState extends State<BinaryApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Block render until SharedPreferences has been read
     if (!_themeNotifier.isLoaded) {
       return const MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -92,7 +90,7 @@ class _BinaryAppState extends State<BinaryApp> {
                       ? AppColors.darkText
                       : AppColors.lightText,
                 ),
-            pageTransitionsTheme: const PageTransitionsTheme(
+            pageTransitionsTheme: PageTransitionsTheme(
               builders: {
                 TargetPlatform.android: CupertinoPageTransitionsBuilder(),
                 TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
@@ -100,7 +98,6 @@ class _BinaryAppState extends State<BinaryApp> {
               },
             ),
           ),
-          // AppTheme wraps every route so AppTheme.of(context) works everywhere
           builder: (context, child) =>
               AppTheme(notifier: _themeNotifier, child: child!),
           home: const _AppEntry(),
@@ -110,7 +107,6 @@ class _BinaryAppState extends State<BinaryApp> {
   }
 }
 
-// ── Shows onboarding on first launch, then WelcomeScreen ─────────────────────
 class _AppEntry extends StatefulWidget {
   const _AppEntry();
   @override
