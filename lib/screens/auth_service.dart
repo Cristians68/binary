@@ -6,9 +6,13 @@ import 'subscription_service.dart';
 
 class AuthService {
   static final _auth = FirebaseAuth.instance;
+
+  // On iOS, clientId is read automatically from GoogleService-Info.plist
+  // Only pass clientId on web
   static final _googleSignIn = GoogleSignIn(
-    clientId:
-        '221875967372-a08gr7ktvm54pijtu2q0b4vc0115rb13.apps.googleusercontent.com',
+    clientId: kIsWeb
+        ? '221875967372-i0if4k8ec66okcb592vdeugf0j0oi10n.apps.googleusercontent.com'
+        : null,
   );
 
   static Future<void> signOut() async {
@@ -35,13 +39,18 @@ class AuthService {
         return null;
       } else {
         final googleUser = await _googleSignIn.signIn();
-        if (googleUser == null) return null;
+        if (googleUser == null) {
+          debugPrint('Google Sign-In: user cancelled or failed');
+          return null;
+        }
+        debugPrint('Google Sign-In: got user ${googleUser.email}');
         final googleAuth = await googleUser.authentication;
         final cred = GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
         credential = await _auth.signInWithCredential(cred);
+        debugPrint('Google Sign-In: Firebase success');
       }
 
       if (credential != null) {
@@ -50,6 +59,7 @@ class AuthService {
 
       return credential;
     } catch (e) {
+      debugPrint('Google Sign-In ERROR: $e');
       return null;
     }
   }
