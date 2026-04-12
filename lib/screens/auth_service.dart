@@ -8,7 +8,7 @@ class AuthService {
   static final _auth = FirebaseAuth.instance;
   static final _googleSignIn = GoogleSignIn(
     clientId:
-        '221875967372-i0if4k8ec66okcb592vdeugf0j0oi10n.apps.googleusercontent.com',
+        '221875967372-a08gr7ktvm54pijtu2q0b4vc0115rb13.apps.googleusercontent.com',
   );
 
   static Future<void> signOut() async {
@@ -21,21 +21,18 @@ class AuthService {
       UserCredential? credential;
 
       if (kIsWeb) {
-        // Use redirect on web to avoid COOP/popup issues
         final provider = GoogleAuthProvider();
         provider.addScope('email');
         provider.addScope('profile');
 
-        // Check if we're returning from a redirect first
         final redirectResult = await _auth.getRedirectResult();
         if (redirectResult.user != null) {
           await _onSignInSuccess();
           return redirectResult;
         }
 
-        // Otherwise kick off the redirect
         await _auth.signInWithRedirect(provider);
-        return null; // Page will reload after redirect
+        return null;
       } else {
         final googleUser = await _googleSignIn.signIn();
         if (googleUser == null) return null;
@@ -57,12 +54,8 @@ class AuthService {
     }
   }
 
-  /// Call this after any sign-in method succeeds (Google, Apple, email, etc.)
   static Future<void> _onSignInSuccess() async {
-    // Link RevenueCat identity to Firebase UID
     await SubscriptionService.identifyUser();
-
-    // Request notification permissions and schedule reminders
     await NotificationService.requestPermissions();
   }
 }
