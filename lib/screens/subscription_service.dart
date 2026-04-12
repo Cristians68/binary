@@ -3,10 +3,9 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// ── Product IDs — must match App Store Connect + RevenueCat dashboard ─────────
 const String kSingleCourseProductId = 'binary_single_monthly';
 const String kAllCoursesProductId = 'binary_all_monthly';
-const String kRevenueCatApiKey = 'test_SOwsFWqTJxFzzOeStHAiREVGcQC';
+const String kRevenueCatApiKey = 'appl_HRXqLWNhneveCEBKZdSgczigiGk';
 
 enum SubscriptionPlan { none, single, all }
 
@@ -14,28 +13,33 @@ class SubscriptionService {
   static FirebaseFirestore get _db => FirebaseFirestore.instance;
   static String? get _uid => FirebaseAuth.instance.currentUser?.uid;
 
-  // ── Configure RevenueCat — call once in main() after Firebase.initializeApp ─
   static Future<void> configure() async {
     if (kIsWeb) return;
-    await Purchases.setLogLevel(LogLevel.debug);
-    final config = PurchasesConfiguration(kRevenueCatApiKey);
-    await Purchases.configure(config);
-    final uid = _uid;
-    if (uid != null) {
-      await Purchases.logIn(uid);
+    try {
+      await Purchases.setLogLevel(LogLevel.debug);
+      final config = PurchasesConfiguration(kRevenueCatApiKey);
+      await Purchases.configure(config);
+      final uid = _uid;
+      if (uid != null) {
+        await Purchases.logIn(uid);
+      }
+    } catch (e) {
+      debugPrint('RevenueCat configure failed: $e');
     }
   }
 
-  // ── Call after Firebase sign-in to link the two identities ───────────────────
   static Future<void> identifyUser() async {
     if (kIsWeb) return;
-    final uid = _uid;
-    if (uid != null) {
-      await Purchases.logIn(uid);
+    try {
+      final uid = _uid;
+      if (uid != null) {
+        await Purchases.logIn(uid);
+      }
+    } catch (e) {
+      debugPrint('RevenueCat identifyUser failed: $e');
     }
   }
 
-  // ── Fetch available packages from RevenueCat ─────────────────────────────────
   static Future<List<Package>> getPackages() async {
     if (kIsWeb) return [];
     try {
@@ -46,7 +50,6 @@ class SubscriptionService {
     }
   }
 
-  // ── Purchase a package (v9 API) ───────────────────────────────────────────────
   static Future<bool> purchase(Package package, {String? courseId}) async {
     if (kIsWeb) return false;
     try {
@@ -61,7 +64,6 @@ class SubscriptionService {
     }
   }
 
-  // ── Restore purchases (required by Apple) ────────────────────────────────────
   static Future<bool> restore() async {
     if (kIsWeb) return false;
     try {
@@ -73,10 +75,13 @@ class SubscriptionService {
     }
   }
 
-  // ── Get current subscription status ──────────────────────────────────────────
   static Future<CustomerInfo?> getCustomerInfo() async {
     if (kIsWeb) return null;
-    return await Purchases.getCustomerInfo();
+    try {
+      return await Purchases.getCustomerInfo();
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<SubscriptionPlan> getCurrentPlan() async {
@@ -89,7 +94,6 @@ class SubscriptionService {
     }
   }
 
-  // ── Check if a specific course is accessible ─────────────────────────────────
   static Future<bool> canAccessCourse(String courseId) async {
     if (kIsWeb) return true;
     try {
@@ -109,16 +113,18 @@ class SubscriptionService {
     }
   }
 
-  // ── Check if user has ever started a trial ────────────────────────────────────
   static Future<bool> hasUsedTrial() async {
     if (kIsWeb) return false;
-    final uid = _uid;
-    if (uid == null) return false;
-    final snap = await _db.collection('users').doc(uid).get();
-    return snap.data()?['hasUsedTrial'] == true;
+    try {
+      final uid = _uid;
+      if (uid == null) return false;
+      final snap = await _db.collection('users').doc(uid).get();
+      return snap.data()?['hasUsedTrial'] == true;
+    } catch (_) {
+      return false;
+    }
   }
 
-  // ── Stream subscription state for real-time UI updates ───────────────────────
   static Stream<SubscriptionPlan> planStream() {
     if (kIsWeb) return Stream.value(SubscriptionPlan.none);
     final uid = _uid;
@@ -137,7 +143,6 @@ class SubscriptionService {
     });
   }
 
-  // ── Internal helpers ──────────────────────────────────────────────────────────
   static SubscriptionPlan _planFromInfo(CustomerInfo info) {
     final entitlements = info.entitlements.active;
     if (entitlements.containsKey('all_courses')) return SubscriptionPlan.all;
