@@ -6,8 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 // ── Product IDs — must match App Store Connect + RevenueCat dashboard ─────────
 const String kSingleCourseProductId = 'binary_single_monthly';
 const String kAllCoursesProductId = 'binary_all_monthly';
-const String kRevenueCatApiKey =
-    'YOUR_REVENUECAT_IOS_API_KEY'; // 🔑 replace this
+const String kRevenueCatApiKey = 'test_SOwsFWqTJxFzzOeStHAiREVGcQC';
 
 enum SubscriptionPlan { none, single, all }
 
@@ -17,13 +16,10 @@ class SubscriptionService {
 
   // ── Configure RevenueCat — call once in main() after Firebase.initializeApp ─
   static Future<void> configure() async {
-    // RevenueCat does not support web — skip on web platform
     if (kIsWeb) return;
-
     await Purchases.setLogLevel(LogLevel.debug);
     final config = PurchasesConfiguration(kRevenueCatApiKey);
     await Purchases.configure(config);
-
     final uid = _uid;
     if (uid != null) {
       await Purchases.logIn(uid);
@@ -95,12 +91,10 @@ class SubscriptionService {
 
   // ── Check if a specific course is accessible ─────────────────────────────────
   static Future<bool> canAccessCourse(String courseId) async {
-    // On web, grant access freely (no purchases on web)
     if (kIsWeb) return true;
     try {
       final info = await Purchases.getCustomerInfo();
       final plan = _planFromInfo(info);
-
       if (plan == SubscriptionPlan.all) return true;
       if (plan == SubscriptionPlan.single) {
         final uid = _uid;
@@ -158,24 +152,20 @@ class SubscriptionService {
   }) async {
     final uid = _uid;
     if (uid == null) return;
-
     final plan = _planFromInfo(info);
     final planString = plan == SubscriptionPlan.all
         ? 'all'
         : plan == SubscriptionPlan.single
         ? 'single'
         : 'none';
-
     final Map<String, dynamic> update = {
       'subscriptionPlan': planString,
       'subscriptionUpdatedAt': FieldValue.serverTimestamp(),
       'hasUsedTrial': true,
     };
-
     if (plan == SubscriptionPlan.single && courseId != null) {
       update['subscribedCourseId'] = courseId;
     }
-
     await _db.collection('users').doc(uid).set(update, SetOptions(merge: true));
   }
 }
