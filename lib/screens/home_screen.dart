@@ -21,9 +21,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Map<String, dynamic>> _courses = [];
+  List<Map<String, dynamic>> _enrolledCourses = [];
   bool _loadingCourses = true;
-  bool _seeding = false;
 
   int _streak = 0;
   int _badgeCount = 0;
@@ -36,31 +35,42 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _initStreak();
-    _seedAndLoad();
+    _loadEnrolledCourses();
   }
 
   Future<void> _initStreak() async {
     await StreakService.checkAndUpdateStreak();
   }
 
-  Future<void> _seedAndLoad() async {
-    final db = FirebaseFirestore.instance;
-    if (mounted) setState(() => _seeding = true);
-    await _seedAllCourses(db);
-    if (mounted) setState(() => _seeding = false);
-    await _loadCourses();
-  }
+  Future<void> _loadEnrolledCourses() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      if (mounted) setState(() => _loadingCourses = false);
+      return;
+    }
 
-  Future<void> _loadCourses() async {
     try {
-      final snapshot = await FirebaseFirestore.instance
+      // Load all courses
+      final coursesSnap = await FirebaseFirestore.instance
           .collection('courses')
           .orderBy('order')
           .get();
+
+      // Load user enrolments
+      final userSnap =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final userData = userSnap.data() ?? {};
+      final enrolments =
+          (userData['enrolments'] as Map<String, dynamic>?) ?? {};
+
+      final enrolled = coursesSnap.docs
+          .map((d) => {'id': d.id, ...d.data()})
+          .where((c) => enrolments[c['id']] == true)
+          .toList();
+
       if (mounted) {
         setState(() {
-          _courses =
-              snapshot.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+          _enrolledCourses = enrolled;
           _loadingCourses = false;
         });
       }
@@ -69,74 +79,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _seedAllCourses(FirebaseFirestore db) async {
-    await _seedCourse(db, 'binary-network-professional', {
-      'title': 'Network Professional',
-      'subtitle':
-          'Master modern networking from fundamentals to advanced design',
-      'tag': 'Binary Network Pro',
-      'color': 0xFF3B82F6,
-      'order': 1,
-      'isComingSoon': false,
-      'progress': 0.0,
-      'totalModules': 20,
-    }, []);
-
-    await _seedCourse(db, 'binary-cybersecurity-professional', {
-      'title': 'Cybersecurity Professional',
-      'subtitle': 'Threats, defenses, and ethical hacking techniques',
-      'tag': 'Binary Cyber Pro',
-      'color': 0xFFEF4444,
-      'order': 2,
-      'isComingSoon': false,
-      'progress': 0.0,
-      'totalModules': 20,
-    }, []);
-
-    await _seedCourse(db, 'binary-cloud-fundamentals', {
-      'title': 'Cloud Fundamentals',
-      'subtitle': 'Cloud concepts, services, and core architecture',
-      'tag': 'Binary Cloud',
-      'color': 0xFF06B6D4,
-      'order': 3,
-      'isComingSoon': false,
-      'progress': 0.0,
-      'totalModules': 20,
-    }, []);
-
-    await _seedCourse(db, 'binary-cloud-professional', {
-      'title': 'Cloud Professional',
-      'subtitle': 'Advanced cloud design, deployment, and optimization',
-      'tag': 'Binary Cloud Pro',
-      'color': 0xFF8B5CF6,
-      'order': 4,
-      'isComingSoon': false,
-      'progress': 0.0,
-      'totalModules': 20,
-    }, []);
-  }
-
-  Future<void> _seedCourse(
-    FirebaseFirestore db,
-    String docId,
-    Map<String, dynamic> courseData,
-    List<Map<String, dynamic>> modules,
-  ) async {
-    final ref = db.collection('courses').doc(docId);
-    await ref.set(courseData);
-  }
-
   void _onStatsUpdate(Map<String, dynamic> data) {
     if (!mounted) return;
 
-    // Badges — stored as a map of badgeId -> timestamp
     final badgesMap = data['badges'] as Map<String, dynamic>? ?? {};
-    final badges = badgesMap.length;
-
-    // Completed lessons
     final lessons = (data['completedLessons'] as List<dynamic>?)?.length ?? 0;
-
-    // Quiz scores
     final scores = List<Map<String, dynamic>>.from(
       (data['quizScores'] as List<dynamic>?)
               ?.map((e) => Map<String, dynamic>.from(e as Map)) ??
@@ -152,22 +99,16 @@ class _HomeScreenState extends State<HomeScreen> {
       avgScore = '${avg.toStringAsFixed(0)}%';
     }
 
-    // Streak — now stored as nested map
     final streakMap = data['streak'] as Map<String, dynamic>? ?? {};
-    final streak = (streakMap['current'] as num?)?.toInt() ?? 0;
-
-    // Daily goal — points-based
     final goalMap = data['dailyGoal'] as Map<String, dynamic>? ?? {};
-    final dailyPoints = (goalMap['todayPoints'] as num?)?.toInt() ?? 0;
-    final dailyTarget = (goalMap['target'] as num?)?.toInt() ?? 50;
 
     setState(() {
-      _streak = streak;
-      _badgeCount = badges;
+      _streak = (streakMap['current'] as num?)?.toInt() ?? 0;
+      _badgeCount = badgesMap.length;
       _lessonCount = lessons;
       _avgQuizScore = avgScore;
-      _dailyPoints = dailyPoints;
-      _dailyTarget = dailyTarget;
+      _dailyPoints = (goalMap['todayPoints'] as num?)?.toInt() ?? 0;
+      _dailyTarget = (goalMap['target'] as num?)?.toInt() ?? 50;
     });
   }
 
@@ -278,11 +219,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      CupertinoIcons.square_arrow_left,
-                      color: AppColors.red,
-                      size: 18,
-                    ),
+                    Icon(CupertinoIcons.square_arrow_left,
+                        color: AppColors.red, size: 18),
                     SizedBox(width: 8),
                     Text(
                       'Sign out',
@@ -308,8 +246,6 @@ class _HomeScreenState extends State<HomeScreen> {
         return CupertinoIcons.doc_text_fill;
       case 'CSM':
         return CupertinoIcons.person_2_fill;
-      case 'Networking':
-        return CupertinoIcons.antenna_radiowaves_left_right;
       case 'Binary Network Pro':
         return CupertinoIcons.wifi;
       case 'Binary Cyber Pro':
@@ -326,28 +262,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);
-
-    if (_seeding) {
-      return Scaffold(
-        backgroundColor: theme.bg,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(
-                color: AppColors.primary,
-                strokeWidth: 2,
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Setting up your courses…',
-                style: TextStyle(fontSize: 15, color: theme.subtext),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -372,51 +286,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 20),
                   _buildDailyGoal(theme),
                   const SizedBox(height: 28),
-                  _buildSectionTitle('Continue learning', theme),
+                  _buildSectionTitle('My courses', theme),
                   const SizedBox(height: 12),
-                  if (_loadingCourses)
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                          strokeWidth: 2,
-                        ),
-                      ),
-                    )
-                  else if (_courses.isEmpty)
-                    _buildEmptyCourses(theme)
-                  else
-                    ..._courses.map(
-                      (c) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _buildCourseCard(c, theme),
-                      ),
-                    ),
-                  if (_courses.isNotEmpty) ...[
-                    const SizedBox(height: 28),
-                    _buildSectionTitle("Today's picks", theme),
-                    const SizedBox(height: 12),
-                    _buildTodayCard(
-                      icon: _iconForTag(_courses.first['tag'] ?? ''),
-                      title: _courses.first['title'] ?? '',
-                      sub: '${_courses.first['tag']} · Module 1',
-                      color: Color(_courses.first['color'] ?? 0xFF6366F1),
-                      course: _courses.first,
-                      theme: theme,
-                    ),
-                    if (_courses.length > 1) ...[
-                      const SizedBox(height: 8),
-                      _buildTodayCard(
-                        icon: _iconForTag(_courses[1]['tag'] ?? ''),
-                        title: _courses[1]['title'] ?? '',
-                        sub: '${_courses[1]['tag']} · Module 1',
-                        color: Color(_courses[1]['color'] ?? 0xFF10B981),
-                        course: _courses[1],
-                        theme: theme,
-                      ),
-                    ],
-                  ],
+                  _buildEnrolledCourses(theme),
                   const SizedBox(height: 28),
                   _buildSectionTitle('Stats', theme),
                   const SizedBox(height: 12),
@@ -449,11 +321,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(width: 6),
-                const Icon(
-                  CupertinoIcons.hand_raised_fill,
-                  size: 15,
-                  color: Color(0xFFF59E0B),
-                ),
+                const Icon(CupertinoIcons.hand_raised_fill,
+                    size: 15, color: Color(0xFFF59E0B)),
               ],
             ),
             Text(
@@ -478,10 +347,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? _getFirstName()[0].toUpperCase()
                   : 'U',
               style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600),
             ),
           ),
         ),
@@ -514,31 +382,22 @@ class _HomeScreenState extends State<HomeScreen> {
               color: AppColors.amber.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(
-              CupertinoIcons.flame_fill,
-              color: AppColors.amber,
-              size: 24,
-            ),
+            child: const Icon(CupertinoIcons.flame_fill,
+                color: AppColors.amber, size: 24),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: theme.text,
-                    letterSpacing: -0.3,
-                  ),
-                ),
+                Text(label,
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: theme.text,
+                        letterSpacing: -0.3)),
                 const SizedBox(height: 2),
-                Text(
-                  sub,
-                  style: TextStyle(fontSize: 12, color: theme.subtext),
-                ),
+                Text(sub, style: TextStyle(fontSize: 12, color: theme.subtext)),
               ],
             ),
           ),
@@ -551,20 +410,14 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  CupertinoIcons.rosette,
-                  size: 13,
-                  color: AppColors.primary,
-                ),
+                const Icon(CupertinoIcons.rosette,
+                    size: 13, color: AppColors.primary),
                 const SizedBox(width: 4),
-                Text(
-                  '$_streak',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                Text('$_streak',
+                    style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700)),
               ],
             ),
           ),
@@ -591,24 +444,18 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Daily goal',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: theme.text,
-                  letterSpacing: -0.3,
-                ),
-              ),
+              Text('Daily goal',
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: theme.text,
+                      letterSpacing: -0.3)),
               Text(
                 isComplete
                     ? 'Complete! 🎉'
                     : '$_dailyPoints / $_dailyTarget pts',
                 style: TextStyle(
-                  fontSize: 12,
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                ),
+                    fontSize: 12, color: color, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -648,39 +495,62 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text(emoji, style: const TextStyle(fontSize: 12)),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: theme.subtext,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11,
+                  color: theme.subtext,
+                  fontWeight: FontWeight.w500)),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyCourses(ThemeNotifier theme) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: theme.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: theme.border),
-      ),
-      child: Center(
+  Widget _buildEnrolledCourses(ThemeNotifier theme) {
+    if (_loadingCourses) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: CircularProgressIndicator(
+              color: AppColors.primary, strokeWidth: 2),
+        ),
+      );
+    }
+
+    if (_enrolledCourses.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: theme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: theme.border),
+        ),
         child: Column(
           children: [
-            Icon(CupertinoIcons.book_fill, size: 32, color: theme.subtext),
-            const SizedBox(height: 12),
+            Icon(CupertinoIcons.book_fill, size: 36, color: theme.subtext),
+            const SizedBox(height: 14),
+            Text('No courses yet',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: theme.text)),
+            const SizedBox(height: 6),
             Text(
-              'No courses yet',
-              style: TextStyle(fontSize: 14, color: theme.subtext),
+              'Head to the Courses tab to enrol\nin your first course.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: theme.subtext, height: 1.5),
             ),
           ],
         ),
-      ),
+      );
+    }
+
+    return Column(
+      children: _enrolledCourses.map((c) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: _buildCourseCard(c, theme),
+        );
+      }).toList(),
     );
   }
 
@@ -720,31 +590,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: color.withValues(alpha: theme.isDark ? 0.15 : 0.10),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(
-                _iconForTag(course['tag'] ?? ''),
-                color: color,
-                size: 22,
-              ),
+              child: Icon(_iconForTag(course['tag'] ?? ''),
+                  color: color, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    course['title'] ?? '',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: theme.text,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
+                  Text(course['title'] ?? '',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: theme.text,
+                          letterSpacing: -0.3)),
                   const SizedBox(height: 2),
-                  Text(
-                    course['subtitle'] ?? '',
-                    style: TextStyle(fontSize: 12, color: theme.subtext),
-                  ),
+                  Text(course['subtitle'] ?? '',
+                      style: TextStyle(fontSize: 12, color: theme.subtext)),
                   const SizedBox(height: 10),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
@@ -763,108 +625,15 @@ class _HomeScreenState extends State<HomeScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  '${(progress * 100).toInt()}%',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Icon(
-                  CupertinoIcons.chevron_right,
-                  size: 12,
-                  color: theme.subtext,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTodayCard({
-    required IconData icon,
-    required String title,
-    required String sub,
-    required Color color,
-    required Map<String, dynamic> course,
-    required ThemeNotifier theme,
-  }) {
-    return GestureDetector(
-      onTap: () => _navigateToCourse(course),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: theme.isDark
-              ? color.withValues(alpha: 0.07)
-              : AppColors.lightCard,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: theme.isDark
-                ? color.withValues(alpha: 0.18)
-                : AppColors.lightBorder,
-          ),
-          boxShadow: theme.isDark
-              ? null
-              : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: theme.isDark ? 0.15 : 0.10),
-                borderRadius: BorderRadius.circular(13),
-              ),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
+                Text('${(progress * 100).toInt()}%',
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: theme.text,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    sub,
-                    style: TextStyle(fontSize: 11, color: theme.subtext),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                'Start',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.1,
-                ),
-              ),
+                        fontSize: 13,
+                        color: color,
+                        fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                Icon(CupertinoIcons.chevron_right,
+                    size: 12, color: theme.subtext),
+              ],
             ),
           ],
         ),
@@ -960,24 +729,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Icon(icon, color: iconColor, size: 19),
               ),
               const SizedBox(height: 10),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: theme.subtext,
-                  letterSpacing: 0.1,
-                ),
-              ),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 10, color: theme.subtext, letterSpacing: 0.1)),
               const SizedBox(height: 3),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: theme.text,
-                  letterSpacing: -0.5,
-                ),
-              ),
+              Text(value,
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: theme.text,
+                      letterSpacing: -0.5)),
             ],
           ),
         ),
