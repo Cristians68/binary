@@ -38,8 +38,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
         final userSnap =
             await FirebaseFirestore.instance.collection('users').doc(uid).get();
         final data = userSnap.data() ?? {};
-        final enrolments = (data['enrolments'] as Map<String, dynamic>?) ?? {};
-        enrolled = enrolments.entries
+        final enrollments = (data['enrolments'] as Map<String, dynamic>?) ?? {};
+        enrolled = enrollments.entries
             .where((e) => e.value == true)
             .map((e) => e.key)
             .toSet();
@@ -58,7 +58,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
     }
   }
 
-  Future<void> _toggleEnrolment(String courseId) async {
+  Future<void> _toggleEnrollment(String courseId) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
@@ -138,7 +138,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Enrol in courses to add them to your home screen.',
+                    'Enroll in courses to add them to your home screen.',
                     style: TextStyle(fontSize: 13, color: theme.subtext),
                   ),
                 ],
@@ -167,7 +167,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                             color: color,
                             isEnrolled: isEnrolled,
                             theme: theme,
-                            onEnrol: () => _toggleEnrolment(id),
+                            onEnroll: () => _toggleEnrollment(id),
                             onTap: () {
                               HapticFeedback.selectionClick();
                               Navigator.push(
@@ -198,7 +198,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
     required Color color,
     required bool isEnrolled,
     required ThemeNotifier theme,
-    required VoidCallback onEnrol,
+    required VoidCallback onEnroll,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -311,7 +311,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 ),
                 const Spacer(),
                 GestureDetector(
-                  onTap: onEnrol,
+                  onTap: onEnroll,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding:
@@ -323,7 +323,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           isEnrolled ? Border.all(color: theme.border) : null,
                     ),
                     child: Text(
-                      isEnrolled ? 'Unenrol' : 'Enrol',
+                      isEnrolled ? 'Unenroll' : 'Enroll',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -348,11 +348,11 @@ class _CoursesScreenState extends State<CoursesScreen> {
       children: [
         Icon(icon, size: 12, color: color.withValues(alpha: 0.7)),
         const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-              fontSize: 11, color: theme.subtext, fontWeight: FontWeight.w500),
-        ),
+        Text(label,
+            style: TextStyle(
+                fontSize: 11,
+                color: theme.subtext,
+                fontWeight: FontWeight.w500)),
       ],
     );
   }
