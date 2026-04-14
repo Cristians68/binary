@@ -30,7 +30,6 @@ class _LessonsScreenState extends State<LessonsScreen> {
         ),
       );
 
-      // Sort newest first
       raw.sort((a, b) {
         final ta = (a['completedAt'] != null)
             ? (a['completedAt'] as dynamic).toDate() as DateTime
@@ -115,7 +114,6 @@ class _LessonsScreenState extends State<LessonsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header ────────────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Row(
@@ -137,16 +135,16 @@ class _LessonsScreenState extends State<LessonsScreen> {
                           color: AppColors.green.withValues(alpha: 0.20),
                         ),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.arrow_back_ios_new_rounded,
                             size: 12,
                             color: AppColors.green,
                           ),
-                          const SizedBox(width: 4),
-                          const Text(
+                          SizedBox(width: 4),
+                          Text(
                             'Back',
                             style: TextStyle(
                               fontSize: 13,
@@ -170,7 +168,6 @@ class _LessonsScreenState extends State<LessonsScreen> {
                       ),
                     ),
                   ),
-                  // Count pill
                   if (!_loading)
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -193,10 +190,7 @@ class _LessonsScreenState extends State<LessonsScreen> {
                 ],
               ),
             ),
-
             const SizedBox(height: 20),
-
-            // ── Body ──────────────────────────────────────────────────────────
             Expanded(
               child: _loading
                   ? Center(
@@ -206,134 +200,131 @@ class _LessonsScreenState extends State<LessonsScreen> {
                       ),
                     )
                   : _lessons.isEmpty
-                  ? _buildEmpty(theme)
-                  : ListView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
-                      itemCount: _lessons.length,
-                      itemBuilder: (context, index) {
-                        final lesson = _lessons[index];
-                        final tag =
-                            (lesson['courseTag'] as String?) ?? 'Unknown';
-                        final color = _colorForTag(tag);
-                        final moduleTitle =
-                            (lesson['moduleTitle'] as String?) ?? 'Lesson';
-                        final date = _formatDate(lesson['completedAt']);
+                      ? _buildEmpty(theme)
+                      : ListView.builder(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                          itemCount: _lessons.length,
+                          itemBuilder: (context, index) {
+                            final lesson = _lessons[index];
+                            final tag =
+                                (lesson['courseTag'] as String?) ?? 'Unknown';
+                            final color = _colorForTag(tag);
+                            final moduleTitle =
+                                (lesson['moduleTitle'] as String?) ?? 'Lesson';
+                            final date = _formatDate(lesson['completedAt']);
 
-                        return _AnimatedItem(
-                          delay: Duration(milliseconds: 40 * index),
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 10),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: theme.isDark
-                                  ? color.withValues(alpha: 0.06)
-                                  : AppColors.lightCard,
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
-                                color: theme.isDark
-                                    ? color.withValues(alpha: 0.18)
-                                    : AppColors.lightBorder,
-                              ),
-                              boxShadow: theme.isDark
-                                  ? null
-                                  : [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.04,
-                                        ),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                            ),
-                            child: Row(
-                              children: [
-                                // ── Icon ──
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: color.withValues(
-                                      alpha: theme.isDark ? 0.15 : 0.10,
-                                    ),
-                                    borderRadius: BorderRadius.circular(13),
+                            return _AnimatedItem(
+                              delay: Duration(milliseconds: 40 * index),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: theme.isDark
+                                      ? color.withValues(alpha: 0.06)
+                                      : AppColors.lightCard,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                    color: theme.isDark
+                                        ? color.withValues(alpha: 0.18)
+                                        : AppColors.lightBorder,
                                   ),
-                                  child: Icon(
-                                    _iconForTag(tag),
-                                    color: color,
-                                    size: 20,
-                                  ),
+                                  boxShadow: theme.isDark
+                                      ? null
+                                      : [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.04,
+                                            ),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
                                 ),
-                                const SizedBox(width: 14),
-
-                                // ── Title + tag ──
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        moduleTitle,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: theme.text,
-                                          letterSpacing: -0.3,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        tag,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: theme.subtext,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                                // ── Right side ──
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                child: Row(
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
+                                      width: 44,
+                                      height: 44,
                                       decoration: BoxDecoration(
-                                        color: AppColors.green.withValues(
-                                          alpha: 0.12,
+                                        color: color.withValues(
+                                          alpha: theme.isDark ? 0.15 : 0.10,
                                         ),
-                                        borderRadius: BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(13),
                                       ),
-                                      child: const Text(
-                                        'Done',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.green,
-                                        ),
+                                      child: Icon(
+                                        _iconForTag(tag),
+                                        color: color,
+                                        size: 20,
                                       ),
                                     ),
-                                    const SizedBox(height: 5),
-                                    Text(
-                                      date,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: theme.subtext,
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            moduleTitle,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: theme.text,
+                                              letterSpacing: -0.3,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            tag,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: theme.subtext,
+                                            ),
+                                          ),
+                                        ],
                                       ),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.green.withValues(
+                                              alpha: 0.12,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: const Text(
+                                            'Done',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.green,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 5),
+                                        Text(
+                                          date,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: theme.subtext,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                              ),
+                            );
+                          },
+                        ),
             ),
           ],
         ),
@@ -375,7 +366,11 @@ class _LessonsScreenState extends State<LessonsScreen> {
             Text(
               'Complete your first lesson\nto see it here.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: theme.subtext, height: 1.5),
+              style: TextStyle(
+                fontSize: 14,
+                color: theme.subtext,
+                height: 1.5,
+              ),
             ),
           ],
         ),
@@ -384,7 +379,6 @@ class _LessonsScreenState extends State<LessonsScreen> {
   }
 }
 
-// ── Staggered entrance animation ──────────────────────────────────────────────
 class _AnimatedItem extends StatefulWidget {
   final Widget child;
   final Duration delay;
@@ -425,7 +419,7 @@ class _AnimatedItemState extends State<_AnimatedItem>
 
   @override
   Widget build(BuildContext context) => FadeTransition(
-    opacity: _fade,
-    child: SlideTransition(position: _slide, child: widget.child),
-  );
+        opacity: _fade,
+        child: SlideTransition(position: _slide, child: widget.child),
+      );
 }

@@ -29,7 +29,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int _badgeCount = 0;
   int _lessonCount = 0;
   String _avgQuizScore = '-';
-  int _dailyLessonsToday = 0;
+  int _dailyPoints = 0;
+  int _dailyTarget = 50;
 
   @override
   void initState() {
@@ -58,9 +59,8 @@ class _HomeScreenState extends State<HomeScreen> {
           .get();
       if (mounted) {
         setState(() {
-          _courses = snapshot.docs
-              .map((d) => {'id': d.id, ...d.data()})
-              .toList();
+          _courses =
+              snapshot.docs.map((d) => {'id': d.id, ...d.data()}).toList();
           _loadingCourses = false;
         });
       }
@@ -126,43 +126,48 @@ class _HomeScreenState extends State<HomeScreen> {
     await ref.set(courseData);
   }
 
-  void _onStatsUpdate(Map<String, dynamic> stats) {
+  void _onStatsUpdate(Map<String, dynamic> data) {
     if (!mounted) return;
-    final badges = (stats['badges'] as List<dynamic>?)?.length ?? 0;
-    final lessons = (stats['completedLessons'] as List<dynamic>?)?.length ?? 0;
+
+    // Badges — stored as a map of badgeId -> timestamp
+    final badgesMap = data['badges'] as Map<String, dynamic>? ?? {};
+    final badges = badgesMap.length;
+
+    // Completed lessons
+    final lessons = (data['completedLessons'] as List<dynamic>?)?.length ?? 0;
+
+    // Quiz scores
     final scores = List<Map<String, dynamic>>.from(
-      (stats['quizScores'] as List<dynamic>?)?.map(
-            (e) => Map<String, dynamic>.from(e as Map),
-          ) ??
+      (data['quizScores'] as List<dynamic>?)
+              ?.map((e) => Map<String, dynamic>.from(e as Map)) ??
           [],
     );
     String avgScore = '-';
     if (scores.isNotEmpty) {
-      final avg =
-          scores.fold<double>(
+      final avg = scores.fold<double>(
             0,
             (s, e) => s + ((e['score'] as num?) ?? 0).toDouble(),
           ) /
           scores.length;
       avgScore = '${avg.toStringAsFixed(0)}%';
     }
-    final today = DateTime.now();
-    final todayLessons = (stats['completedLessons'] as List<dynamic>? ?? [])
-        .where((l) {
-          final ts = (l as Map)['completedAt'] as Timestamp?;
-          if (ts == null) return false;
-          final d = ts.toDate();
-          return d.year == today.year &&
-              d.month == today.month &&
-              d.day == today.day;
-        })
-        .length;
+
+    // Streak — now stored as nested map
+    final streakMap = data['streak'] as Map<String, dynamic>? ?? {};
+    final streak = (streakMap['current'] as num?)?.toInt() ?? 0;
+
+    // Daily goal — points-based
+    final goalMap = data['dailyGoal'] as Map<String, dynamic>? ?? {};
+    final dailyPoints = (goalMap['todayPoints'] as num?)?.toInt() ?? 0;
+    final dailyTarget = (goalMap['target'] as num?)?.toInt() ?? 50;
+
     setState(() {
-      _streak = (stats['streak'] as int?) ?? 0;
+      _streak = streak;
       _badgeCount = badges;
       _lessonCount = lessons;
       _avgQuizScore = avgScore;
-      _dailyLessonsToday = todayLessons;
+      _dailyPoints = dailyPoints;
+      _dailyTarget = dailyTarget;
     });
   }
 
@@ -489,10 +494,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final sub = _streak == 0
         ? 'Start your streak today!'
         : _streak < 3
-        ? 'Great start — keep going!'
-        : _streak < 7
-        ? 'You\'re building momentum!'
-        : 'You\'re on a roll!';
+            ? 'Great start — keep going!'
+            : _streak < 7
+                ? 'You\'re building momentum!'
+                : 'You\'re on a roll!';
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -530,7 +535,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(sub, style: TextStyle(fontSize: 12, color: theme.subtext)),
+                Text(
+                  sub,
+                  style: TextStyle(fontSize: 12, color: theme.subtext),
+                ),
               ],
             ),
           ),
@@ -566,8 +574,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildDailyGoal(ThemeNotifier theme) {
-    const goal = 3;
-    final done = _dailyLessonsToday.clamp(0, goal);
+    final pct = (_dailyPoints / _dailyTarget).clamp(0.0, 1.0);
+    final isComplete = _dailyPoints >= _dailyTarget;
+    final color = isComplete ? AppColors.green : AppColors.primary;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -591,8 +601,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               Text(
-                '$done / $goal lessons',
-                style: TextStyle(fontSize: 12, color: theme.subtext),
+                isComplete
+                    ? 'Complete! 🎉'
+                    : '$_dailyPoints / $_dailyTarget pts',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -600,22 +616,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(5),
             child: LinearProgressIndicator(
-              value: done / goal,
+              value: pct,
               backgroundColor: theme.border,
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                AppColors.primary,
-              ),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
               minHeight: 6,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Row(
             children: [
-              _buildGoalDot(done > 0, 'Lesson 1', theme),
+              _buildPointPill(theme, '📖', '+10 per lesson'),
               const SizedBox(width: 8),
-              _buildGoalDot(done > 1, 'Lesson 2', theme),
-              const SizedBox(width: 8),
-              _buildGoalDot(done > 2, 'Lesson 3', theme),
+              _buildPointPill(theme, '✅', '+20 per quiz'),
             ],
           ),
         ],
@@ -623,41 +635,28 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildGoalDot(bool done, String label, ThemeNotifier theme) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: done
-              ? AppColors.primary.withValues(alpha: 0.15)
-              : theme.border.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: done
-                ? AppColors.primary.withValues(alpha: 0.35)
-                : theme.border,
+  Widget _buildPointPill(ThemeNotifier theme, String emoji, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: theme.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 12)),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: theme.subtext,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              done
-                  ? CupertinoIcons.checkmark_circle_fill
-                  : CupertinoIcons.circle,
-              size: 20,
-              color: done ? AppColors.primary : theme.subtext,
-            ),
-            const SizedBox(height: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                color: done ? AppColors.primary : theme.subtext,
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -751,9 +750,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: progress,
-                      backgroundColor: theme.isDark
-                          ? theme.border
-                          : AppColors.lightBorder,
+                      backgroundColor:
+                          theme.isDark ? theme.border : AppColors.lightBorder,
                       valueColor: AlwaysStoppedAnimation<Color>(color),
                       minHeight: 4,
                     ),
