@@ -42,8 +42,6 @@ class _QuizScreenState extends State<QuizScreen> {
     _loadQuestions();
   }
 
-  // ── THE FIX: shuffle answer positions at runtime so correct answer is never
-  // in a predictable position. The correctIndex tracks where it lands after shuffle.
   List<Map<String, dynamic>> _shuffleQuestions(
     List<Map<String, dynamic>> questions,
   ) {
@@ -127,8 +125,12 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
+  // ── FIXED: navigator captured before any async gap ─────────────────────────
   void _showResults() {
+    if (!mounted) return;
     final theme = AppTheme.of(context);
+    // Capture navigator BEFORE any async work or dialog dismissal
+    final navigator = Navigator.of(context);
     final percent = (_score / _questions.length * 100).toInt();
     final passed = _score >= (_questions.length * 0.6).ceil();
 
@@ -141,9 +143,8 @@ class _QuizScreenState extends State<QuizScreen> {
         score: _score,
         total: _questions.length,
       ).then((_) async {
-        final courseComplete = await ProgressService.isCourseComplete(
-          widget.courseId,
-        );
+        final courseComplete =
+            await ProgressService.isCourseComplete(widget.courseId);
         if (courseComplete && mounted) {
           NotificationService.showCourseCompleteNotification(widget.courseTag);
         }
@@ -204,36 +205,41 @@ class _QuizScreenState extends State<QuizScreen> {
                 ),
               ),
               const SizedBox(height: 24),
+              // ── Back to course ────────────────────────────────────────────
               GestureDetector(
                 onTap: () async {
                   HapticFeedback.selectionClick();
-                  Navigator.pop(context);
-                  Navigator.pop(context);
+                  // Pop dialog — synchronous, navigator still valid
+                  navigator.pop();
+
                   if (passed) {
                     final courseComplete =
                         await ProgressService.isCourseComplete(widget.courseId);
-                    if (courseComplete && mounted) {
-                      Navigator.push(
-                        context,
+                    // Guard after async gap
+                    if (!mounted) return;
+                    // Now pop the quiz screen
+                    navigator.pop();
+                    if (courseComplete) {
+                      navigator.push(
                         PageRouteBuilder(
-                          pageBuilder:
-                              (context, animation, secondaryAnimation) =>
-                                  CertificateScreen(
-                                    courseTitle: widget.courseTag,
-                                    courseTag: widget.courseTag,
-                                    color: widget.color,
-                                    courseId: widget.courseId,
-                                  ),
-                          transitionsBuilder:
-                              (context, animation, secondaryAnimation, child) =>
-                                  FadeTransition(
-                                    opacity: animation,
-                                    child: child,
-                                  ),
+                          pageBuilder: (_, animation, __) => CertificateScreen(
+                            courseTitle: widget.courseTag,
+                            courseTag: widget.courseTag,
+                            color: widget.color,
+                            courseId: widget.courseId,
+                          ),
+                          transitionsBuilder: (_, animation, __, child) =>
+                              FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          ),
                           transitionDuration: const Duration(milliseconds: 500),
                         ),
                       );
                     }
+                  } else {
+                    if (!mounted) return;
+                    navigator.pop();
                   }
                 },
                 child: Container(
@@ -256,10 +262,12 @@ class _QuizScreenState extends State<QuizScreen> {
                 ),
               ),
               const SizedBox(height: 10),
+              // ── Try again ─────────────────────────────────────────────────
               GestureDetector(
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  Navigator.pop(context);
+                  navigator.pop(); // pop dialog only
+                  if (!mounted) return;
                   setState(() {
                     _currentQuestion = 0;
                     _selectedAnswer = null;
