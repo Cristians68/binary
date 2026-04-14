@@ -2,7 +2,7 @@ name: binary
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 1.0.0+19
+version: 1.0.0+21
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
