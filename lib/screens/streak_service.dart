@@ -24,12 +24,6 @@ class StreakData {
       lastLogin: (map['lastLogin'] as Timestamp?)?.toDate(),
     );
   }
-
-  Map<String, dynamic> toMap() => {
-        'current': current,
-        'longest': longest,
-        'lastLogin': lastLogin != null ? Timestamp.fromDate(lastLogin!) : null,
-      };
 }
 
 class BadgeData {
@@ -75,12 +69,6 @@ class DailyGoalData {
       lastReset: (map['lastReset'] as Timestamp?)?.toDate(),
     );
   }
-
-  Map<String, dynamic> toMap() => {
-        'target': target,
-        'todayPoints': todayPoints,
-        'lastReset': lastReset != null ? Timestamp.fromDate(lastReset!) : null,
-      };
 }
 
 // ─────────────────────────────────────────────
@@ -180,7 +168,7 @@ class StreakService {
         .map((snap) => snap.data() ?? {});
   }
 
-  // ── One-shot fetch — used by LessonsScreen ────────────────────────────────
+  // ── One-shot fetch — used by LessonsScreen / ProfileScreen ───────────────
   static Future<Map<String, dynamic>> getStats() async {
     final doc = _userDoc;
     if (doc == null) return {};
@@ -192,6 +180,9 @@ class StreakService {
       return {};
     }
   }
+
+  // ── Alias for backward compat ─────────────────────────────────────────────
+  static Future<void> checkAndUpdateStreak() => recordLogin();
 
   // ── Record daily login + update streak ────────────────────────────────────
   static Future<void> recordLogin() async {
@@ -211,13 +202,9 @@ class StreakService {
       final lastLogin = streak.lastLogin;
 
       if (lastLogin != null) {
-        final lastDay = DateTime(
-          lastLogin.year,
-          lastLogin.month,
-          lastLogin.day,
-        );
+        final lastDay =
+            DateTime(lastLogin.year, lastLogin.month, lastLogin.day);
         final diff = today.difference(lastDay).inDays;
-
         if (diff == 0) {
           await _resetDailyGoalIfNeeded(doc, data, today);
           return;
@@ -233,12 +220,11 @@ class StreakService {
       final newLongest =
           newCurrent > streak.longest ? newCurrent : streak.longest;
 
+      // Use dot-notation to avoid nested-map iOS crash
       await doc.set({
-        'streak': StreakData(
-          current: newCurrent,
-          longest: newLongest,
-          lastLogin: now,
-        ).toMap(),
+        'streak.current': newCurrent,
+        'streak.longest': newLongest,
+        'streak.lastLogin': Timestamp.fromDate(now),
       }, SetOptions(merge: true));
 
       await _resetDailyGoalIfNeeded(doc, data, today);
@@ -247,9 +233,6 @@ class StreakService {
       debugPrint('StreakService.recordLogin error: $e');
     }
   }
-
-  // ── Alias so home_screen.dart compiles without changes ────────────────────
-  static Future<void> checkAndUpdateStreak() => recordLogin();
 
   // ── Add points toward daily goal ──────────────────────────────────────────
   static Future<void> addPoints(int points) async {
@@ -263,14 +246,19 @@ class StreakService {
         data['dailyGoal'] as Map<String, dynamic>? ?? {},
       );
 
-      await doc.set({
-        'dailyGoal': DailyGoalData(
-          target: goal.target,
-          todayPoints: goal.todayPoints + points,
-          lastReset: goal.lastReset,
-        ).toMap(),
-      }, SetOptions(merge: true));
+      await doc.update({
+        'dailyGoal.todayPoints': goal.todayPoints + points,
+      });
     } catch (e) {
+      // Document may not exist yet — create it
+      try {
+        final doc2 = _userDoc;
+        if (doc2 != null) {
+          await doc2.set({
+            'dailyGoal.todayPoints': points,
+          }, SetOptions(merge: true));
+        }
+      } catch (_) {}
       debugPrint('StreakService.addPoints error: $e');
     }
   }
@@ -290,31 +278,22 @@ class StreakService {
       final data = snapshot.data() ?? {};
       final quizzesPassed = ((data['quizzesPassed'] as num?) ?? 0).toInt() + 1;
 
-      await doc.set(
-        {'quizzesPassed': quizzesPassed},
-        SetOptions(merge: true),
-      );
+      await doc.update({'quizzesPassed': quizzesPassed});
 
       final earnedIds = _earnedBadgeIds(data);
-      final toAward = <String>[];
-
-      if (!earnedIds.contains('quiz_first')) toAward.add('quiz_first');
+      if (!earnedIds.contains('quiz_first')) await _awardBadge('quiz_first');
       if (score == total && !earnedIds.contains('quiz_perfect')) {
-        toAward.add('quiz_perfect');
+        await _awardBadge('quiz_perfect');
       }
       if (quizzesPassed >= 10 && !earnedIds.contains('quiz_10')) {
-        toAward.add('quiz_10');
-      }
-
-      for (final id in toAward) {
-        await _awardBadge(id);
+        await _awardBadge('quiz_10');
       }
     } catch (e) {
       debugPrint('StreakService.recordQuizPass error: $e');
     }
   }
 
-  // ── Call after completing a course ───────────────────────────────────────
+  // ── Call after completing a course ────────────────────────────────────────
   static Future<void> recordCourseComplete({
     required int totalCoursesCompleted,
     required int totalCoursesAvailable,
@@ -326,19 +305,16 @@ class StreakService {
       final snapshot = await doc.get();
       final data = snapshot.data() ?? {};
       final earnedIds = _earnedBadgeIds(data);
-      final toAward = <String>[];
 
-      if (!earnedIds.contains('course_first')) toAward.add('course_first');
+      if (!earnedIds.contains('course_first')) {
+        await _awardBadge('course_first');
+      }
       if (totalCoursesCompleted >= 3 && !earnedIds.contains('course_3')) {
-        toAward.add('course_3');
+        await _awardBadge('course_3');
       }
       if (totalCoursesCompleted >= totalCoursesAvailable &&
           !earnedIds.contains('course_all')) {
-        toAward.add('course_all');
-      }
-
-      for (final id in toAward) {
-        await _awardBadge(id);
+        await _awardBadge('course_all');
       }
     } catch (e) {
       debugPrint('StreakService.recordCourseComplete error: $e');
@@ -360,17 +336,14 @@ class StreakService {
         badges: _mergeEarned({}, kAllBadges),
       );
     }
-
     try {
       final snapshot = await doc.get();
       final data = snapshot.data() ?? {};
       return (
-        streak: StreakData.fromMap(
-          data['streak'] as Map<String, dynamic>? ?? {},
-        ),
+        streak:
+            StreakData.fromMap(data['streak'] as Map<String, dynamic>? ?? {}),
         goal: DailyGoalData.fromMap(
-          data['dailyGoal'] as Map<String, dynamic>? ?? {},
-        ),
+            data['dailyGoal'] as Map<String, dynamic>? ?? {}),
         badges: _mergeEarned(data, kAllBadges),
       );
     } catch (e) {
@@ -387,9 +360,11 @@ class StreakService {
   static Future<void> setDailyTarget(int target) async {
     final doc = _userDoc;
     if (doc == null) return;
-    await doc.set({
-      'dailyGoal': {'target': target},
-    }, SetOptions(merge: true));
+    try {
+      await doc.update({'dailyGoal.target': target});
+    } catch (_) {
+      await doc.set({'dailyGoal.target': target}, SetOptions(merge: true));
+    }
   }
 
   // ─────────────────────────────────────────────
@@ -413,11 +388,8 @@ class StreakService {
 
     if (needsReset) {
       await doc.set({
-        'dailyGoal': DailyGoalData(
-          target: goal.target,
-          todayPoints: 0,
-          lastReset: today,
-        ).toMap(),
+        'dailyGoal.todayPoints': 0,
+        'dailyGoal.lastReset': Timestamp.fromDate(today),
       }, SetOptions(merge: true));
     }
   }
@@ -425,7 +397,6 @@ class StreakService {
   static Future<void> _checkStreakBadges(int current) async {
     final doc = _userDoc;
     if (doc == null) return;
-
     final snapshot = await doc.get();
     final data = snapshot.data() ?? {};
     final earnedIds = _earnedBadgeIds(data);
@@ -441,13 +412,21 @@ class StreakService {
     }
   }
 
+  // KEY FIX: dot-notation field path instead of nested map
   static Future<void> _awardBadge(String badgeId) async {
     final doc = _userDoc;
     if (doc == null) return;
     debugPrint('Awarding badge: $badgeId');
-    await doc.set({
-      'badges': {badgeId: Timestamp.fromDate(DateTime.now())},
-    }, SetOptions(merge: true));
+    try {
+      await doc.update({
+        'badges.$badgeId': Timestamp.fromDate(DateTime.now()),
+      });
+    } catch (_) {
+      // Document doesn't exist yet
+      await doc.set({
+        'badges.$badgeId': Timestamp.fromDate(DateTime.now()),
+      }, SetOptions(merge: true));
+    }
   }
 
   static Set<String> _earnedBadgeIds(Map<String, dynamic> data) {

@@ -103,10 +103,18 @@ class _ProfileScreenState extends State<ProfileScreen>
     HapticFeedback.selectionClick();
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    await FirebaseFirestore.instance.collection('users').doc(uid).set(
-      {'notificationsEnabled': value},
-      SetOptions(merge: true),
-    );
+    // Flat field — no nested map, no iOS crash
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .update({'notificationsEnabled': value});
+    } catch (_) {
+      await FirebaseFirestore.instance.collection('users').doc(uid).set(
+        {'notificationsEnabled': value},
+        SetOptions(merge: true),
+      );
+    }
   }
 
   String _getFullName() =>
@@ -121,7 +129,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     return name.isNotEmpty ? name[0].toUpperCase() : 'U';
   }
 
-  // ── Edit profile ───────────────────────────────────────────────────────────
   void _showEditProfile() {
     final theme = AppTheme.of(context);
     final nameController = TextEditingController(
@@ -217,7 +224,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Notifications ──────────────────────────────────────────────────────────
   void _showNotificationsSheet() {
     final theme = AppTheme.of(context);
     showModalBottomSheet(
@@ -347,7 +353,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── My stats ───────────────────────────────────────────────────────────────
   void _showMyStats() {
     final theme = AppTheme.of(context);
     showModalBottomSheet(
@@ -446,7 +451,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Offline downloads ──────────────────────────────────────────────────────
   void _showOfflineDownloads() {
     final theme = AppTheme.of(context);
     showModalBottomSheet(
@@ -512,7 +516,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Help center ────────────────────────────────────────────────────────────
   Future<void> _openHelpCenter() async {
     final uri = Uri.parse('https://binaryacademy.app/help');
     try {
@@ -526,7 +529,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  // ── Send feedback ──────────────────────────────────────────────────────────
   Future<void> _sendFeedback() async {
     final uri = Uri(
       scheme: 'mailto',
@@ -559,7 +561,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Change password ────────────────────────────────────────────────────────
   void _showChangePasswordSheet() {
     final theme = AppTheme.of(context);
     final currentController = TextEditingController();
@@ -682,7 +683,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Sign out ───────────────────────────────────────────────────────────────
   void _signOut() {
     final theme = AppTheme.of(context);
     showModalBottomSheet(
@@ -774,7 +774,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── About ──────────────────────────────────────────────────────────────────
   void _showAboutSheet() {
     final theme = AppTheme.of(context);
     showModalBottomSheet(
@@ -847,7 +846,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);

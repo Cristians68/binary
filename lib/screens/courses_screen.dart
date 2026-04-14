@@ -66,7 +66,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
     final isEnrolled = _enrolledIds.contains(courseId);
 
-    // Optimistic update
+    // Optimistic UI update
     setState(() {
       if (isEnrolled) {
         _enrolledIds.remove(courseId);
@@ -76,19 +76,29 @@ class _CoursesScreenState extends State<CoursesScreen> {
     });
 
     try {
-      await FirebaseFirestore.instance.collection('users').doc(uid).set({
-        'enrolments': {courseId: !isEnrolled},
-      }, SetOptions(merge: true));
+      // Dot-notation field path — avoids nested-map iOS Firestore crash
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .update({'enrolments.$courseId': !isEnrolled});
     } catch (_) {
-      // Revert on failure
-      if (mounted) {
-        setState(() {
-          if (isEnrolled) {
-            _enrolledIds.add(courseId);
-          } else {
-            _enrolledIds.remove(courseId);
-          }
-        });
+      // Document may not exist yet — use set with merge
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(uid).set(
+          {'enrolments.$courseId': !isEnrolled},
+          SetOptions(merge: true),
+        );
+      } catch (_) {
+        // Revert optimistic update on failure
+        if (mounted) {
+          setState(() {
+            if (isEnrolled) {
+              _enrolledIds.add(courseId);
+            } else {
+              _enrolledIds.remove(courseId);
+            }
+          });
+        }
       }
     }
   }
@@ -241,11 +251,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     color: color.withValues(alpha: theme.isDark ? 0.15 : 0.10),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(
-                    _iconForTag(course['tag'] ?? ''),
-                    color: color,
-                    size: 22,
-                  ),
+                  child: Icon(_iconForTag(course['tag'] ?? ''),
+                      color: color, size: 22),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -262,10 +269,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        course['tag'] ?? '',
-                        style: TextStyle(fontSize: 12, color: color),
-                      ),
+                      Text(course['tag'] ?? '',
+                          style: TextStyle(fontSize: 12, color: color)),
                     ],
                   ),
                 ),
@@ -277,38 +282,26 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       color: AppColors.green.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
-                      'Enrolled',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.green,
-                      ),
-                    ),
+                    child: const Text('Enrolled',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.green)),
                   ),
               ],
             ),
             const SizedBox(height: 12),
-            Text(
-              course['subtitle'] ?? '',
-              style: TextStyle(fontSize: 13, color: theme.subtext, height: 1.4),
-            ),
+            Text(course['subtitle'] ?? '',
+                style:
+                    TextStyle(fontSize: 13, color: theme.subtext, height: 1.4)),
             const SizedBox(height: 14),
             Row(
               children: [
-                _buildCourseMeta(
-                  theme,
-                  CupertinoIcons.book_fill,
-                  '${course['totalModules'] ?? 8} modules',
-                  color,
-                ),
+                _buildCourseMeta(theme, CupertinoIcons.book_fill,
+                    '${course['totalModules'] ?? 8} modules', color),
                 const SizedBox(width: 12),
-                _buildCourseMeta(
-                  theme,
-                  CupertinoIcons.checkmark_seal_fill,
-                  'Certificate',
-                  color,
-                ),
+                _buildCourseMeta(theme, CupertinoIcons.checkmark_seal_fill,
+                    'Certificate', color),
                 const Spacer(),
                 GestureDetector(
                   onTap: onEnroll,
