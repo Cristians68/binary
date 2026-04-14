@@ -38,8 +38,8 @@ class _SignupScreenState extends State<SignupScreen>
         vsync: this, duration: const Duration(milliseconds: 600));
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
     _slide = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
-        .animate(CurvedAnimation(
-            parent: _controller, curve: Curves.easeOutCubic));
+        .animate(
+            CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
   }
 
@@ -61,8 +61,7 @@ class _SignupScreenState extends State<SignupScreen>
         PageRouteBuilder(
           pageBuilder: (_, animation, __) => const MainNavigation(),
           transitionsBuilder: (_, animation, __, child) => FadeTransition(
-            opacity:
-                CurvedAnimation(parent: animation, curve: Curves.easeOut),
+            opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
             child: child,
           ),
           transitionDuration: const Duration(milliseconds: 500),
@@ -112,18 +111,18 @@ class _SignupScreenState extends State<SignupScreen>
                   const SizedBox(height: 48),
                   _buildLabel('Full name'),
                   const SizedBox(height: 8),
-                  _buildTextField(
-                      _nameController, 'John Doe', false, CupertinoIcons.person),
+                  _buildTextField(_nameController, 'John Doe', false,
+                      CupertinoIcons.person),
                   const SizedBox(height: 16),
                   _buildLabel('Email address'),
                   const SizedBox(height: 8),
-                  _buildTextField(
-                      _emailController, 'you@example.com', false, CupertinoIcons.mail),
+                  _buildTextField(_emailController, 'you@example.com', false,
+                      CupertinoIcons.mail),
                   const SizedBox(height: 16),
                   _buildLabel('Password'),
                   const SizedBox(height: 8),
-                  _buildTextField(
-                      _passwordController, '••••••••', true, CupertinoIcons.lock),
+                  _buildTextField(_passwordController, '••••••••', true,
+                      CupertinoIcons.lock),
                   const SizedBox(height: 28),
                   _buildLabel('What is your main learning goal?'),
                   const SizedBox(height: 12),
@@ -253,8 +252,8 @@ class _SignupScreenState extends State<SignupScreen>
         ),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: TextStyle(
-              color: Colors.white.withOpacity(0.2), fontSize: 15),
+          hintStyle:
+              TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 15),
           prefixIcon:
               Icon(icon, color: Colors.white.withOpacity(0.25), size: 18),
           suffixIcon: isPassword
@@ -311,8 +310,7 @@ class _SignupScreenState extends State<SignupScreen>
                 color: selected
                     ? const Color(0xFF6366F1)
                     : Colors.white.withOpacity(0.45),
-                fontWeight:
-                    selected ? FontWeight.w600 : FontWeight.w400,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                 letterSpacing: -0.1,
               ),
             ),
@@ -323,7 +321,6 @@ class _SignupScreenState extends State<SignupScreen>
   }
 }
 
-// Reusable pressable button with scale animation
 class _PressableButton extends StatefulWidget {
   final VoidCallback? onTap;
   final Color color;
@@ -349,8 +346,8 @@ class _PressableButtonState extends State<_PressableButton>
     super.initState();
     _controller = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 100));
-    _scale = Tween<double>(begin: 1.0, end: 0.96).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _scale = Tween<double>(begin: 1.0, end: 0.96)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override

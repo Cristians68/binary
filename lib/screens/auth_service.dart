@@ -8,8 +8,8 @@ import 'subscription_service.dart';
 class AuthService {
   static final _auth = FirebaseAuth.instance;
 
-  static GoogleSignIn get _googleSignIn =>
-      GoogleSignIn(scopes: ['email', 'profile']);
+  // Cached instance — recreating on every call causes state issues on Android
+  static final _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
 
   static Future<void> signOut() async {
     try {
@@ -21,9 +21,9 @@ class AuthService {
   static Future<UserCredential?> signInWithGoogle() async {
     if (kIsWeb) {
       try {
-        final provider = GoogleAuthProvider();
-        provider.addScope('email');
-        provider.addScope('profile');
+        final provider = GoogleAuthProvider()
+          ..addScope('email')
+          ..addScope('profile');
         final redirectResult = await _auth.getRedirectResult();
         if (redirectResult.user != null) {
           await _onSignInSuccess();
@@ -38,23 +38,35 @@ class AuthService {
     }
 
     try {
-      final googleSignIn = _googleSignIn;
-      final googleUser = await googleSignIn.signIn();
+      // Disconnect clears any stale cached account that causes crashes on retry
+      try {
+        await _googleSignIn.disconnect();
+      } catch (_) {}
+
+      final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         debugPrint('Google Sign-In: cancelled by user');
         return null;
       }
       debugPrint('Google Sign-In: got user ${googleUser.email}');
+
       final googleAuth = await googleUser.authentication;
       final accessToken = googleAuth.accessToken;
       final idToken = googleAuth.idToken;
       debugPrint(
         'Google Sign-In: accessToken=${accessToken != null}, idToken=${idToken != null}',
       );
+
+      if (idToken == null) {
+        debugPrint('Google Sign-In: idToken is null — aborting');
+        return null;
+      }
+
       final credential = GoogleAuthProvider.credential(
         accessToken: accessToken,
         idToken: idToken,
       );
+
       final userCredential = await _auth.signInWithCredential(credential);
       debugPrint(
         'Google Sign-In: Firebase success uid=${userCredential.user?.uid}',

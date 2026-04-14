@@ -51,16 +51,15 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         transitionsBuilder: (_, animation, __, child) => FadeTransition(
           opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
           child: SlideTransition(
-            position:
-                Tween<Offset>(
-                  begin: const Offset(0, 0.03),
-                  end: Offset.zero,
-                ).animate(
-                  CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutCubic,
-                  ),
-                ),
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.03),
+              end: Offset.zero,
+            ).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              ),
+            ),
             child: child,
           ),
         ),
@@ -336,9 +335,9 @@ class _AnimatedFeatureState extends State<_AnimatedFeature>
 
   @override
   Widget build(BuildContext context) => FadeTransition(
-    opacity: _fade,
-    child: SlideTransition(position: _slide, child: widget.child),
-  );
+        opacity: _fade,
+        child: SlideTransition(position: _slide, child: widget.child),
+      );
 }
 
 class _PressableButton extends StatefulWidget {
@@ -513,10 +512,10 @@ class _GoogleLogo extends StatelessWidget {
   const _GoogleLogo({this.size = 24});
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: size,
-    height: size,
-    child: CustomPaint(painter: _GoogleLogoPainter()),
-  );
+        width: size,
+        height: size,
+        child: CustomPaint(painter: _GoogleLogoPainter()),
+      );
 }
 
 class _GoogleLogoPainter extends CustomPainter {
