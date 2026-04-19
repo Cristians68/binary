@@ -1,29 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'app_theme.dart';
 
 class QuizScoreScreen extends StatelessWidget {
   const QuizScoreScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final theme = AppTheme.of(context);
     final uid = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0F),
+      backgroundColor: theme.bg,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(context),
+            _buildHeader(context, theme),
             Expanded(
               child: uid == null
-                  ? const Center(
+                  ? Center(
                       child: Text(
                         'Not signed in',
-                        style: TextStyle(color: Colors.white54),
+                        style: TextStyle(color: theme.subtext),
                       ),
                     )
                   : StreamBuilder<DocumentSnapshot>(
@@ -33,9 +34,9 @@ class QuizScoreScreen extends StatelessWidget {
                           .snapshots(),
                       builder: (context, snap) {
                         if (snap.connectionState == ConnectionState.waiting) {
-                          return const Center(
+                          return Center(
                             child: CircularProgressIndicator(
-                              color: Color(0xFF6366F1),
+                              color: AppColors.primary,
                               strokeWidth: 2,
                             ),
                           );
@@ -48,7 +49,7 @@ class QuizScoreScreen extends StatelessWidget {
                               ) ??
                               [],
                         );
-                        return _buildContent(scores);
+                        return _buildContent(scores, theme);
                       },
                     ),
             ),
@@ -58,7 +59,7 @@ class QuizScoreScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, ThemeNotifier theme) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Row(
@@ -71,26 +72,26 @@ class QuizScoreScreen extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFF6366F1).withOpacity(0.1),
+                color: AppColors.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: const Color(0xFF6366F1).withOpacity(0.2),
+                  color: AppColors.primary.withOpacity(0.2),
                 ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
+                children: [
                   Icon(
                     Icons.arrow_back_ios_new_rounded,
                     size: 13,
-                    color: Color(0xFF6366F1),
+                    color: AppColors.primary,
                   ),
-                  SizedBox(width: 5),
+                  const SizedBox(width: 5),
                   Text(
                     'Back',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF6366F1),
+                      color: AppColors.primary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -99,12 +100,12 @@ class QuizScoreScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          const Text(
+          Text(
             'Quiz Scores',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: theme.text,
               letterSpacing: -0.8,
             ),
           ),
@@ -113,7 +114,7 @@ class QuizScoreScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildContent(List<Map<String, dynamic>> scores) {
+  Widget _buildContent(List<Map<String, dynamic>> scores, ThemeNotifier theme) {
     if (scores.isEmpty) {
       return Center(
         child: Column(
@@ -123,22 +124,22 @@ class QuizScoreScreen extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: const Color(0xFF6366F1).withOpacity(0.1),
+                color: AppColors.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Icon(
                 Icons.track_changes_rounded,
-                color: Color(0xFF6366F1),
+                color: AppColors.primary,
                 size: 32,
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'No quizzes taken yet',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: theme.text,
               ),
             ),
             const SizedBox(height: 6),
@@ -146,7 +147,7 @@ class QuizScoreScreen extends StatelessWidget {
               'Complete a lesson to unlock quizzes',
               style: TextStyle(
                 fontSize: 13,
-                color: Colors.white.withOpacity(0.4),
+                color: theme.subtext,
               ),
             ),
           ],
@@ -154,8 +155,7 @@ class QuizScoreScreen extends StatelessWidget {
       );
     }
 
-    final avg =
-        scores.fold<double>(
+    final avg = scores.fold<double>(
           0,
           (sum, s) => sum + ((s['score'] as num?) ?? 0).toDouble(),
         ) /
@@ -165,13 +165,14 @@ class QuizScoreScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
       physics: const BouncingScrollPhysics(),
       children: [
+        // Summary card
         Container(
           padding: const EdgeInsets.all(20),
           margin: const EdgeInsets.only(bottom: 20),
           decoration: BoxDecoration(
-            color: const Color(0xFF6366F1).withOpacity(0.1),
+            color: AppColors.primary.withOpacity(0.08),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.2)),
+            border: Border.all(color: AppColors.primary.withOpacity(0.2)),
           ),
           child: Row(
             children: [
@@ -179,36 +180,33 @@ class QuizScoreScreen extends StatelessWidget {
                 child: _buildSummaryItem(
                   'Avg Score',
                   '${avg.toStringAsFixed(0)}%',
-                  const Color(0xFF6366F1),
+                  AppColors.primary,
+                  theme,
                 ),
               ),
-              Container(
-                width: 1,
-                height: 40,
-                color: Colors.white.withOpacity(0.08),
-              ),
+              Container(width: 1, height: 40, color: theme.border),
               Expanded(
                 child: _buildSummaryItem(
                   'Quizzes Taken',
                   '${scores.length}',
-                  const Color(0xFF10B981),
+                  AppColors.green,
+                  theme,
                 ),
               ),
-              Container(
-                width: 1,
-                height: 40,
-                color: Colors.white.withOpacity(0.08),
-              ),
+              Container(width: 1, height: 40, color: theme.border),
               Expanded(
                 child: _buildSummaryItem(
                   'Best Score',
                   '${scores.map((s) => (s['score'] as num?) ?? 0).reduce((a, b) => a > b ? a : b)}%',
-                  const Color(0xFFF59E0B),
+                  AppColors.amber,
+                  theme,
                 ),
               ),
             ],
           ),
         ),
+
+        // Score rows
         ...List.generate(scores.length, (i) {
           final score = scores[scores.length - 1 - i];
           final pct = ((score['score'] as num?) ?? 0).toInt();
@@ -216,10 +214,10 @@ class QuizScoreScreen extends StatelessWidget {
           final course = score['course'] as String? ?? '';
           final takenAt = (score['takenAt'] as Timestamp?)?.toDate();
           final color = pct >= 80
-              ? const Color(0xFF10B981)
+              ? AppColors.green
               : pct >= 60
-              ? const Color(0xFFF59E0B)
-              : const Color(0xFFEF4444);
+                  ? AppColors.amber
+                  : AppColors.red;
 
           return Container(
             margin: const EdgeInsets.only(bottom: 10),
@@ -256,10 +254,10 @@ class QuizScoreScreen extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: theme.text,
                           letterSpacing: -0.2,
                         ),
                       ),
@@ -268,7 +266,7 @@ class QuizScoreScreen extends StatelessWidget {
                         course,
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.white.withOpacity(0.4),
+                          color: theme.subtext,
                         ),
                       ),
                     ],
@@ -279,7 +277,7 @@ class QuizScoreScreen extends StatelessWidget {
                     _formatDate(takenAt),
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.white.withOpacity(0.3),
+                      color: theme.subtext,
                     ),
                   ),
               ],
@@ -290,7 +288,8 @@ class QuizScoreScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryItem(String label, String value, Color color) {
+  Widget _buildSummaryItem(
+      String label, String value, Color color, ThemeNotifier theme) {
     return Column(
       children: [
         Text(
@@ -305,7 +304,7 @@ class QuizScoreScreen extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.4)),
+          style: TextStyle(fontSize: 11, color: theme.subtext),
         ),
       ],
     );

@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'app_theme.dart';
 
 class BadgesScreen extends StatelessWidget {
   const BadgesScreen({super.key});
@@ -54,21 +55,22 @@ class BadgesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = AppTheme.of(context);
     final uid = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0F),
+      backgroundColor: theme.bg,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(context),
+            _buildHeader(context, theme),
             Expanded(
               child: uid == null
-                  ? const Center(
+                  ? Center(
                       child: Text(
                         'Not signed in',
-                        style: TextStyle(color: Colors.white54),
+                        style: TextStyle(color: theme.subtext),
                       ),
                     )
                   : StreamBuilder<DocumentSnapshot>(
@@ -82,7 +84,7 @@ class BadgesScreen extends StatelessWidget {
                         final earned = List<String>.from(
                           (data['badges'] as List<dynamic>?) ?? [],
                         );
-                        return _buildGrid(earned);
+                        return _buildGrid(earned, theme);
                       },
                     ),
             ),
@@ -92,7 +94,7 @@ class BadgesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, ThemeNotifier theme) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Row(
@@ -105,26 +107,26 @@ class BadgesScreen extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF59E0B).withOpacity(0.1),
+                color: AppColors.amber.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: const Color(0xFFF59E0B).withOpacity(0.2),
+                  color: AppColors.amber.withOpacity(0.2),
                 ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.arrow_back_ios_new_rounded,
                     size: 13,
-                    color: Color(0xFFF59E0B),
+                    color: AppColors.amber,
                   ),
                   const SizedBox(width: 5),
-                  const Text(
+                  Text(
                     'Back',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFFF59E0B),
+                      color: AppColors.amber,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -133,12 +135,12 @@ class BadgesScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          const Text(
+          Text(
             'Badges',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: theme.text,
               letterSpacing: -0.8,
             ),
           ),
@@ -147,7 +149,7 @@ class BadgesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildGrid(List<String> earned) {
+  Widget _buildGrid(List<String> earned, ThemeNotifier theme) {
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
       physics: const BouncingScrollPhysics(),
@@ -162,7 +164,8 @@ class BadgesScreen extends StatelessWidget {
         final badge = _allBadges[index];
         final isEarned = earned.contains(badge['id']);
         final color = Color(badge['color'] as int);
-        return _BadgeCard(badge: badge, color: color, isEarned: isEarned);
+        return _BadgeCard(
+            badge: badge, color: color, isEarned: isEarned, theme: theme);
       },
     );
   }
@@ -172,11 +175,13 @@ class _BadgeCard extends StatelessWidget {
   final Map<String, dynamic> badge;
   final Color color;
   final bool isEarned;
+  final ThemeNotifier theme;
 
   const _BadgeCard({
     required this.badge,
     required this.color,
     required this.isEarned,
+    required this.theme,
   });
 
   @override
@@ -184,14 +189,10 @@ class _BadgeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isEarned
-            ? color.withOpacity(0.08)
-            : Colors.white.withOpacity(0.03),
+        color: isEarned ? color.withOpacity(0.08) : theme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isEarned
-              ? color.withOpacity(0.25)
-              : Colors.white.withOpacity(0.07),
+          color: isEarned ? color.withOpacity(0.25) : theme.border,
         ),
       ),
       child: Column(
@@ -203,12 +204,12 @@ class _BadgeCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: isEarned
                   ? color.withOpacity(0.15)
-                  : Colors.white.withOpacity(0.05),
+                  : theme.border.withOpacity(0.5),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
               badge['icon'] as IconData,
-              color: isEarned ? color : Colors.white.withOpacity(0.2),
+              color: isEarned ? color : theme.subtext,
               size: 26,
             ),
           ),
@@ -219,7 +220,7 @@ class _BadgeCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: isEarned ? Colors.white : Colors.white.withOpacity(0.3),
+              color: isEarned ? theme.text : theme.subtext,
               letterSpacing: -0.2,
             ),
           ),
@@ -229,44 +230,27 @@ class _BadgeCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 11,
-              color: isEarned
-                  ? Colors.white.withOpacity(0.4)
-                  : Colors.white.withOpacity(0.2),
+              color: theme.subtext,
             ),
           ),
           const SizedBox(height: 10),
-          if (isEarned)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Earned',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-              ),
-            )
-          else
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Locked',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white.withOpacity(0.25),
-                ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: isEarned
+                  ? color.withOpacity(0.15)
+                  : theme.border.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              isEarned ? 'Earned' : 'Locked',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: isEarned ? color : theme.subtext,
               ),
             ),
+          ),
         ],
       ),
     );
