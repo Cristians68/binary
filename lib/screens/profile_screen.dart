@@ -6,10 +6,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'auth_service.dart';
 import 'welcome_screen.dart';
-import 'streak_screen.dart';
+import 'badges_screen.dart';
 import 'app_router.dart';
 import 'streak_service.dart';
 import 'app_theme.dart';
+
+// Safely cast a Firestore value to Map<String, dynamic>.
+// On web, nested maps can arrive as Map<Object, Object>.
+Map<String, dynamic> _toMap(dynamic value) {
+  if (value == null) return {};
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) return value.map((k, v) => MapEntry(k.toString(), v));
+  return {};
+}
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -54,13 +63,20 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _loadStats() async {
     final data = await StreakService.getStats();
     if (!mounted) return;
-    final badges = (data['badges'] as Map<String, dynamic>? ?? {}).length;
+
+    // Safe casting — works on iOS, Android, and Web
+    final badges = _toMap(data['badges']).length;
     final lessons = (data['completedLessons'] as List<dynamic>?)?.length ?? 0;
-    final scores = List<Map<String, dynamic>>.from(
-      (data['quizScores'] as List<dynamic>?)
-              ?.map((e) => Map<String, dynamic>.from(e as Map)) ??
-          [],
-    );
+
+    final rawScores = data['quizScores'];
+    List<Map<String, dynamic>> scores = [];
+    if (rawScores is List) {
+      scores = rawScores
+          .whereType<Map>()
+          .map((e) => e.map((k, v) => MapEntry(k.toString(), v)))
+          .toList();
+    }
+
     String avg = '-';
     if (scores.isNotEmpty) {
       final a = scores.fold<double>(
@@ -68,7 +84,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           scores.length;
       avg = '${a.toStringAsFixed(0)}%';
     }
-    final streakMap = data['streak'] as Map<String, dynamic>? ?? {};
+
+    final streakMap = _toMap(data['streak']);
     setState(() {
       _lessonCount = lessons;
       _badgeCount = badges;
@@ -103,17 +120,16 @@ class _ProfileScreenState extends State<ProfileScreen>
     HapticFeedback.selectionClick();
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    // Flat field — no nested map, no iOS crash
     try {
       await FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
           .update({'notificationsEnabled': value});
     } catch (_) {
-      await FirebaseFirestore.instance.collection('users').doc(uid).set(
-        {'notificationsEnabled': value},
-        SetOptions(merge: true),
-      );
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .set({'notificationsEnabled': value}, SetOptions(merge: true));
     }
   }
 
@@ -884,7 +900,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 _buildItem(
                     CupertinoIcons.rosette, 'Badges', AppColors.green, theme,
                     onTap: () => Navigator.push(
-                        context, AppRouter.push(const StreakScreen()))),
+                        context, AppRouter.push(const BadgesScreen()))),
                 _buildItem(CupertinoIcons.arrow_down_circle_fill,
                     'Download for offline', AppColors.green, theme,
                     onTap: _showOfflineDownloads, isLast: true),

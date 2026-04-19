@@ -13,6 +13,15 @@ import 'quiz_score_screen.dart';
 import 'streak_service.dart';
 import 'app_theme.dart';
 
+// Safely cast a Firestore value to Map<String, dynamic>.
+// On web, nested maps can arrive as Map<Object, Object>.
+Map<String, dynamic> _toMap(dynamic value) {
+  if (value == null) return {};
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) return value.map((k, v) => MapEntry(k.toString(), v));
+  return {};
+}
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -50,18 +59,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
-      // Load all courses
       final coursesSnap = await FirebaseFirestore.instance
           .collection('courses')
           .orderBy('order')
           .get();
 
-      // Load user enrolments
       final userSnap =
           await FirebaseFirestore.instance.collection('users').doc(uid).get();
       final userData = userSnap.data() ?? {};
-      final enrolments =
-          (userData['enrolments'] as Map<String, dynamic>?) ?? {};
+      final enrolments = _toMap(userData['enrolments']);
 
       final enrolled = coursesSnap.docs
           .map((d) => {'id': d.id, ...d.data()})
@@ -82,13 +88,22 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onStatsUpdate(Map<String, dynamic> data) {
     if (!mounted) return;
 
-    final badgesMap = data['badges'] as Map<String, dynamic>? ?? {};
+    // Use _toMap so web's Map<Object,Object> is handled safely
+    final badgesMap = _toMap(data['badges']);
+    final streakMap = _toMap(data['streak']);
+    final goalMap = _toMap(data['dailyGoal']);
+
     final lessons = (data['completedLessons'] as List<dynamic>?)?.length ?? 0;
-    final scores = List<Map<String, dynamic>>.from(
-      (data['quizScores'] as List<dynamic>?)
-              ?.map((e) => Map<String, dynamic>.from(e as Map)) ??
-          [],
-    );
+
+    final rawScores = data['quizScores'];
+    List<Map<String, dynamic>> scores = [];
+    if (rawScores is List) {
+      scores = rawScores
+          .whereType<Map>()
+          .map((e) => e.map((k, v) => MapEntry(k.toString(), v)))
+          .toList();
+    }
+
     String avgScore = '-';
     if (scores.isNotEmpty) {
       final avg = scores.fold<double>(
@@ -98,9 +113,6 @@ class _HomeScreenState extends State<HomeScreen> {
           scores.length;
       avgScore = '${avg.toStringAsFixed(0)}%';
     }
-
-    final streakMap = data['streak'] as Map<String, dynamic>? ?? {};
-    final goalMap = data['dailyGoal'] as Map<String, dynamic>? ?? {};
 
     setState(() {
       _streak = (streakMap['current'] as num?)?.toInt() ?? 0;
@@ -535,7 +547,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: theme.text)),
             const SizedBox(height: 6),
             Text(
-              'Head to the Courses tab to enrol\nin your first course.',
+              'Head to the Courses tab to enroll\nin your first course.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: theme.subtext, height: 1.5),
             ),
