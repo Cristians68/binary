@@ -239,16 +239,15 @@ class _LessonScreenState extends State<LessonScreen> {
                       curve: Curves.easeOut,
                     ),
                     child: SlideTransition(
-                      position:
-                          Tween<Offset>(
-                            begin: const Offset(0.03, 0),
-                            end: Offset.zero,
-                          ).animate(
-                            CurvedAnimation(
-                              parent: animation,
-                              curve: Curves.easeOutCubic,
-                            ),
-                          ),
+                      position: Tween<Offset>(
+                        begin: const Offset(0.03, 0),
+                        end: Offset.zero,
+                      ).animate(
+                        CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeOutCubic,
+                        ),
+                      ),
                       child: child,
                     ),
                   );
@@ -2189,35 +2188,35 @@ class _LessonScreenState extends State<LessonScreen> {
 
   // ── Fallback defaults ──────────────────────────────────────────────────────
   List<Map<String, String>> _itilV4Default() => [
-    {
-      'label': 'Definition',
-      'term': 'What is ITIL V4?',
-      'definition':
-          'ITIL V4 is a framework of best practices for IT Service Management (ITSM). It provides guidance on designing, delivering, and improving IT services to create value for organisations and their customers.',
-      'example':
-          'Exam trap: ITIL V4 is guidance — not a mandatory standard. Organisations adopt and adapt it to their context.',
-    },
-  ];
+        {
+          'label': 'Definition',
+          'term': 'What is ITIL V4?',
+          'definition':
+              'ITIL V4 is a framework of best practices for IT Service Management (ITSM). It provides guidance on designing, delivering, and improving IT services to create value for organisations and their customers.',
+          'example':
+              'Exam trap: ITIL V4 is guidance — not a mandatory standard. Organisations adopt and adapt it to their context.',
+        },
+      ];
 
   List<Map<String, String>> _cloudFundamentalsDefault() => [
-    {
-      'label': 'Definition',
-      'term': 'What is cloud computing?',
-      'definition':
-          'Cloud computing delivers computing services over the internet — servers, storage, databases, and software — on a pay-as-you-go basis.',
-      'example':
-          'Instead of buying a server, you rent one from AWS and pay only for the hours you use.',
-    },
-  ];
+        {
+          'label': 'Definition',
+          'term': 'What is cloud computing?',
+          'definition':
+              'Cloud computing delivers computing services over the internet — servers, storage, databases, and software — on a pay-as-you-go basis.',
+          'example':
+              'Instead of buying a server, you rent one from AWS and pay only for the hours you use.',
+        },
+      ];
 
   List<Map<String, String>> _cloudProDefault() => [
-    {
-      'label': 'Architecture',
-      'term': 'Well-Architected Framework',
-      'definition':
-          'A set of best practices across six pillars: Operational Excellence, Security, Reliability, Performance Efficiency, Cost Optimisation, and Sustainability.',
-      'example':
-          'Before launching, an architect reviews each pillar to ensure the design is secure, resilient, and cost-effective.',
-    },
-  ];
+        {
+          'label': 'Architecture',
+          'term': 'Well-Architected Framework',
+          'definition':
+              'A set of best practices across six pillars: Operational Excellence, Security, Reliability, Performance Efficiency, Cost Optimisation, and Sustainability.',
+          'example':
+              'Before launching, an architect reviews each pillar to ensure the design is secure, resilient, and cost-effective.',
+        },
+      ];
 }
