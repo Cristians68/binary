@@ -8,7 +8,6 @@ import 'subscription_service.dart';
 class AuthService {
   static final _auth = FirebaseAuth.instance;
 
-  // Cached instance — recreating on every call causes state issues on Android
   static final _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
 
   static Future<void> signOut() async {
@@ -19,17 +18,25 @@ class AuthService {
   }
 
   static Future<UserCredential?> signInWithGoogle() async {
+    // ── Web — use popup (redirect requires handling result on page reload) ──
     if (kIsWeb) {
       try {
         final provider = GoogleAuthProvider()
           ..addScope('email')
           ..addScope('profile');
-        final redirectResult = await _auth.getRedirectResult();
-        if (redirectResult.user != null) {
+        final result = await _auth.signInWithPopup(provider);
+        if (result.user != null) {
           await _onSignInSuccess();
-          return redirectResult;
         }
-        await _auth.signInWithRedirect(provider);
+        return result;
+      } on FirebaseAuthException catch (e) {
+        // User closed the popup — not an error
+        if (e.code == 'popup-closed-by-user' ||
+            e.code == 'cancelled-popup-request') {
+          debugPrint('Google Sign-In: popup closed by user');
+          return null;
+        }
+        debugPrint('Web Google Sign-In FirebaseAuthException: ${e.code}');
         return null;
       } catch (e) {
         debugPrint('Web Google Sign-In ERROR: $e');
@@ -37,8 +44,8 @@ class AuthService {
       }
     }
 
+    // ── iOS / Android ─────────────────────────────────────────────────────
     try {
-      // Disconnect clears any stale cached account that causes crashes on retry
       try {
         await _googleSignIn.disconnect();
       } catch (_) {}
@@ -53,9 +60,6 @@ class AuthService {
       final googleAuth = await googleUser.authentication;
       final accessToken = googleAuth.accessToken;
       final idToken = googleAuth.idToken;
-      debugPrint(
-        'Google Sign-In: accessToken=${accessToken != null}, idToken=${idToken != null}',
-      );
 
       if (idToken == null) {
         debugPrint('Google Sign-In: idToken is null — aborting');
@@ -69,8 +73,7 @@ class AuthService {
 
       final userCredential = await _auth.signInWithCredential(credential);
       debugPrint(
-        'Google Sign-In: Firebase success uid=${userCredential.user?.uid}',
-      );
+          'Google Sign-In: Firebase success uid=${userCredential.user?.uid}');
       await _onSignInSuccess();
       return userCredential;
     } on PlatformException catch (e) {
@@ -78,8 +81,7 @@ class AuthService {
       return null;
     } on FirebaseAuthException catch (e) {
       debugPrint(
-        'Google Sign-In FirebaseAuthException: ${e.code} - ${e.message}',
-      );
+          'Google Sign-In FirebaseAuthException: ${e.code} - ${e.message}');
       return null;
     } catch (e, stack) {
       debugPrint('Google Sign-In ERROR: $e');

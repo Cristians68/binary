@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
@@ -13,9 +15,32 @@ import 'screens/notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Ensure every user has a Firebase identity so progress is always
+  // scoped to a real UID — never shared across users.
+  await _ensureUserIdentity();
+
   await SubscriptionService.configure();
   await NotificationService.init();
   runApp(const BinaryApp());
+}
+
+/// Signs in anonymously if no user is currently authenticated.
+/// When a user later signs in with email/Google/etc., call
+/// [FirebaseAuth.instance.currentUser?.linkWithCredential()] to
+/// migrate their anonymous progress to a permanent account.
+Future<void> _ensureUserIdentity() async {
+  final auth = FirebaseAuth.instance;
+  if (auth.currentUser == null) {
+    try {
+      await auth.signInAnonymously();
+      debugPrint('Anonymous user created: ${auth.currentUser?.uid}');
+    } catch (e) {
+      debugPrint('Failed to sign in anonymously: $e');
+    }
+  } else {
+    debugPrint('Existing user: ${auth.currentUser?.uid}');
+  }
 }
 
 class BinaryApp extends StatefulWidget {
@@ -66,9 +91,8 @@ class _BinaryAppState extends State<BinaryApp> {
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
             brightness: isDark ? Brightness.dark : Brightness.light,
-            scaffoldBackgroundColor: isDark
-                ? AppColors.darkBg
-                : AppColors.lightBg,
+            scaffoldBackgroundColor:
+                isDark ? AppColors.darkBg : AppColors.lightBg,
             colorScheme: ColorScheme(
               brightness: isDark ? Brightness.dark : Brightness.light,
               primary: AppColors.primary,
@@ -80,17 +104,12 @@ class _BinaryAppState extends State<BinaryApp> {
               surface: isDark ? AppColors.darkSurface : AppColors.lightSurface,
               onSurface: isDark ? AppColors.darkText : AppColors.lightText,
             ),
-            textTheme:
-                GoogleFonts.interTextTheme(
-                  isDark
-                      ? ThemeData.dark().textTheme
-                      : ThemeData.light().textTheme,
-                ).apply(
-                  bodyColor: isDark ? AppColors.darkText : AppColors.lightText,
-                  displayColor: isDark
-                      ? AppColors.darkText
-                      : AppColors.lightText,
-                ),
+            textTheme: GoogleFonts.interTextTheme(
+              isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
+            ).apply(
+              bodyColor: isDark ? AppColors.darkText : AppColors.lightText,
+              displayColor: isDark ? AppColors.darkText : AppColors.lightText,
+            ),
             pageTransitionsTheme: PageTransitionsTheme(
               builders: {
                 TargetPlatform.android: const CupertinoPageTransitionsBuilder(),
@@ -124,9 +143,27 @@ class _AppEntryState extends State<_AppEntry> {
   }
 
   Future<void> _check() async {
+    // Web always skips onboarding — go straight to WelcomeScreen
+    if (kIsWeb) {
+      if (mounted) setState(() => _showOnboarding = false);
+      return;
+    }
+
+    // Key onboarding flag to the current user's UID so each new user
+    // always sees onboarding, regardless of device history.
+    final uid = FirebaseAuth.instance.currentUser?.uid;
     final prefs = await SharedPreferences.getInstance();
-    final done = prefs.getBool('onboardingComplete') ?? false;
+    final key = uid != null ? 'onboardingComplete_$uid' : 'onboardingComplete';
+    final done = prefs.getBool(key) ?? false;
     if (mounted) setState(() => _showOnboarding = !done);
+  }
+
+  Future<void> _completeOnboarding() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final prefs = await SharedPreferences.getInstance();
+    final key = uid != null ? 'onboardingComplete_$uid' : 'onboardingComplete';
+    await prefs.setBool(key, true);
+    if (mounted) setState(() => _showOnboarding = false);
   }
 
   @override
@@ -136,11 +173,7 @@ class _AppEntryState extends State<_AppEntry> {
       return Scaffold(backgroundColor: theme.bg);
     }
     if (_showOnboarding!) {
-      return OnboardingScreen(
-        onComplete: () {
-          if (mounted) setState(() => _showOnboarding = false);
-        },
-      );
+      return OnboardingScreen(onComplete: _completeOnboarding);
     }
     return const WelcomeScreen();
   }

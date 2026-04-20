@@ -589,7 +589,7 @@ class _QuizScreenState extends State<QuizScreen> {
     if (tag == 'Binary Cloud') return _cloudFundamentalsQuestions(moduleId);
     if (tag == 'Binary Cloud Pro') return _cloudProQuestions(moduleId);
     if (tag == 'Binary Cyber Pro') return _cyberProQuestions(moduleId);
-    return _networkingFallback();
+    return _networkProQuestions(moduleId);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2645,484 +2645,548 @@ class _QuizScreenState extends State<QuizScreen> {
   // ═══════════════════════════════════════════════════════════════════════════
   List<Map<String, dynamic>> _cloudFundamentalsQuestions(String moduleId) {
     switch (moduleId) {
+      // ═══════════════════════════════════════════════════════════════════════════
+// Binary Cloud — Modules 01–04 REWRITTEN (scenario-based)
+// Drop these cases into _cloudFundamentalsQuestions() replacing the old ones.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── MODULE 01 — Cloud Concepts & Characteristics ────────────────────────────
       case 'module-01':
         return [
           {
             'question':
-                'Which is NOT one of NIST\'s five essential characteristics of cloud computing?',
+                'A retail company runs its own servers. Every Black Friday they crash under traffic. The rest of the year, 70% of those servers sit idle. What is the core cloud characteristic that directly solves this problem?',
+            'answers': [
+              'Broad network access — staff can reach servers remotely',
+              'Rapid elasticity — capacity scales up under load and releases when demand drops',
+              'Measured service — they only pay for what they use',
+              'Resource pooling — servers are shared across tenants',
+            ],
+            'correct': 1,
+            'explanation':
+                'Rapid elasticity directly solves seasonal spikes. The company scales up for Black Friday and scales down the rest of the year — no idle hardware. Measured service is a benefit of elasticity but is not itself the scaling mechanism.',
+          },
+          {
+            'question':
+                'A startup CTO says: "We spent \$400k on servers last year. Half that was sitting unused while we waited for our product to find users. We need a better model." Which cloud characteristic she is describing the absence of?',
             'answers': [
               'On-demand self-service',
-              'Dedicated hardware per customer',
-              'Rapid elasticity',
+              'Resource pooling',
+              'Rapid elasticity combined with measured service — pay only for what you consume',
+              'Broad network access',
+            ],
+            'correct': 2,
+            'explanation':
+                'The CTO wasted money on provisioned but unused capacity — the opposite of measured service (pay-per-use). Elasticity + measured service together mean she only pays while resources are actually being used.',
+          },
+          {
+            'question':
+                'A development team in London needs a new test server at 11pm. Their IT department is closed. In the cloud, they spin one up in 3 minutes without calling anyone. Which characteristic made this possible?',
+            'answers': [
+              'Broad network access',
+              'On-demand self-service',
+              'Resource pooling',
               'Measured service',
             ],
             'correct': 1,
             'explanation':
-                'NIST\'s five: on-demand self-service, broad network access, resource POOLING (shared), rapid elasticity, measured service. Dedicated hardware is the opposite of pooling.',
-          },
-          {
-            'question': 'What does "elasticity" mean in cloud?',
-            'answers': [
-              'Physical flexibility of data centre cables',
-              'Automatically scaling resources up and down based on demand',
-              'Using multiple cloud providers simultaneously',
-              'Backing up data to multiple regions',
-            ],
-            'correct': 1,
-            'explanation':
-                'Elasticity = resources automatically scale with demand. Up under load, down when quiet. Pay only for what you use.',
+                'On-demand self-service = provisioning without human interaction from the provider. The team used a console or API to get the server themselves — no ticket, no IT department needed.',
           },
           {
             'question':
-                'A company moves from owning physical servers to renting cloud resources monthly. What financial shift?',
+                'A company\'s finance team accesses their cloud ERP from office desktops. The sales team uses it on mobile phones in the field. The warehouse uses it on shared tablets. Which NIST characteristic enables this?',
             'answers': [
-              'From OpEx to CapEx',
-              'From CapEx to OpEx',
-              'No overall financial benefit',
-              'From monthly to annual contracts only',
+              'Rapid elasticity',
+              'Measured service',
+              'On-demand self-service',
+              'Broad network access — services accessible via standard devices and protocols',
             ],
-            'correct': 1,
+            'correct': 3,
             'explanation':
-                'Cloud shifts from Capital Expenditure (large upfront hardware = CapEx) to Operational Expenditure (monthly pay-as-you-go = OpEx). Improves cash flow and flexibility.',
-          },
-          {
-            'question': 'What does "on-demand self-service" mean in cloud?',
-            'answers': [
-              'You can call provider support at any time',
-              'You can provision resources yourself without human interaction from the provider',
-              'Resources are available 24/7 with no downtime',
-              'Billing is calculated automatically',
-            ],
-            'correct': 1,
-            'explanation':
-                'On-demand self-service = spin up servers, databases, storage via console or API — no calls, no tickets to the provider. Immediate automated provisioning.',
-          },
-          {
-            'question': 'What is "resource pooling" in cloud?',
-            'answers': [
-              'All customers share the same login credentials',
-              'Provider\'s physical resources serve multiple customers simultaneously, dynamically allocated',
-              'Each customer gets dedicated physical hardware',
-              'Storage and compute must be purchased together',
-            ],
-            'correct': 1,
-            'explanation':
-                'Resource pooling = multi-tenancy. Provider\'s hardware serves multiple customers with dynamic allocation. Customers get logical isolation but share physical infrastructure.',
-          },
-          {
-            'question': 'What is "measured service" in cloud?',
-            'answers': [
-              'Provider measures distance to nearest data centre',
-              'Resource usage is monitored, metered, and billed — you pay for exactly what you consume',
-              'Performance is guaranteed via SLAs',
-              'Customer satisfaction is measured monthly',
-            ],
-            'correct': 1,
-            'explanation':
-                'Measured service = pay for compute hours, GB transferred, or API calls — like a utility bill. Not a fixed fee for unused capacity.',
+                'Broad network access = cloud services available over the network to any standard client device. Desktop, mobile, tablet — all work because the service uses standard web protocols.',
           },
           {
             'question':
-                'What is the key difference between scalability and elasticity?',
+                'An AWS data centre hosts workloads from thousands of different companies simultaneously on the same physical hardware — but each company only sees their own resources. Which characteristic describes this?',
             'answers': [
-              'They are the same concept',
-              'Scalability = ability to increase capacity; elasticity = automatic scale-up AND scale-down based on demand',
-              'Scalability = storage; elasticity = compute',
-              'Elasticity requires manual intervention',
-            ],
-            'correct': 1,
-            'explanation':
-                'Scalability = can handle growth. Elasticity = automatically adjusts in both directions. Elasticity is a specific automated form of scalability.',
-          },
-          {
-            'question': 'Which best describes on-premises infrastructure?',
-            'answers': [
-              'Servers hosted in a co-location facility',
-              'Computing resources owned and physically managed by the organisation in its own facility',
-              'Any infrastructure not accessed via internet',
-              'A private cloud hosted by a managed service provider',
-            ],
-            'correct': 1,
-            'explanation':
-                'On-premises = organisation owns physical hardware and manages it in their own data centre. Full control, full responsibility.',
-          },
-          {
-            'question':
-                'A startup needs servers for a product launch but doesn\'t want long-term hardware investment. Which cloud characteristic helps?',
-            'answers': [
-              'Resource pooling',
-              'On-demand self-service combined with pay-as-you-go pricing',
+              'Multi-tenancy through resource pooling',
+              'On-demand self-service',
               'Broad network access',
-              'Data sovereignty',
+              'Measured service',
             ],
-            'correct': 1,
+            'correct': 0,
             'explanation':
-                'On-demand self-service + measured service = launch with minimal upfront investment, scale if product succeeds, decommission if it doesn\'t.',
+                'Resource pooling = provider\'s physical resources dynamically serve multiple tenants with logical isolation. The hardware is shared; the data and access are not.',
           },
           {
-            'question': 'What does "broad network access" mean?',
+            'question':
+                'A SaaS company\'s cloud bill increases by exactly 340% in December due to a viral campaign. In January it returns to normal. No infrastructure changes were made manually. Which two characteristics working together enabled this?',
             'answers': [
-              'The provider has a very fast internet connection',
-              'Cloud services are accessible via the network using standard devices like laptops and phones',
-              'The provider operates in many countries',
-              'All users share the same bandwidth',
+              'Broad network access and on-demand self-service',
+              'Rapid elasticity and measured service',
+              'Resource pooling and broad network access',
+              'On-demand self-service and resource pooling',
             ],
             'correct': 1,
             'explanation':
-                'Broad network access = cloud services available via internet using standard client devices and protocols — accessible from anywhere with a connection.',
+                'Rapid elasticity automatically scaled capacity to meet demand. Measured service meant the bill reflected actual usage — up in December, back to normal in January. Neither works without the other here.',
+          },
+          {
+            'question':
+                'A company migrates from buying physical servers (£200k upfront every 3 years) to renting cloud VMs monthly. Their CFO asks what financial category has changed. What is the correct answer?',
+            'answers': [
+              'They moved from OpEx to CapEx — now they own less',
+              'They moved from CapEx to OpEx — from large upfront capital to ongoing operational expense',
+              'No change — cloud is just renting servers',
+              'They moved to CapEx because cloud contracts are long-term',
+            ],
+            'correct': 1,
+            'explanation':
+                'Physical servers = CapEx (large upfront capital investment). Cloud VMs = OpEx (monthly operational expense). This shift improves cash flow and removes the risk of owning depreciating hardware.',
+          },
+          {
+            'question':
+                'A company\'s cloud bill shows line items for: 847 compute hours, 2.3TB storage, 180GB data transfer, and 4.2 million API calls. This billing model is an example of which cloud characteristic?',
+            'answers': [
+              'Rapid elasticity',
+              'On-demand self-service',
+              'Measured service — granular metering of actual consumption',
+              'Resource pooling',
+            ],
+            'correct': 2,
+            'explanation':
+                'Measured service meters usage at a granular level — compute hours, GB stored, data transferred — and bills exactly for what was consumed. Like a utility bill for electricity.',
+          },
+          {
+            'question':
+                'A company wants to test a new application idea. They need 50 servers for 2 weeks, then nothing. On-premises this would require a 6-week hardware procurement process. What makes cloud the right choice here?',
+            'answers': [
+              'Cloud is always cheaper than on-premises',
+              'On-demand self-service and elasticity — provision 50 servers in minutes, release them in 2 weeks',
+              'Cloud providers manage the application for you',
+              'Cloud servers are faster than physical servers',
+            ],
+            'correct': 1,
+            'explanation':
+                'On-demand self-service eliminates procurement delays. Elasticity means releasing the 50 servers when done — no sunk cost. A 2-week burst workload is the textbook use case for cloud economics.',
+          },
+          {
+            'question':
+                'An engineer sets up auto-scaling on a web fleet. During a load test, the fleet grows from 4 to 23 instances automatically, then shrinks back to 4 when the test ends. The total bill for the test is £18. Which NIST characteristics are directly demonstrated?',
+            'answers': [
+              'Broad network access and resource pooling',
+              'On-demand self-service and broad network access',
+              'Rapid elasticity and measured service',
+              'Resource pooling and on-demand self-service',
+            ],
+            'correct': 2,
+            'explanation':
+                'Rapid elasticity = automatic scale-up and scale-down. Measured service = the £18 bill reflects only the hours those instances ran. Both characteristics are directly observable in this scenario.',
           },
         ];
 
+// ── MODULE 02 — Cloud Service Models ────────────────────────────────────────
       case 'module-02':
         return [
           {
             'question':
-                'In which cloud service model does the provider manage the OS and runtime?',
-            'answers': ['IaaS', 'PaaS', 'SaaS', 'FaaS'],
-            'correct': 1,
-            'explanation':
-                'PaaS: provider manages OS, runtime, and infrastructure. You only manage application code and data.',
-          },
-          {
-            'question':
-                'A team deploys code to Heroku by pushing to Git. Never configures servers. Which model?',
-            'answers': ['IaaS', 'PaaS', 'SaaS', 'On-premises'],
-            'correct': 1,
-            'explanation':
-                'Heroku = PaaS. Provider manages OS, runtime, and infrastructure. Team manages only their application code.',
-          },
-          {
-            'question':
-                'Which service model has the LEAST customer responsibility for infrastructure?',
-            'answers': ['IaaS', 'PaaS', 'SaaS', 'FaaS'],
-            'correct': 2,
-            'explanation':
-                'SaaS: provider manages everything. Customer just uses the application. No OS, runtime, or infrastructure management.',
-          },
-          {
-            'question':
-                'AWS Lambda runs a function when a file is uploaded to S3. Which model?',
-            'answers': ['IaaS', 'PaaS', 'SaaS', 'FaaS (Serverless)'],
-            'correct': 3,
-            'explanation':
-                'Lambda = FaaS. Code runs on event trigger, no servers to provision, billed per execution in milliseconds. Zero idle cost.',
-          },
-          {
-            'question':
-                'A company uses Microsoft 365 for email. Which service model?',
-            'answers': ['IaaS', 'PaaS', 'SaaS', 'FaaS'],
-            'correct': 2,
-            'explanation':
-                'Microsoft 365 = SaaS. Microsoft manages all infrastructure, updates, and maintenance. Company just uses the software.',
-          },
-          {
-            'question':
-                'Pizza analogy: which model is "pizza delivered and ready to eat"?',
-            'answers': ['IaaS', 'PaaS', 'SaaS', 'On-premises'],
-            'correct': 2,
-            'explanation':
-                'SaaS = pizza delivered ready to eat. IaaS = ingredients delivered (you cook). PaaS = pizza kit (you assemble). On-premises = you grow ingredients and build everything.',
-          },
-          {
-            'question': 'Which correctly describes IaaS shared responsibility?',
+                'A team needs to run a legacy Windows application that requires a specific OS version and custom registry settings. They need full control of the environment but don\'t want to own physical hardware. Which service model fits?',
             'answers': [
-              'Provider manages everything including OS and app',
-              'Customer manages OS, middleware, and app; provider manages physical hardware',
-              'Customer only manages their data; provider manages everything else',
-              'Responsibility is equal',
+              'SaaS — the provider manages everything',
+              'PaaS — the provider manages the OS for them',
+              'IaaS — they get a VM and control everything from the OS up',
+              'FaaS — run the app as a serverless function',
+            ],
+            'correct': 2,
+            'explanation':
+                'IaaS gives full OS control — they can set the exact Windows version and registry settings. PaaS manages the OS for you, which breaks their requirement for custom OS configuration.',
+          },
+          {
+            'question':
+                'A data science team wants to train machine learning models. They don\'t want to manage servers, install Python, or configure Jupyter notebooks. They just want to write code and run experiments. Which model serves them best?',
+            'answers': [
+              'IaaS — full control of the environment',
+              'PaaS — platform manages infrastructure; team focuses on code and data',
+              'SaaS — everything managed, including the application logic',
+              'On-premises — better GPU performance',
             ],
             'correct': 1,
             'explanation':
-                'IaaS: Customer = OS upwards (patching, configuration, application). Provider = hardware, networking, virtualisation downwards.',
+                'PaaS (e.g. Google Colab, Azure ML, SageMaker Studio) provides the runtime, libraries, and infrastructure. The team writes code without managing any servers — exactly what they need.',
           },
           {
             'question':
-                'Which service model gives developers the fastest path to running application without infrastructure work?',
-            'answers': ['IaaS', 'PaaS', 'On-premises', 'Colocation'],
-            'correct': 1,
-            'explanation':
-                'PaaS eliminates all infrastructure management. Developers focus only on code. Platform handles everything below the application layer.',
-          },
-          {
-            'question':
-                'Google App Engine is an example of which service model?',
-            'answers': ['IaaS', 'PaaS', 'SaaS', 'FaaS'],
-            'correct': 1,
-            'explanation':
-                'Google App Engine = PaaS. Deploy application code; Google manages underlying infrastructure, OS, and runtime.',
-          },
-          {
-            'question': 'Key operational difference between PaaS and FaaS?',
+                'A 500-person company switches from running their own email servers to using a cloud email product. Their IT team no longer manages servers, OS patches, or email software updates. Which model describes the new setup?',
             'answers': [
-              'They are the same',
-              'PaaS provides an always-on platform; FaaS executes code only on-demand and scales to zero when idle',
-              'FaaS requires more server management',
-              'PaaS is for mobile only; FaaS for web',
+              'IaaS — servers are in the cloud',
+              'PaaS — the platform handles the email logic',
+              'SaaS — the entire application is managed by the provider',
+              'Hybrid — some on-premises, some cloud',
+            ],
+            'correct': 2,
+            'explanation':
+                'SaaS: the provider manages everything — hardware, OS, application, updates. The IT team just administers user accounts. Email products like Microsoft 365 and Google Workspace are the canonical SaaS examples.',
+          },
+          {
+            'question':
+                'A developer pushes code with `git push` and it is live in 90 seconds. She never configured a web server, installed a runtime, or set up a database connection string. Which model is her platform using?',
+            'answers': [
+              'IaaS — fast provisioning scripts',
+              'PaaS — the platform handles the full runtime stack',
+              'SaaS — the application is pre-built',
+              'FaaS — each git push triggers a function',
             ],
             'correct': 1,
             'explanation':
-                'PaaS runs your application continuously. FaaS runs code only when triggered — scales to zero between invocations. FaaS has no idle cost; PaaS does.',
+                'PaaS (Heroku, Render, Railway, Google App Engine) takes code and handles the rest — runtime, web server, scaling. The developer\'s only responsibility is the application code.',
+          },
+          {
+            'question':
+                'A company runs their customer database on a cloud VM. They are responsible for OS patching, database installation, backups, and firewall rules. A security breach occurs because they missed a OS patch. Who is liable?',
+            'answers': [
+              'The cloud provider — they manage the infrastructure',
+              'The company — under IaaS, OS management is the customer\'s responsibility',
+              'Shared equally — cloud security is always joint',
+              'The database vendor — the software had a vulnerability',
+            ],
+            'correct': 1,
+            'explanation':
+                'Under IaaS shared responsibility: the provider secures the physical hardware and hypervisor. The customer owns everything from the OS up — including patching. Missing an OS patch is the customer\'s failure.',
+          },
+          {
+            'question':
+                'An application processes uploaded images. It runs code for 200ms per image then does nothing. The team is billed for 0 when no images are uploaded. Which model describes this?',
+            'answers': [
+              'PaaS — managed runtime platform',
+              'IaaS — virtual machines that scale to zero',
+              'FaaS — executes on event trigger, billed per execution, zero cost when idle',
+              'SaaS — fully managed image processing service',
+            ],
+            'correct': 2,
+            'explanation':
+                'FaaS (AWS Lambda, Azure Functions) runs code only on trigger, scales to zero between events, and bills per millisecond of execution. Zero uploads = zero cost. No VM sits idle.',
+          },
+          {
+            'question':
+                'A startup has three engineers. They want to launch a web app in a week without hiring a DevOps engineer. Which service model lets them focus entirely on application code without managing infrastructure?',
+            'answers': [
+              'IaaS — cheap VMs they can configure themselves',
+              'PaaS — handles all infrastructure so the team writes only application code',
+              'SaaS — use someone else\'s application',
+              'On-premises — full control from day one',
+            ],
+            'correct': 1,
+            'explanation':
+                'PaaS removes all infrastructure work for small teams. No DevOps hire needed — the platform handles servers, scaling, and runtime. IaaS would require significant ops work that a 3-person team cannot afford.',
+          },
+          {
+            'question':
+                'A company uses a cloud HR system. Their legal team needs a custom data export that the vendor doesn\'t offer and won\'t build. The company cannot modify the application. Which model\'s tradeoff are they experiencing?',
+            'answers': [
+              'IaaS — limited customisation at the infrastructure level',
+              'PaaS — the platform controls the database schema',
+              'SaaS — convenience comes at the cost of customisation; you use what the vendor provides',
+              'FaaS — serverless functions cannot be customised',
+            ],
+            'correct': 2,
+            'explanation':
+                'SaaS tradeoff: maximum convenience, minimum customisation. You use the application as built. If the vendor doesn\'t offer a feature, you cannot add it yourself. IaaS and PaaS give you code-level control.',
+          },
+          {
+            'question':
+                'A team is deciding between hosting their API on a VM (IaaS) vs a managed container service (PaaS). The PaaS option costs 20% more per month. What is the strongest business case for choosing PaaS?',
+            'answers': [
+              'PaaS is always more reliable',
+              'PaaS eliminates the engineering time spent on OS patching, scaling config, and runtime maintenance — that time cost exceeds 20%',
+              'PaaS has better network performance',
+              'PaaS is easier to migrate away from later',
+            ],
+            'correct': 1,
+            'explanation':
+                'The true cost of IaaS includes engineering hours for OS maintenance, security patching, and scaling configuration. A 20% price premium for PaaS is almost always cheaper when you factor in staff time.',
+          },
+          {
+            'question':
+                'An application runs smoothly on PaaS during normal traffic. During a flash sale it needs 40x more capacity for 2 hours. The team did not configure anything — the platform scaled automatically. Two hours later it scaled back. Which statement is correct?',
+            'answers': [
+              'This would not happen on PaaS — scaling requires manual configuration',
+              'This is a PaaS advantage — the platform handles scaling without the team configuring individual VMs',
+              'This is IaaS auto-scaling triggered by a monitoring alert',
+              'This is FaaS — the application must be stateless for this to work',
+            ],
+            'correct': 1,
+            'explanation':
+                'Managed PaaS platforms handle scaling automatically as part of the service. The team writes code; the platform handles capacity. This is the core value proposition of PaaS over IaaS.',
           },
         ];
 
+// ── MODULE 03 — Cloud Deployment Models ─────────────────────────────────────
       case 'module-03':
         return [
           {
             'question':
-                'A hospital stores patient records on private infrastructure but uses AWS for a public appointment booking site. What model?',
+                'A bank stores customer financial records on private infrastructure in their own data centre. They run their customer-facing mobile app on AWS. A security audit flags that both environments must be treated as connected. What deployment model is this?',
             'answers': [
-              'Public cloud',
-              'Private cloud',
-              'Hybrid cloud',
-              'Multi-cloud',
+              'Multi-cloud — using two different environments',
+              'Private cloud — everything stays internal',
+              'Hybrid cloud — private infrastructure for sensitive data, public cloud for customer-facing workloads',
+              'Community cloud — shared between regulated institutions',
             ],
             'correct': 2,
             'explanation':
-                'Hybrid cloud = combining private and public. Sensitive data stays on private (compliance); less sensitive workloads use public cloud for flexibility.',
+                'Hybrid cloud combines private (sensitive regulated data) with public cloud (scalable customer-facing app). The connection between them is what makes it hybrid — not just using both independently.',
           },
           {
             'question':
-                'Primary reason an organisation adopts a multi-cloud strategy?',
+                'A company uses AWS for their main application, Azure for their data analytics pipeline, and Google Cloud for their ML training jobs. Their CTO chose each for best-in-class capabilities. What is this strategy called and what risk does it introduce?',
             'answers': [
-              'Reduce all cloud costs to zero',
-              'Avoid vendor lock-in and use the best services from multiple providers',
-              'A single provider cannot serve multiple regions',
-              'To comply with GDPR',
+              'Hybrid cloud — risk is data sovereignty compliance',
+              'Multi-cloud — risk is increased operational complexity and skill requirements across platforms',
+              'Community cloud — risk is shared security responsibility',
+              'Private cloud — risk is vendor lock-in',
             ],
             'correct': 1,
             'explanation':
-                'Multi-cloud avoids vendor lock-in and allows selecting the best service from each provider.',
+                'Multi-cloud uses multiple providers intentionally for best-of-breed services. The primary risk is complexity — different APIs, tooling, billing, and skills needed for each platform.',
           },
           {
             'question':
-                'What makes a private cloud different from simply owning on-premises servers?',
+                'A government ministry must ensure citizen data never leaves the country. Their legal team says third-party public cloud providers cannot be used. Which deployment model is required?',
             'answers': [
-              'Private cloud is managed by a third party',
-              'Private cloud uses virtualisation to provide on-demand, self-service resources — like a cloud, but dedicated',
-              'Private cloud uses public internet',
-              'They are the same thing',
+              'Public cloud with data encryption',
+              'Community cloud shared with other government agencies',
+              'Multi-cloud with regional restrictions configured',
+              'Private cloud — complete control over data location and access',
+            ],
+            'correct': 3,
+            'explanation':
+                'Private cloud gives the ministry complete control over physical data location and who can access it. Public cloud — even with encryption — means a foreign company holds the keys. Data sovereignty regulations often mandate private infrastructure.',
+          },
+          {
+            'question':
+                'A company built their entire platform using proprietary AWS services: DynamoDB, Lambda, Kinesis, and SageMaker. Two years later they want to switch to Azure to cut costs. Their engineering team estimates 18 months of rewriting. What caused this?',
+            'answers': [
+              'Multi-cloud complexity — too many platforms to manage',
+              'Vendor lock-in — deep use of proprietary services makes migration extremely costly',
+              'Hybrid cloud risk — their on-premises systems cannot connect to Azure',
+              'Private cloud limitation — they cannot scale on Azure without re-architecting',
             ],
             'correct': 1,
             'explanation':
-                'Private cloud applies cloud characteristics (self-service, elasticity, measured service) to dedicated infrastructure. Traditional on-premises lacks these capabilities.',
+                'Vendor lock-in: proprietary managed services (DynamoDB, Kinesis) have no direct equivalents elsewhere. Migrating requires rebuilding with different APIs and data models — the deeper you go, the more it costs to leave.',
           },
           {
             'question':
-                'Most appropriate deployment model for a government agency with strict data sovereignty requirements?',
+                'Five NHS hospital trusts share a cloud environment with common security controls, GDPR compliance frameworks, and NHS-specific data handling policies. No other organisations use this environment. What is this?',
             'answers': [
-              'Public cloud',
-              'Multi-cloud',
-              'Private cloud',
-              'Community cloud',
+              'Public cloud with NHS-specific configuration',
+              'Private cloud owned by the NHS',
+              'Community cloud — shared by organisations with common compliance requirements',
+              'Hybrid cloud — combines NHS data centres with public cloud',
             ],
             'correct': 2,
             'explanation':
-                'Private cloud = complete control over where data is stored and who can access it. Essential for data sovereignty and national security compliance.',
+                'Community cloud is shared exclusively by organisations with common concerns — in this case, NHS trusts sharing healthcare compliance requirements. It\'s not public (others cannot join) and not private (it\'s shared).',
           },
           {
             'question':
-                'An org built entirely with AWS-specific services like DynamoDB, Lambda, SageMaker. What risk?',
+                'A growing e-commerce company currently hosts everything on-premises. They want to move their product catalogue to the cloud to handle traffic spikes, while keeping their payment processing on their own servers for compliance. What should they build?',
             'answers': [
-              'Performance will degrade over time',
-              'Vendor lock-in — migrating to another provider would require significant rearchitecting',
-              'App will become non-compliant',
-              'AWS will increase prices unpredictably',
-            ],
-            'correct': 1,
-            'explanation':
-                'Vendor lock-in: deep use of proprietary services makes migrating extremely expensive. May require years of rewriting to use equivalent services elsewhere.',
-          },
-          {
-            'question': 'What is a community cloud?',
-            'answers': [
-              'A public cloud with lower prices for charities',
-              'A shared cloud used exclusively by organisations with common concerns like compliance or mission',
-              'A cloud built by open-source communities',
-              'A cloud for local government only',
-            ],
-            'correct': 1,
-            'explanation':
-                'Community cloud serves a group of organisations with shared requirements (e.g. NHS trusts sharing a compliant healthcare cloud). Shared but not public.',
-          },
-          {
-            'question':
-                'Which deployment model offers the lowest upfront cost and fastest provisioning?',
-            'answers': [
-              'Private cloud',
-              'On-premises',
-              'Public cloud',
-              'Community cloud',
+              'Full public cloud migration — compliance concerns can be handled in the cloud',
+              'Full private cloud — move everything to virtualised on-premises infrastructure',
+              'Hybrid cloud — public cloud for scalable catalogue, private/on-premises for regulated payment processing',
+              'Multi-cloud — split across AWS and Azure for redundancy',
             ],
             'correct': 2,
             'explanation':
-                'Public cloud = zero upfront capital cost, resources in minutes. Private and on-premises require hardware procurement and setup — weeks or months.',
+                'Hybrid cloud is purpose-built for this: elastic public cloud for variable workloads (product catalogue), private/on-premises for compliance-sensitive workloads (payments). The right data in the right environment.',
           },
           {
             'question':
-                'A company uses AWS for their web app and Azure for identity management simultaneously. What model?',
+                'A startup chooses public cloud from day one. Their CTO says "we have zero budget for hardware, need to launch in 6 weeks, and don\'t know yet if the product will survive." Which characteristic of public cloud drove this decision?',
             'answers': [
-              'Hybrid cloud',
-              'Multi-cloud',
-              'Community cloud',
-              'Private cloud',
+              'Maximum security and compliance controls',
+              'Zero upfront capital cost, instant provisioning, and the ability to shut everything down if the product fails',
+              'Guaranteed performance SLAs not available on-premises',
+              'Full control over the underlying infrastructure',
             ],
             'correct': 1,
             'explanation':
-                'Multi-cloud = using services from multiple different cloud providers simultaneously. Hybrid = combining public and private/on-premises.',
-          },
-          {
-            'question': 'Main disadvantage of private cloud vs public cloud?',
-            'answers': [
-              'Private cloud offers less security',
-              'Private cloud requires the organisation to manage infrastructure — higher upfront and operational costs',
-              'Private cloud cannot scale',
-              'Private cloud does not support virtualisation',
-            ],
-            'correct': 1,
-            'explanation':
-                'Private cloud retains all infrastructure management — hardware, software, power, cooling, staffing. Significant investment and expertise required.',
+                'Public cloud removes capital risk for early-stage companies. No hardware to buy, provision in minutes, shut down without sunk costs if the product fails. This is why almost all startups begin on public cloud.',
           },
           {
             'question':
-                'Which best describes the shared responsibility model in public cloud?',
+                'A company runs workloads on both AWS and their private data centre. During their annual DR test, a simulated AWS region failure automatically routes all traffic to their private data centre with no downtime. What made this possible?',
             'answers': [
-              'Provider is responsible for everything including customer data',
-              'Customer is responsible for physical hardware',
-              'Provider secures the infrastructure; customer secures what they run on it',
-              'Responsibility is negotiated individually',
+              'Multi-cloud replication between AWS and Azure',
+              'Hybrid cloud architecture with failover routing between public and private environments',
+              'AWS global infrastructure automatically rerouting to nearest region',
+              'Public cloud SLA guaranteeing 100% uptime',
+            ],
+            'correct': 1,
+            'explanation':
+                'Hybrid cloud enables failover between environments. The private data centre acts as the DR target. This pattern requires careful network connectivity and DNS failover between the two environments.',
+          },
+          {
+            'question':
+                'A company standardises all new services on open-source components (Kubernetes, PostgreSQL, Kafka) instead of proprietary cloud services. Their architect says "this costs more to manage but we can move it anywhere." What concern is she addressing?',
+            'answers': [
+              'Data sovereignty — open-source data stays in the country',
+              'Vendor lock-in — using portable open standards keeps migration options open',
+              'Community cloud compliance — open-source is required for shared environments',
+              'Multi-cloud billing — proprietary services cannot be billed across providers',
+            ],
+            'correct': 1,
+            'explanation':
+                'Using open-source, cloud-agnostic components is the primary strategy for avoiding vendor lock-in. Kubernetes runs on any cloud. PostgreSQL runs anywhere. The extra management overhead is the tradeoff for portability.',
+          },
+          {
+            'question':
+                'A retailer uses public cloud for their website but processes end-of-day sales data on on-premises servers due to data residency laws. Their cloud architect says the two environments are "connected but separate." What model is this, and what is the primary technical challenge?',
+            'answers': [
+              'Multi-cloud — challenge is managing two cloud provider APIs',
+              'Community cloud — challenge is data sharing between tenants',
+              'Hybrid cloud — challenge is secure, low-latency connectivity between public and private environments',
+              'Private cloud — challenge is scaling the on-premises infrastructure',
             ],
             'correct': 2,
             'explanation':
-                'Shared responsibility: provider = security OF the cloud (hardware, network, facilities). Customer = security IN the cloud (data, access controls, OS config).',
+                'Hybrid cloud\'s core technical challenge is the connection between environments — VPN or dedicated link (AWS Direct Connect, Azure ExpressRoute), consistent security policies, and data transfer latency.',
           },
         ];
 
+// ── MODULE 04 — Cloud Storage and Compute ───────────────────────────────────
       case 'module-04':
         return [
           {
             'question':
-                'Best storage type for user profile photos accessed via HTTP?',
+                'A media company stores 4 million user-uploaded videos. Videos are accessed via a URL in a mobile app. The storage must handle unlimited growth and serve files globally over HTTP. Which storage type is correct?',
             'answers': [
-              'Block storage',
-              'File storage',
-              'Object storage',
-              'Archive storage',
+              'Block storage — fastest throughput for large files',
+              'File storage — shared network filesystem for media assets',
+              'Object storage — flat namespace, HTTP access, infinite scale for unstructured files',
+              'Archive storage — lowest cost for large media libraries',
             ],
             'correct': 2,
             'explanation':
-                'Object storage (S3) = ideal for unstructured files like photos, videos, documents. Scales infinitely, HTTP APIs, purpose-built for this use case.',
-          },
-          {
-            'question': 'What is block storage in cloud?',
-            'answers': [
-              'Storage for large data blocks like video files',
-              'Virtualised storage acting like a raw hard drive attached to a VM',
-              'Shared network storage accessible from multiple instances',
-              'Encrypted cold archive storage',
-            ],
-            'correct': 1,
-            'explanation':
-                'Block storage (EBS, Azure Managed Disk) = like a physical hard drive attached to your VM. Low-latency, directly mounted storage for OS and databases.',
-          },
-          {
-            'question': 'Primary advantage of a managed database service?',
-            'answers': [
-              'Always performs better',
-              'Provider handles backups, patching, replication, and failover automatically',
-              'Supports more SQL features',
-              'Always cheaper',
-            ],
-            'correct': 1,
-            'explanation':
-                'Managed databases eliminate DBA tasks. You focus on your data and queries — the provider handles the engine.',
+                'Object storage (S3, GCS, Azure Blob) is designed for exactly this: unstructured files served via HTTP at unlimited scale. Videos, images, and documents are the canonical object storage use case.',
           },
           {
             'question':
-                'A global e-commerce site serves users in US, Europe, and Asia. What would most reduce load times?',
+                'A database server on a cloud VM needs fast, low-latency disk I/O. The volume must mount directly to the VM and behave like a local hard drive. Which storage type should the engineer choose?',
             'answers': [
-              'Larger virtual machines',
-              'A Content Delivery Network (CDN)',
-              'More database read replicas',
-              'Load balancing',
+              'Object storage — accessible via API from the database process',
+              'Block storage — raw volume attached directly to the VM, low-latency like a physical disk',
+              'File storage — NFS mount shared across the database cluster',
+              'Archive storage — cheapest option for database files',
             ],
             'correct': 1,
             'explanation':
-                'CDN caches static content at edge locations worldwide. Users receive content from the nearest edge server.',
-          },
-          {
-            'question': 'Auto Scaling\'s key benefit during off-peak hours?',
-            'answers': [
-              'Maintains maximum capacity for sudden spikes',
-              'Removes excess compute resources to reduce cost when demand is low',
-              'Automatically patches servers overnight',
-              'Backs up data more frequently',
-            ],
-            'correct': 1,
-            'explanation':
-                'Auto Scaling scales DOWN when demand drops — removing idle resources and reducing costs. Bidirectional scaling is its core value.',
+                'Block storage (EBS, Azure Managed Disk) attaches directly to a VM as a raw volume. Databases require block storage for low-latency I/O — object storage APIs are too slow for database workloads.',
           },
           {
             'question':
-                'Best storage type for sharing files between multiple VMs simultaneously?',
+                'A render farm has 30 worker VMs that all need read/write access to the same project files simultaneously. A single artist\'s change must be visible to all workers immediately. Which storage type enables this?',
             'answers': [
-              'Object storage',
-              'Block storage',
-              'File storage (NFS/SMB)',
-              'Archive storage',
+              'Object storage — each VM accesses files via S3 API',
+              'Block storage — one volume per VM, manually synced',
+              'File storage — shared NFS/SMB filesystem accessible by all VMs simultaneously',
+              'Archive storage — low-cost shared access',
             ],
             'correct': 2,
             'explanation':
-                'File storage (AWS EFS, Azure Files) = shared network file systems accessible by multiple instances simultaneously. Block storage = one instance at a time.',
-          },
-          {
-            'question': 'What is a virtual machine in cloud?',
-            'answers': [
-              'A physical server rented from the provider',
-              'A software-defined server running on shared physical hardware, providing isolated compute resources',
-              'A container running in Kubernetes',
-              'A serverless function',
-            ],
-            'correct': 1,
-            'explanation':
-                'VM = virtualised server on physical hardware managed by the provider. Has dedicated vCPUs, RAM, and disk — isolated from other VMs despite sharing physical resources.',
+                'File storage (AWS EFS, Azure Files) provides a shared filesystem multiple VMs can mount simultaneously with read/write access. Block storage is one-to-one; object storage doesn\'t provide filesystem semantics.',
           },
           {
             'question':
-                'An application has stable 100 req/s but spikes to 2,000 during flash sales. Ideal compute strategy?',
+                'An application serves 500 requests/second on normal days. On product launch days it hits 18,000 requests/second for about 4 hours. The team currently provisions for 18,000 at all times at enormous cost. What is the right cloud solution?',
             'answers': [
-              'Always provision for 2,000 req/s',
-              'Always provision for 100 req/s and accept degraded performance',
-              'Use Auto Scaling to handle baseline and scale automatically during spikes',
-              'Use multiple cloud providers simultaneously',
+              'Upgrade to larger VMs permanently to handle peak load more efficiently',
+              'Move to a multi-cloud setup to distribute the load',
+              'Implement Auto Scaling — add instances automatically during launches, remove them after',
+              'Use archive storage to reduce the cost of idle resources',
             ],
             'correct': 2,
             'explanation':
-                'Auto Scaling adds instances automatically during the sale and removes them after — you pay for peak capacity only when needed, not 24/7.',
+                'Auto Scaling solves exactly this: scale out to 18,000 req/s capacity during launch, scale back to 500 req/s capacity after. The team stops paying for peak capacity 24/7 and only pays during the actual peak.',
           },
           {
             'question':
-                'What distinguishes object storage from traditional file systems?',
+                'A company\'s website loads slowly for users in Southeast Asia despite the servers being in Ireland. Static assets like images and CSS files account for 80% of page load time. What should the architect add?',
             'answers': [
-              'Object storage is faster for all workloads',
-              'Object storage uses a flat namespace with unique IDs instead of folders, accessed via HTTP APIs',
-              'Object storage can only store images',
-              'Object storage requires more management',
+              'A second server region in Singapore',
+              'A Content Delivery Network — caches static assets at edge locations near Southeast Asian users',
+              'Larger VMs in Ireland for faster response generation',
+              'Object storage in Ireland with cross-region replication',
             ],
             'correct': 1,
             'explanation':
-                'Object storage: no folder hierarchy, each object has a unique key. Accessed via REST APIs (HTTP GET/PUT). Highly scalable and globally accessible.',
+                'A CDN caches static assets at edge locations worldwide. A user in Singapore gets images served from a nearby edge node — not from Ireland. This is the standard solution for latency caused by geographic distance.',
           },
           {
-            'question': 'What is CDN edge caching?',
+            'question':
+                'An engineer notices that 3 out of 6 VMs in a load-balanced pool are showing high error rates. The load balancer is still sending them traffic. What feature should have been configured to prevent this?',
             'answers': [
-              'Permanently storing content at the edge',
-              'Serving cached content to nearby users until it expires, reducing requests to the origin server',
-              'Encrypting content before delivery',
-              'Deleting content after each request',
+              'Auto Scaling — adds new instances to replace failing ones',
+              'Health checks — load balancer removes instances failing checks from the rotation automatically',
+              'CDN caching — reduces requests reaching unhealthy VMs',
+              'Block storage snapshots — restores VMs to a known good state',
             ],
             'correct': 1,
             'explanation':
-                'Edge servers cache content for a TTL period. Cached content served locally — only cache misses hit the origin. Reduces origin load and latency.',
+                'Load balancer health checks probe each instance on a configured interval. Instances returning errors are removed from the pool. Without health checks, the load balancer blindly sends traffic to broken instances.',
+          },
+          {
+            'question':
+                'A compliance team requires that database backups older than 90 days are kept for 7 years but may never be needed. Retrieval within 48 hours is acceptable. Storage cost must be minimised. Which storage class fits?',
+            'answers': [
+              'Standard storage — immediate retrieval, highest cost',
+              'Infrequent access storage — cheaper but still fast retrieval',
+              'Archive/glacier storage — lowest cost, hours-to-days retrieval, designed for long-term retention',
+              'Block storage snapshots — best for database backup retention',
+            ],
+            'correct': 2,
+            'explanation':
+                'Archive storage (S3 Glacier, Azure Archive) is designed for data that must be kept but is rarely if ever accessed. Retrieval takes hours — acceptable for 7-year compliance archives. Cost is a fraction of standard storage.',
+          },
+          {
+            'question':
+                'A startup\'s web app runs on a single VM. During testing, the VM\'s CPU hits 95% and the site becomes unresponsive. The engineer wants to handle more load without rewriting the application. What are the two scaling options and which is easier?',
+            'answers': [
+              'Horizontal (add VMs) and vertical (bigger VM) — vertical is easier as it requires no application changes',
+              'Horizontal (add VMs) and vertical (bigger VM) — horizontal is easier because VMs are cheap',
+              'Diagonal scaling and multi-cloud — both require load balancer reconfiguration',
+              'Auto Scaling and CDN — CDN is easier because it requires no server changes',
+            ],
+            'correct': 0,
+            'explanation':
+                'Vertical scaling (upgrading to a larger VM) is the easier immediate fix — no application changes, no load balancer needed. Horizontal scaling (adding VMs) is more resilient long-term but requires a load balancer and stateless application design.',
+          },
+          {
+            'question':
+                'A product team asks: "Can we store our 50TB of application logs cheaply but still run SQL queries against them occasionally?" Which storage approach handles both requirements?',
+            'answers': [
+              'Block storage attached to a database server — fastest query performance',
+              'Standard object storage with a query service like Athena — cheap storage, on-demand SQL without loading data into a database',
+              'File storage with a shared SQL server reading from the NFS mount',
+              'Archive storage — cheapest option, retrieve logs before querying',
+            ],
+            'correct': 1,
+            'explanation':
+                'Object storage + serverless query (S3 + Athena, GCS + BigQuery) lets teams store logs cheaply and query them on demand without a persistent database. This pattern is standard for log analytics.',
+          },
+          {
+            'question':
+                'A team runs a batch processing job every night at 2am. The job takes 45 minutes and uses 20 large VMs. For the remaining 23 hours and 15 minutes, those VMs sit completely idle. What is the most cost-effective solution?',
+            'answers': [
+              'Reserve those VMs for 1 year to get a discount on the idle time',
+              'Move to a larger VM so the job completes faster and costs less',
+              'Terminate the VMs after each job and provision them fresh each night — pay only for 45 minutes of compute',
+              'Use a CDN to cache the batch output and avoid re-running the job',
+            ],
+            'correct': 2,
+            'explanation':
+                'Provision on demand, terminate when done. Cloud pay-per-use means 45 minutes of 20 VMs costs a fraction of running them 24/7. This is the correct pattern for scheduled batch jobs — automation handles the provision/terminate cycle.',
           },
         ];
 
@@ -4679,383 +4743,6 @@ class _QuizScreenState extends State<QuizScreen> {
   // ═══════════════════════════════════════════════════════════════════════════
   List<Map<String, dynamic>> _cyberProQuestions(String moduleId) {
     switch (moduleId) {
-      case 'module-01':
-        return [
-          {
-            'question': 'What does the CIA Triad stand for?',
-            'answers': [
-              'Computing, Infrastructure, Availability',
-              'Confidentiality, Integrity, Availability',
-              'Cryptography, Identity, Authentication',
-              'Compliance, Integrity, Assurance',
-            ],
-            'correct': 1,
-            'explanation':
-                'CIA = Confidentiality (data is private), Integrity (data is accurate and unmodified), Availability (data is accessible when needed). The three pillars of information security.',
-          },
-          {
-            'question':
-                'What is the difference between a threat and a vulnerability?',
-            'answers': [
-              'They are the same thing',
-              'A threat is a weakness; a vulnerability is an attacker',
-              'A threat is a potential cause of harm; a vulnerability is an exploitable weakness in a system',
-              'A threat is always internal; a vulnerability is always external',
-            ],
-            'correct': 2,
-            'explanation':
-                'Threat = potential cause of harm (attacker, natural disaster). Vulnerability = a weakness that can be exploited (unpatched software, weak password). Risk = threat exploiting a vulnerability.',
-          },
-          {
-            'question': 'What is defense in depth?',
-            'answers': [
-              'Using one very strong security control',
-              'Hiring a large security team',
-              'Using multiple layered security controls so if one fails others protect the system',
-              'Keeping all data on an offline server',
-            ],
-            'correct': 2,
-            'explanation':
-                'Defense in depth uses multiple independent layers — network, host, application, data. If one layer fails, others remain. No single point of failure.',
-          },
-          {
-            'question': 'What does the principle of least privilege mean?',
-            'answers': [
-              'Users should have the lowest possible salary',
-              'Users should only have the minimum access they need to do their job — no more',
-              'Admins should not have any restrictions',
-              'All users should share the same account',
-            ],
-            'correct': 1,
-            'explanation':
-                'Least privilege limits blast radius of compromised accounts. A user needing only read access to S3 should never have delete or admin permissions.',
-          },
-          {
-            'question': 'Which is an example of social engineering?',
-            'answers': [
-              'Exploiting a buffer overflow vulnerability',
-              'Running a port scan on a target',
-              'Calling an employee pretending to be IT support to get their password',
-              'Intercepting network packets with Wireshark',
-            ],
-            'correct': 2,
-            'explanation':
-                'Social engineering manipulates people rather than technology. Impersonating IT support to extract a password bypasses technical defences entirely.',
-          },
-          {
-            'question': 'What does "integrity" mean in the CIA Triad?',
-            'answers': [
-              'Data is available when needed',
-              'Data is kept confidential from unauthorised parties',
-              'Data is accurate, complete, and has not been unauthorisedly modified',
-              'Data is encrypted in transit',
-            ],
-            'correct': 2,
-            'explanation':
-                'Integrity ensures data has not been tampered with. Hash functions (SHA-256) and digital signatures are common integrity controls.',
-          },
-          {
-            'question':
-                'Which type of control attempts to STOP a security incident before it occurs?',
-            'answers': [
-              'Detective control',
-              'Corrective control',
-              'Preventive control',
-              'Compensating control',
-            ],
-            'correct': 2,
-            'explanation':
-                'Preventive controls block threats before they succeed — firewalls, access controls, encryption. Detective = identify incidents. Corrective = fix after the fact.',
-          },
-          {
-            'question': 'What is non-repudiation?',
-            'answers': [
-              'Preventing unauthorised access to data',
-              'Ensuring a sender cannot deny having sent a message — implemented via digital signatures',
-              'Encrypting data so only the recipient can read it',
-              'Verifying identity before granting access',
-            ],
-            'correct': 1,
-            'explanation':
-                'Non-repudiation ensures parties cannot deny their actions. Digital signatures provide non-repudiation for messages and transactions.',
-          },
-          {
-            'question': 'How is risk calculated?',
-            'answers': [
-              'Risk = Threat × Vulnerability × Impact',
-              'Risk = Likelihood × Impact',
-              'Risk = Vulnerability × Asset Value',
-              'Risk = Threat × Asset Value',
-            ],
-            'correct': 1,
-            'explanation':
-                'Risk = Likelihood (probability of exploit) × Impact (business damage). High-likelihood + high-impact = Priority 1 risk.',
-          },
-          {
-            'question': 'What is a zero-day vulnerability?',
-            'answers': [
-              'A vulnerability that has been patched but not deployed',
-              'A vulnerability disclosed publicly but not yet exploited',
-              'A vulnerability unknown to the vendor with no available patch',
-              'A vulnerability affecting only zero-trust environments',
-            ],
-            'correct': 2,
-            'explanation':
-                'Zero-day = unknown to the vendor — there are zero days between discovery and exploitation risk. No patch is available, making it especially dangerous.',
-          },
-        ];
-
-      case 'module-02':
-        return [
-          {
-            'question': 'Primary function of a firewall?',
-            'answers': [
-              'Speed up network traffic',
-              'Monitor and control network traffic based on predefined security rules',
-              'Store backup copies of data',
-              'Assign IP addresses to devices',
-            ],
-            'correct': 1,
-            'explanation':
-                'A firewall monitors and controls incoming and outgoing network traffic based on security rules — either permitting or blocking based on defined criteria.',
-          },
-          {
-            'question': 'What does an IPS do that an IDS does not?',
-            'answers': [
-              'Detects suspicious traffic',
-              'Generates alerts for suspicious activity',
-              'Automatically blocks malicious traffic in real time',
-              'Logs network events',
-            ],
-            'correct': 2,
-            'explanation':
-                'IDS detects and alerts. IPS goes further — automatically blocking the malicious traffic without requiring human action.',
-          },
-          {
-            'question': 'What is a VPN primarily used for?',
-            'answers': [
-              'Speeding up internet connection',
-              'Creating an encrypted tunnel to secure data in transit over untrusted networks',
-              'Blocking ads on websites',
-              'Storing passwords securely',
-            ],
-            'correct': 1,
-            'explanation':
-                'VPN creates an encrypted tunnel between a device and a remote endpoint, securing data in transit — commonly used for remote access and site-to-site connectivity.',
-          },
-          {
-            'question': 'What makes HTTPS more secure than HTTP?',
-            'answers': [
-              'HTTPS loads pages faster',
-              'HTTPS uses a different port number',
-              'HTTPS uses TLS encryption to protect data in transit from eavesdropping and tampering',
-              'HTTPS blocks all cookies',
-            ],
-            'correct': 2,
-            'explanation':
-                'HTTPS uses TLS, preventing eavesdropping and man-in-the-middle attacks. HTTP transmits data in plaintext — readable by anyone intercepting the traffic.',
-          },
-          {
-            'question': 'What is the goal of network segmentation?',
-            'answers': [
-              'Increase internet speed',
-              'Reduce the number of devices on a network',
-              'Limit the spread of attacks and control which systems can communicate with each other',
-              'Replace firewalls entirely',
-            ],
-            'correct': 2,
-            'explanation':
-                'Network segmentation divides the network into zones — if an attacker compromises one segment, they cannot freely access others. Contains blast radius.',
-          },
-          {
-            'question': 'Difference between stateful and stateless firewall?',
-            'answers': [
-              'Stateful firewalls are faster',
-              'Stateless firewalls track connections; stateful ones do not',
-              'Stateful firewalls track TCP connection state and make context-aware decisions; stateless inspect each packet independently',
-              'Stateless firewalls are more secure',
-            ],
-            'correct': 2,
-            'explanation':
-                'Stateful firewalls track connection state — allowing return traffic automatically. Stateless require explicit rules for both directions of traffic.',
-          },
-          {
-            'question': 'What is a DMZ in network security?',
-            'answers': [
-              'A geographic region excluded from cloud coverage',
-              'An isolated network segment between internet and internal network where publicly accessible services are placed',
-              'A type of VPN configuration',
-              'A firewall rule set for outbound traffic',
-            ],
-            'correct': 1,
-            'explanation':
-                'DMZ hosts publicly accessible services in an isolated zone. Compromise of a DMZ host does not directly expose the internal network.',
-          },
-          {
-            'question': 'What is a honeypot?',
-            'answers': [
-              'A type of encrypted password storage',
-              'A decoy system designed to attract and detect attackers, gathering intelligence about their techniques',
-              'A backup server for production systems',
-              'A security patch management tool',
-            ],
-            'correct': 1,
-            'explanation':
-                'A honeypot mimics a real system to lure attackers. Any interaction triggers alerts and reveals attacker techniques, tools, and intentions.',
-          },
-          {
-            'question': 'What does port scanning discover?',
-            'answers': [
-              'Scanning physical ports on networking hardware',
-              'Which network ports and services are open on a target system — mapping the attack surface',
-              'Monitoring bandwidth usage per port',
-              'Filtering traffic by destination port',
-            ],
-            'correct': 1,
-            'explanation':
-                'Port scanning (Nmap) maps open ports and services. Essential for both attackers (discovery) and defenders (attack surface management). Open unused ports should be closed.',
-          },
-          {
-            'question': 'What does VPC Flow Logs capture?',
-            'answers': [
-              'Application-level HTTP requests',
-              'IP traffic metadata (source, destination, port, protocol, bytes) flowing through VPC network interfaces',
-              'User login and authentication events',
-              'Database query logs',
-            ],
-            'correct': 1,
-            'explanation':
-                'VPC Flow Logs record network traffic metadata. Essential for security investigations, anomaly detection, and compliance — who connected to what, when, and how much data moved.',
-          },
-        ];
-
-      case 'module-03':
-        return [
-          {
-            'question':
-                'Which type of encryption uses the same key to encrypt and decrypt?',
-            'answers': [
-              'Asymmetric encryption',
-              'Symmetric encryption',
-              'Hashing',
-              'Public Key Infrastructure',
-            ],
-            'correct': 1,
-            'explanation':
-                'Symmetric encryption uses one shared key for both encryption and decryption. AES-256 is the industry standard. Fast — used for bulk data encryption.',
-          },
-          {
-            'question':
-                'What makes hash functions useful for integrity verification?',
-            'answers': [
-              'They are reversible — you can recover the original data',
-              'They produce a fixed-length output; any change to input produces a completely different hash',
-              'They use two keys for extra security',
-              'They encrypt data for secure storage',
-            ],
-            'correct': 1,
-            'explanation':
-                'Hash functions are one-way (cannot reverse). Any change to input — even one bit — produces a completely different hash. Used to verify files haven\'t been tampered with.',
-          },
-          {
-            'question': 'What is the role of a Certificate Authority (CA)?',
-            'answers': [
-              'Store encryption keys for users',
-              'Issue and verify digital certificates, creating a chain of trust for HTTPS and other secure communications',
-              'Block malicious network traffic',
-              'Generate one-time passwords',
-            ],
-            'correct': 1,
-            'explanation':
-                'CAs issue and sign digital certificates, establishing the chain of trust. Your browser trusts a website because a trusted CA signed its certificate.',
-          },
-          {
-            'question': 'How does a digital signature work?',
-            'answers': [
-              'The sender encrypts with the receiver\'s public key',
-              'The sender signs with their private key; anyone verifies with the sender\'s public key',
-              'Both parties use the same secret key',
-              'The message is hashed and stored in the cloud',
-            ],
-            'correct': 1,
-            'explanation':
-                'Digital signature: private key signs → public key verifies. Provides authentication (proves who signed), integrity (message not altered), and non-repudiation.',
-          },
-          {
-            'question': 'What protocol does HTTPS use for encryption?',
-            'answers': [
-              'SSH',
-              'IPSec',
-              'TLS (Transport Layer Security)',
-              'SFTP',
-            ],
-            'correct': 2,
-            'explanation':
-                'TLS (Transport Layer Security) is the cryptographic protocol powering HTTPS. It replaces the deprecated SSL protocol.',
-          },
-          {
-            'question':
-                'Difference between symmetric and asymmetric encryption?',
-            'answers': [
-              'Symmetric uses two keys; asymmetric uses one',
-              'Symmetric uses one shared key (fast, for bulk data); asymmetric uses a key pair (slower, for key exchange and authentication)',
-              'Asymmetric is older and less secure',
-              'Symmetric cannot be used for data at rest',
-            ],
-            'correct': 1,
-            'explanation':
-                'TLS combines both: asymmetric to exchange a symmetric session key, then symmetric for bulk data transfer — security of asymmetric with speed of symmetric.',
-          },
-          {
-            'question': 'What is end-to-end encryption (E2EE)?',
-            'answers': [
-              'Encryption applied only at the server end',
-              'Encryption where only the communicating parties can read messages — no intermediary can decrypt',
-              'Encrypting data from database to API',
-              'Full disk encryption on endpoint devices',
-            ],
-            'correct': 1,
-            'explanation':
-                'E2EE ensures only sender and recipient hold decryption keys. WhatsApp and Signal use E2EE — even the service provider cannot read messages.',
-          },
-          {
-            'question': 'What is a rainbow table attack?',
-            'answers': [
-              'A network flood attack using colourful packets',
-              'A precomputed table of hash values used to reverse hash functions and crack passwords',
-              'An attack targeting multi-coloured CAPTCHA systems',
-              'A social engineering attack using visual deception',
-            ],
-            'correct': 1,
-            'explanation':
-                'Rainbow tables contain precomputed hash → password mappings. Salt (random data added before hashing) defeats rainbow tables because every hash is unique.',
-          },
-          {
-            'question': 'What is the purpose of salting passwords?',
-            'answers': [
-              'Adding special characters to improve password requirements',
-              'Adding a unique random value to each password before hashing — making rainbow table attacks and identical password detection impossible',
-              'Encrypting passwords before storing them',
-              'Requiring passwords to contain symbols',
-            ],
-            'correct': 1,
-            'explanation':
-                'Salt ensures two users with the same password have different hashes — rainbow tables are defeated. Even identical passwords produce unique stored hashes.',
-          },
-          {
-            'question': 'What is key management and why is it critical?',
-            'answers': [
-              'Managing API keys for cloud services',
-              'The secure generation, storage, rotation, and revocation of cryptographic keys — poor key management undermines even the strongest encryption',
-              'Managing physical server keys in data centres',
-              'Managing user login credentials',
-            ],
-            'correct': 1,
-            'explanation':
-                'Strong encryption with poor key management is useless. If an attacker gets the key, they can decrypt everything. KMS provides centralised, audited, hardware-backed key management.',
-          },
-        ];
-
       case 'module-04':
         return [
           {
@@ -5705,71 +5392,1095 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Networking fallback
-  // ═══════════════════════════════════════════════════════════════════════════
-  List<Map<String, dynamic>> _networkingFallback() {
-    return [
-      {
-        'question': 'What does DNS stand for?',
-        'answers': [
-          'Data Network System',
-          'Domain Name System',
-          'Digital Network Service',
-          'Direct Name Server',
-        ],
-        'correct': 1,
-        'explanation':
-            'DNS = Domain Name System. Translates human-readable domain names (google.com) to IP addresses computers use to route traffic.',
-      },
-      {
-        'question': 'What is an IP address?',
-        'answers': [
-          'A password for accessing networks',
-          'A unique numerical label identifying each device on a network',
-          'A type of network cable',
-          'An internet browser plugin',
-        ],
-        'correct': 1,
-        'explanation':
-            'An IP address uniquely identifies a device on a network. IPv4 addresses are 32-bit (e.g. 192.168.1.1); IPv6 addresses are 128-bit.',
-      },
-      {
-        'question': 'What does TCP stand for?',
-        'answers': [
-          'Transfer Control Protocol',
-          'Transmission Control Protocol',
-          'Technical Computing Process',
-          'Terminal Connection Point',
-        ],
-        'correct': 1,
-        'explanation':
-            'TCP = Transmission Control Protocol. Provides reliable, ordered, error-checked delivery of data between applications.',
-      },
-      {
-        'question': 'What is a router?',
-        'answers': [
-          'A type of computer terminal',
-          'A device that forwards data packets between networks based on IP addresses',
-          'A wireless keyboard transmitter',
-          'A network storage device',
-        ],
-        'correct': 1,
-        'explanation':
-            'A router forwards data packets between networks using routing tables. Your home router connects your local network to the internet.',
-      },
-      {
-        'question': 'What is a subnet?',
-        'answers': [
-          'A type of internet browser',
-          'A logical subdivision of an IP network enabling organised, secure network segments',
-          'A wireless signal type',
-          'A server hardware type',
-        ],
-        'correct': 1,
-        'explanation':
-            'A subnet is a logical subdivision of an IP network. Subnetting organises large networks, improves performance, and enables security isolation between network segments.',
-      },
-    ];
+  List<Map<String, dynamic>> _networkProQuestions(String moduleId) {
+    switch (moduleId) {
+      case 'module-01':
+        return [
+          {
+            'question':
+                'A packet leaves a web server destined for a client. At which OSI layer does the source and destination MAC address get added, and what device reads only this layer to make forwarding decisions?',
+            'answers': [
+              'Layer 3 — routers read MAC addresses to forward packets',
+              'Layer 2 — switches use MAC addresses to forward frames within a network segment',
+              'Layer 4 — firewalls inspect MAC addresses for access control',
+              'Layer 1 — hubs broadcast all frames and read MAC addresses',
+            ],
+            'correct': 1,
+            'explanation':
+                'Layer 2 (Data Link) adds source and destination MAC addresses to create a frame. Switches operate at Layer 2 — they learn MAC addresses on each port and forward frames only to the port where the destination MAC is located. Hubs operate at Layer 1 and have no awareness of addresses — they broadcast all signals to all ports.',
+          },
+          {
+            'question':
+                'A user can ping a server by IP address but cannot reach it by hostname. Which OSI layer and protocol is failing?',
+            'answers': [
+              'Layer 3 — IP routing is broken between the two hosts',
+              'Layer 4 — TCP port 80 is being blocked by a firewall',
+              'Layer 7 — DNS resolution is failing, preventing hostname-to-IP translation',
+              'Layer 2 — ARP cannot resolve the server\'s MAC address',
+            ],
+            'correct': 2,
+            'explanation':
+                'Successful ping by IP confirms Layer 3 routing is working. The failure is at Layer 7 (Application) — specifically DNS. The client cannot resolve the hostname to an IP address. DNS operates at Layer 7 and uses UDP/TCP port 53. Check DNS server configuration and connectivity to the DNS resolver.',
+          },
+          {
+            'question':
+                'A network engineer captures packets and sees a TCP segment with SYN flag set, source port 54231, destination port 443. What is happening and at which layer does this occur?',
+            'answers': [
+              'Layer 2 — a switch is initiating a spanning tree election',
+              'Layer 3 — a router is establishing a routing adjacency',
+              'Layer 4 — a client is initiating the first step of a TCP three-way handshake to an HTTPS server',
+              'Layer 7 — an HTTPS application is negotiating TLS parameters',
+            ],
+            'correct': 2,
+            'explanation':
+                'TCP operates at Layer 4 (Transport). The SYN flag initiates the three-way handshake (SYN → SYN-ACK → ACK). Source port 54231 is an ephemeral client port; destination port 443 is HTTPS. The client is establishing a reliable connection before any application data (TLS negotiation, HTTP) is exchanged.',
+          },
+          {
+            'question':
+                'Two hosts on different VLANs need to communicate. What device is required and at which OSI layer does it operate?',
+            'answers': [
+              'A hub at Layer 1 — broadcasts the traffic to both VLANs',
+              'A switch at Layer 2 — can forward traffic between VLANs using MAC addresses',
+              'A router or Layer 3 switch at Layer 3 — inter-VLAN routing requires IP forwarding between subnets',
+              'A firewall at Layer 7 — application inspection is required for cross-VLAN traffic',
+            ],
+            'correct': 2,
+            'explanation':
+                'VLANs are separate Layer 2 broadcast domains. Communication between them requires a Layer 3 device (router or Layer 3 switch) to route packets between the different subnets. A Layer 2 switch cannot forward traffic between VLANs without configured SVIs (Switched Virtual Interfaces) and routing enabled.',
+          },
+          {
+            'question':
+                'An application developer asks why their UDP-based video stream occasionally drops frames but a TCP-based file transfer never loses data. What is the correct explanation?',
+            'answers': [
+              'UDP uses a faster network path than TCP, causing congestion and drops',
+              'TCP retransmits lost segments and uses flow control — UDP has no error recovery, sequencing, or retransmission, making it faster but unreliable for delivery',
+              'UDP packets are smaller and more likely to be fragmented by routers',
+              'TCP uses encryption that UDP does not, adding overhead that prevents drops',
+            ],
+            'correct': 1,
+            'explanation':
+                'TCP (Layer 4) provides reliable, ordered, error-checked delivery via sequence numbers, acknowledgements, and retransmission. UDP provides no guarantee of delivery, order, or error recovery — dropped packets are simply lost. For video streaming, a dropped frame is preferable to the delay caused by retransmission. For file transfers, every byte must arrive intact, so TCP is required.',
+          },
+          {
+            'question':
+                'A technician needs to identify which OSI layer a problem exists at. The user cannot send emails but can browse websites. ICMP pings to the mail server succeed. What is the most likely layer of failure?',
+            'answers': [
+              'Layer 1 — physical cable is partially damaged',
+              'Layer 3 — routing to the mail server is broken',
+              'Layer 4 or 7 — TCP port 25/587 (SMTP) may be blocked, or the mail application/DNS MX record is misconfigured',
+              'Layer 2 — the mail server\'s MAC address is not in the ARP table',
+            ],
+            'correct': 2,
+            'explanation':
+                'ICMP ping success confirms Layers 1-3 are working. The failure is above Layer 3. SMTP uses TCP port 25 (server-to-server) or 587 (client submission) — a firewall may be blocking these specific ports while allowing HTTP/HTTPS. The mail application configuration or DNS MX record could also be the issue at Layer 7.',
+          },
+          {
+            'question':
+                'In the TCP/IP model, which layer combines the functions of the OSI Session, Presentation, and Application layers?',
+            'answers': [
+              'Internet layer',
+              'Transport layer',
+              'Application layer',
+              'Network Access layer',
+            ],
+            'correct': 2,
+            'explanation':
+                'The TCP/IP model has 4 layers: Network Access (OSI Layers 1-2), Internet (OSI Layer 3), Transport (OSI Layer 4), and Application (OSI Layers 5-7). The Application layer in TCP/IP encompasses OSI\'s Session (5), Presentation (6), and Application (7) layers. Protocols like HTTP, FTP, DNS, and SMTP all operate at this combined layer.',
+          },
+          {
+            'question':
+                'A packet needs to travel from 192.168.1.10 to 10.0.0.50 across three routers. What changes and what stays the same at each router hop?',
+            'answers': [
+              'The source and destination IP addresses change at each hop; MAC addresses stay the same',
+              'The source and destination MAC addresses are rewritten at each hop; the source and destination IP addresses remain unchanged end-to-end',
+              'Both IP addresses and MAC addresses change at every router',
+              'Nothing changes — routers forward packets without modifying any headers',
+            ],
+            'correct': 1,
+            'explanation':
+                'IP addresses (Layer 3) identify the ultimate source and destination — they remain unchanged across the entire path. MAC addresses (Layer 2) are local to each network segment. At each router, the frame is stripped, the IP packet is re-encapsulated in a new frame with the router\'s MAC as source and the next-hop device\'s MAC as destination.',
+          },
+          {
+            'question':
+                'Which protocol operates at Layer 2 and is responsible for mapping a known IP address to an unknown MAC address on the local network segment?',
+            'answers': [
+              'DNS — resolves hostnames to IP addresses',
+              'DHCP — assigns IP addresses to hosts automatically',
+              'ARP (Address Resolution Protocol) — broadcasts a request for the MAC address of a given IP on the local segment',
+              'ICMP — used for network diagnostics and error reporting',
+            ],
+            'correct': 2,
+            'explanation':
+                'ARP operates at the Layer 2/3 boundary. When a host needs to send to an IP on the same subnet, it broadcasts an ARP request. The owner of that IP replies with its MAC address. The requesting host caches this in its ARP table. Without ARP, Layer 3 packets cannot be encapsulated into Layer 2 frames for local delivery.',
+          },
+          {
+            'question':
+                'An engineer troubleshooting a connectivity issue works from the bottom of the OSI model upward. They confirm the cable is connected (Layer 1), the switch port is up (Layer 2), and the IP address is correctly configured (Layer 3). The problem persists. What should they check next?',
+            'answers': [
+              'Replace the network cable — physical issues can be intermittent',
+              'Layer 4 — check if the specific TCP/UDP port the application uses is being blocked by a firewall or not listening on the server',
+              'Layer 1 again — duplex mismatch causes intermittent issues that appear resolved',
+              'Layer 2 again — VLAN membership may be incorrect on the switch port',
+            ],
+            'correct': 1,
+            'explanation':
+                'The bottom-up troubleshooting approach confirms each layer before moving up. Layers 1-3 are confirmed working. Layer 4 is next: is the server listening on the required port? Is a firewall blocking that port? Use netstat or ss on the server to check listening ports, and test with telnet or nc to the specific port to verify reachability.',
+          },
+        ];
+
+      case 'module-02':
+        return [
+          {
+            'question':
+                'A network engineer needs to subnet 192.168.10.0/24 to support 6 departments, each needing up to 30 hosts. Which subnet mask creates exactly enough subnets with sufficient host capacity?',
+            'answers': [
+              '/25 — provides 2 subnets of 126 hosts each',
+              '/27 — provides 8 subnets of 30 hosts each (30 usable: 32 minus network and broadcast)',
+              '/28 — provides 16 subnets of 14 hosts each — insufficient for 30 hosts',
+              '/26 — provides 4 subnets of 62 hosts each — not enough subnets',
+            ],
+            'correct': 1,
+            'explanation':
+                '/27 borrows 3 bits from the host portion: 2³=8 subnets. Each subnet has 5 host bits: 2⁵-2=30 usable hosts. This exactly meets the requirement — 6 departments each needing up to 30 hosts. /28 gives only 14 usable hosts (insufficient). /26 gives only 4 subnets (not enough departments).',
+          },
+          {
+            'question':
+                'A host has IP address 172.16.45.200/20. What is the network address, broadcast address, and valid host range for this subnet?',
+            'answers': [
+              'Network: 172.16.45.0, Broadcast: 172.16.45.255, Hosts: 172.16.45.1–172.16.45.254',
+              'Network: 172.16.32.0, Broadcast: 172.16.47.255, Hosts: 172.16.32.1–172.16.47.254',
+              'Network: 172.16.40.0, Broadcast: 172.16.47.255, Hosts: 172.16.40.1–172.16.47.254',
+              'Network: 172.16.0.0, Broadcast: 172.16.255.255, Hosts: 172.16.0.1–172.16.255.254',
+            ],
+            'correct': 1,
+            'explanation':
+                '/20 means 20 network bits, 12 host bits. The subnet mask is 255.255.240.0. In the third octet: 240 in binary is 11110000. 45 AND 240 = 32 (network). Network: 172.16.32.0, Broadcast: 172.16.47.255, Usable hosts: 172.16.32.1 to 172.16.47.254 (4094 hosts).',
+          },
+          {
+            'question':
+                'A company has 5 point-to-point WAN links between routers. They want to waste as few IP addresses as possible. Which subnet mask should they use for each link?',
+            'answers': [
+              '/24 — standard subnet size for simplicity',
+              '/30 — provides exactly 2 usable host addresses per link (4 addresses: network, 2 hosts, broadcast)',
+              '/29 — provides 6 usable host addresses, enough for future expansion',
+              '/31 — not valid, no usable host addresses',
+            ],
+            'correct': 1,
+            'explanation':
+                '/30 provides 4 addresses: 1 network, 2 usable hosts (one per router end), 1 broadcast. This is the industry standard for point-to-point links.',
+          },
+          {
+            'question':
+                'Which of the following IP addresses is NOT a valid host address in the 10.10.10.128/26 subnet?',
+            'answers': [
+              '10.10.10.129',
+              '10.10.10.150',
+              '10.10.10.190',
+              '10.10.10.191',
+            ],
+            'correct': 3,
+            'explanation':
+                '/26 in the last octet: mask is 192. 128 network address. 128+64-1=191 is the broadcast address. Valid hosts: 10.10.10.129 to 10.10.10.190. 10.10.10.191 is the broadcast address — not assignable to a host.',
+          },
+          {
+            'question':
+                'A network admin receives a complaint that two hosts — 192.168.1.65/26 and 192.168.1.130/26 — cannot communicate without a router even though they are on the same physical switch. Why?',
+            'answers': [
+              'The switch is misconfigured and needs a static route',
+              'They are in different /26 subnets: .65 is in 192.168.1.64/26 (.64-.127) and .130 is in 192.168.1.128/26 (.128-.191) — a router is required to forward between subnets',
+              'Both hosts have the same subnet mask so they should communicate directly',
+              '192.168.1.130 is a broadcast address and cannot be assigned to a host',
+            ],
+            'correct': 1,
+            'explanation':
+                '/26 creates four subnets: .0-.63, .64-.127, .128-.191, .192-.255. Host .65 is in the .64/26 subnet; host .130 is in the .128/26 subnet. Even on the same switch, hosts in different subnets must communicate via a router.',
+          },
+          {
+            'question':
+                'What type of IPv6 address begins with FE80::/10 and what is its purpose?',
+            'answers': [
+              'Global unicast — routable on the public internet',
+              'Multicast — sends to all IPv6 devices on the local segment',
+              'Link-local — automatically configured on every IPv6 interface, used for communication on the local link only, never routed beyond the local segment',
+              'Anycast — routes to the nearest node in a group of servers with the same address',
+            ],
+            'correct': 2,
+            'explanation':
+                'FE80::/10 addresses are link-local — automatically generated from the MAC address (EUI-64) or randomly. They are mandatory on every IPv6 interface and used for neighbour discovery, router discovery, and DHCPv6. They are never forwarded by routers.',
+          },
+          {
+            'question':
+                'A host sends a packet to 255.255.255.255. What type of transmission is this and what is its scope?',
+            'answers': [
+              'Multicast — delivered to a group of subscribed hosts across multiple subnets',
+              'Unicast — delivered to a single specific host',
+              'Limited broadcast — delivered to all hosts on the local subnet only, routers do not forward it',
+              'Directed broadcast — delivered to all hosts in a specific remote subnet',
+            ],
+            'correct': 2,
+            'explanation':
+                '255.255.255.255 is the limited broadcast address. It is delivered to all hosts on the local network segment. Routers do not forward limited broadcasts. DHCP Discover uses this address because the client does not yet know its subnet.',
+          },
+          {
+            'question':
+                'An organisation needs 500 IP addresses for a new office. They are assigned 203.0.113.0/23 from their ISP. How many usable host addresses does this provide?',
+            'answers': [
+              '254 usable hosts',
+              '510 usable hosts (2⁹ - 2 = 510)',
+              '512 usable hosts',
+              '1022 usable hosts',
+            ],
+            'correct': 1,
+            'explanation':
+                '/23 has 9 host bits (32-23=9). Total addresses: 2⁹=512. Subtract network and broadcast: 512-2=510 usable hosts. This covers 203.0.113.1 to 203.0.114.254.',
+          },
+          {
+            'question':
+                'What is VLSM (Variable Length Subnet Masking) and why is it used instead of fixed-length subnetting?',
+            'answers': [
+              'VLSM uses the same subnet mask for all subnets — it simplifies routing table management',
+              'VLSM allows different subnet masks within the same address space — a /30 for WAN links and /24 for large LANs from the same block, minimising IP address waste',
+              'VLSM automatically assigns IP addresses to hosts using DHCP',
+              'VLSM is only used with IPv6 — IPv4 always uses fixed-length subnetting',
+            ],
+            'correct': 1,
+            'explanation':
+                'VLSM allows subnets of different sizes within the same address space. A WAN link needs only 2 hosts (/30), a small office needs 10 hosts (/28), a large LAN needs 200 hosts (/24). VLSM requires a classless routing protocol (OSPF, EIGRP, BGP).',
+          },
+          {
+            'question':
+                'A router has the following routes: 10.0.0.0/8, 10.1.0.0/16, and 10.1.1.0/24. A packet arrives destined for 10.1.1.50. Which route does the router use?',
+            'answers': [
+              '10.0.0.0/8 — it is the largest supernet covering this address',
+              '10.1.0.0/16 — it is the most specific match covering the /24',
+              '10.1.1.0/24 — longest prefix match selects the most specific route',
+              'All three routes — the router load-balances across all matching routes',
+            ],
+            'correct': 2,
+            'explanation':
+                'Routers use longest prefix match — the most specific (longest) matching route wins. 10.1.1.50 matches all three routes, but /24 is the most specific. More specific routes always win over less specific ones.',
+          },
+        ];
+
+      case 'module-03':
+        return [
+          {
+            'question':
+                'A switch receives a frame with a destination MAC address that is not in its MAC address table. What does the switch do?',
+            'answers': [
+              'Drops the frame — unknown destinations are discarded for security',
+              'Sends the frame back to the source requesting the destination MAC',
+              'Floods the frame out all ports except the port it was received on (unknown unicast flooding)',
+              'Forwards the frame to the default gateway for routing',
+            ],
+            'correct': 2,
+            'explanation':
+                'When a switch encounters an unknown unicast destination, it floods the frame out all ports except the ingress port. The intended recipient receives the frame and responds — the switch learns the destination MAC from that reply and adds it to the MAC table.',
+          },
+          {
+            'question':
+                'Two switches are connected with a single uplink. VLANs 10, 20, and 30 need to pass between them. The engineer configures the link as a trunk. What protocol negotiates trunking on Cisco switches and what does it do?',
+            'answers': [
+              'STP — prevents loops and negotiates which VLANs are active',
+              'DTP (Dynamic Trunking Protocol) — negotiates whether the link becomes a trunk and which encapsulation (802.1Q) to use',
+              'VTP (VLAN Trunking Protocol) — synchronises VLAN databases between switches',
+              'LACP — bundles multiple links and negotiates VLAN tagging',
+            ],
+            'correct': 1,
+            'explanation':
+                'DTP (Dynamic Trunking Protocol) is Cisco-proprietary and automatically negotiates trunk links between switches. It determines whether a port becomes a trunk and negotiates 802.1Q encapsulation. Best practice is to disable DTP on production ports and manually configure trunks.',
+          },
+          {
+            'question':
+                'A network engineer notices that traffic between VLAN 10 and VLAN 20 is unexpectedly reaching hosts in both VLANs without passing through a router. Investigation reveals the attack originated from a host in VLAN 10. What attack occurred?',
+            'answers': [
+              'MAC spoofing — the attacker changed their MAC to match a VLAN 20 host',
+              'ARP poisoning — the attacker redirected VLAN 20 traffic through their host',
+              'VLAN hopping via double tagging — the attacker sent frames with two 802.1Q tags; the first switch stripped the outer tag matching the native VLAN, and the second switch forwarded based on the inner tag',
+              'STP manipulation — the attacker became the root bridge and captured inter-VLAN traffic',
+            ],
+            'correct': 2,
+            'explanation':
+                'Double-tagging VLAN hopping: the attacker sends a frame with two 802.1Q tags — the outer tag matches the native VLAN. The first switch strips the outer tag and the second switch forwards to the target VLAN. Mitigation: change the native VLAN to an unused VLAN ID.',
+          },
+          {
+            'question':
+                'Spanning Tree Protocol elects a root bridge. Which switch becomes the root bridge and why?',
+            'answers': [
+              'The switch with the highest MAC address — it has priority in the election',
+              'The switch with the most ports — it can connect the most segments',
+              'The switch with the lowest Bridge ID (combination of priority value and MAC address) — lowest priority wins, with MAC address as tiebreaker',
+              'The switch configured first — it claims root status before others boot',
+            ],
+            'correct': 2,
+            'explanation':
+                'STP elects the root bridge based on Bridge ID = Priority (default 32768) + VLAN ID + MAC address. The switch with the lowest Bridge ID wins. Network engineers set the priority manually to ensure the most capable switch is root.',
+          },
+          {
+            'question':
+                'An access port on a switch is assigned to VLAN 30. The connected host has no VLAN awareness. How does the host communicate on VLAN 30?',
+            'answers': [
+              'The host must be configured with 802.1Q tagging to join VLAN 30',
+              'The switch tags all frames entering the access port with VLAN 30 — the host sends and receives untagged frames and is unaware of VLAN membership',
+              'The host must use a VLAN-aware network adapter to communicate on VLAN 30',
+              'The host communicates on the native VLAN by default — VLAN 30 requires explicit configuration on the host',
+            ],
+            'correct': 1,
+            'explanation':
+                'Access ports handle VLAN tagging transparently. The host sends and receives normal untagged Ethernet frames. The switch adds the VLAN 30 tag to all ingress frames and strips it from all egress frames. The host has no knowledge of VLANs.',
+          },
+          {
+            'question':
+                'A network has three switches in a triangle topology (A-B, B-C, A-C links). STP blocks the A-C link. Link A-B fails. How does STP respond?',
+            'answers': [
+              'The network is partitioned — hosts on switch C cannot reach switch A until A-B is repaired',
+              'STP immediately unblocks A-C — the previously blocked port transitions through Listening and Learning states before reaching Forwarding, taking ~30-50 seconds with classic STP',
+              'STP unblocks A-C instantly — all blocked ports transition to forwarding within 1 second',
+              'Switch C sends a topology change notification and the network administrator must manually unblock A-C',
+            ],
+            'correct': 1,
+            'explanation':
+                'When STP detects a topology change, blocked ports transition to Forwarding to restore connectivity. Classic STP takes 30-50 seconds. RSTP (802.1w) converges in 1-2 seconds. Always deploy RSTP in modern networks.',
+          },
+          {
+            'question':
+                'An engineer configures PortFast on a switch port connected to a PC. What does PortFast do and what risk does it introduce if misconfigured?',
+            'answers': [
+              'PortFast increases port speed to maximum — risk is duplex mismatch with slower devices',
+              'PortFast skips the STP Listening and Learning states, immediately placing the port in Forwarding — risk is if connected to a switch, a loop forms instantly before STP can block the port',
+              'PortFast enables BPDU filtering permanently — risk is that STP cannot detect topology changes',
+              'PortFast disables STP entirely on the port — risk is broadcast storms on the segment',
+            ],
+            'correct': 1,
+            'explanation':
+                'PortFast bypasses the 30-second STP delay for ports connected to end devices. Risk: if a switch is connected to a PortFast port, a loop can form before STP blocks it. Always pair PortFast with BPDU Guard.',
+          },
+          {
+            'question':
+                'An organisation wants to allow only a single authorised MAC address per switch port and automatically disable the port if an unauthorised device connects. Which feature accomplishes this?',
+            'answers': [
+              '802.1X port authentication — requires RADIUS authentication before port access',
+              'Dynamic ARP Inspection — validates ARP packets against the DHCP snooping table',
+              'Port Security with violation mode shutdown — limits MACs per port and errdisables the port if violated',
+              'DHCP snooping — blocks DHCP responses from unauthorised servers',
+            ],
+            'correct': 2,
+            'explanation':
+                'Port Security allows you to specify a maximum number of MAC addresses per port and define the violation action. Violation mode shutdown immediately shuts down the port if an unauthorised MAC is detected.',
+          },
+          {
+            'question':
+                'What is the purpose of the native VLAN on an 802.1Q trunk link?',
+            'answers': [
+              'The native VLAN carries management traffic and cannot be changed',
+              'The native VLAN is used for inter-VLAN routing between trunk-connected switches',
+              'Frames on the native VLAN are sent untagged across the trunk — both ends must agree on the native VLAN or frames will be misassigned to the wrong VLAN',
+              'The native VLAN is the default VLAN for all access ports on the switch',
+            ],
+            'correct': 2,
+            'explanation':
+                'The native VLAN on a trunk carries untagged frames. By default this is VLAN 1. Mismatched native VLANs cause a security issue. Best practice: change the native VLAN to an unused VLAN and tag all user VLANs explicitly.',
+          },
+          {
+            'question':
+                'A network engineer must connect 48 access ports to a core switch that only has 4 uplinks available. The engineer adds a second uplink to the core switch, but STP blocks it. What technology allows both uplinks to be active simultaneously?',
+            'answers': [
+              'RSTP — enables faster failover but still blocks one link',
+              'EtherChannel (LACP/PAgP) — bundles multiple physical links into a single logical link, providing both redundancy and increased bandwidth',
+              'VTP — synchronises VLANs across the additional uplink',
+              'BPDU Guard — disables STP blocking on the second uplink',
+            ],
+            'correct': 1,
+            'explanation':
+                'EtherChannel (IEEE 802.3ad LACP or Cisco PAgP) bundles multiple physical links into one logical interface. STP sees it as a single link (no blocking). Traffic is load-balanced across all member links.',
+          },
+        ];
+
+      case 'module-04':
+        return [
+          {
+            'question':
+                'A router has OSPF and a static route to the same destination. The static route has AD 1, OSPF has AD 110. Which route is installed in the routing table and why?',
+            'answers': [
+              'OSPF — dynamic routing protocols are always preferred over static routes',
+              'Static route — lower Administrative Distance (1) means it is more trusted than OSPF (110)',
+              'Both — the router load-balances between them',
+              'Neither — conflicting routes cause the router to drop traffic to that destination',
+            ],
+            'correct': 1,
+            'explanation':
+                'Administrative Distance (AD) is the measure of route source trustworthiness. Lower AD = more preferred. Static routes have AD 1. OSPF has AD 110. Common ADs: Connected=0, Static=1, EIGRP=90, OSPF=110, RIP=120, eBGP=20, iBGP=200.',
+          },
+          {
+            'question':
+                'OSPF routers on the same segment elect a Designated Router (DR). Router A has priority 100, Router B has priority 1, Router C has priority 100 but was the first to boot. Which becomes DR?',
+            'answers': [
+              'Router B — lowest priority is elected DR in OSPF',
+              'Router C — the first router to boot always becomes DR regardless of priority',
+              'Router A — tied on priority with C, highest Router ID breaks the tie (highest IP address on a loopback or physical interface)',
+              'All three — OSPF elects multiple DRs for redundancy',
+            ],
+            'correct': 2,
+            'explanation':
+                'OSPF DR election: highest priority wins. Tie is broken by highest Router ID. Routers A and C are tied at priority 100 — the router with the higher Router ID becomes DR. OSPF DR election is not first-come-first-served when priorities are equal.',
+          },
+          {
+            'question':
+                'A network running RIP version 2 has a route that has been unreachable for 180 seconds. What happens next and why is RIP poorly suited for large networks?',
+            'answers': [
+              'RIP marks the route as invalid after 180 seconds and removes it after the flush timer (240s) — RIP is limited to 15 hops maximum, making it unsuitable for large networks',
+              'RIP immediately floods the network with a route withdrawal message',
+              'RIP waits for the hold-down timer (300s) before removing the route',
+              'RIP recalculates the entire routing table using Dijkstra\'s algorithm',
+            ],
+            'correct': 0,
+            'explanation':
+                'RIP timers: Update (30s), Invalid (180s), Flush (240s). RIP limitations: maximum 15 hops, slow convergence, sends full routing table every 30 seconds. OSPF and EIGRP replace RIP in enterprise networks.',
+          },
+          {
+            'question':
+                'Two OSPF routers are connected but are not forming a neighbour relationship. Hello packets are being sent but no adjacency forms. What is the most likely cause?',
+            'answers': [
+              'The routers have different router IDs — OSPF requires matching router IDs',
+              'OSPF Hello packets must match: Area ID, Hello/Dead intervals, subnet mask, and authentication — a mismatch in any of these prevents adjacency formation',
+              'OSPF requires a static route to the neighbour before adjacency can form',
+              'The routers are in different AS numbers — OSPF requires matching AS configuration',
+            ],
+            'correct': 1,
+            'explanation':
+                'OSPF neighbour requirements (must match): same Area ID, same Hello interval, same Dead interval, same subnet mask, same authentication. Router IDs must be unique. AS number is an EIGRP/BGP concept — OSPF uses Areas.',
+          },
+          {
+            'question':
+                'A company has two ISP connections for redundancy. They want traffic to use ISP-A by default but automatically fail over to ISP-B if ISP-A goes down. What routing approach achieves this?',
+            'answers': [
+              'Configure two default routes with equal cost — traffic load-balances between both ISPs',
+              'Configure a floating static route: default route via ISP-A with AD 1, default route via ISP-B with AD 254 — ISP-B route only enters the routing table if ISP-A route is removed',
+              'Use OSPF with ISP-A as the preferred OSPF path and ISP-B as backup',
+              'Configure policy-based routing to direct traffic based on source address',
+            ],
+            'correct': 1,
+            'explanation':
+                'A floating static route has a higher AD than the primary route. When the primary is active, the floating route is not in the table. If the primary fails, the floating route becomes active. ISP-A static at AD 1 is primary; ISP-B static at AD 254 floats.',
+          },
+          {
+            'question':
+                'BGP is the routing protocol of the internet. What makes BGP fundamentally different from OSPF and EIGRP?',
+            'answers': [
+              'BGP uses hop count as its metric — OSPF and EIGRP use bandwidth',
+              'BGP is a path-vector protocol that makes routing decisions based on AS-PATH and policies — not just shortest path. It is designed to route between organisations (eBGP), not just within a network',
+              'BGP converges faster than OSPF because it uses incremental updates',
+              'BGP requires all routers in an AS to be directly connected to each other',
+            ],
+            'correct': 1,
+            'explanation':
+                'BGP is a path-vector EGP. It carries AS-PATH, makes decisions based on policy attributes (Local Preference, MED, Weight), and is designed for inter-organisation routing. OSPF/EIGRP are IGPs optimising for shortest path within an organisation.',
+          },
+          {
+            'question':
+                'An engineer is configuring EIGRP. They see the term "feasible successor" in the routing table. What is a feasible successor and why is it important?',
+            'answers': [
+              'The current best route to a destination — the route installed in the forwarding table',
+              'A backup route pre-calculated and held in the topology table, ready for instant installation if the successor fails — enabling EIGRP\'s sub-second convergence',
+              'The next router in the path to the destination',
+              'A route learned from a different EIGRP autonomous system',
+            ],
+            'correct': 1,
+            'explanation':
+                'EIGRP: Successor = current best route (in routing table). Feasible Successor = pre-computed backup route in topology table. When a successor fails, EIGRP instantly promotes the feasible successor — no recalculation needed.',
+          },
+          {
+            'question':
+                'A packet is destined for a network not in the router\'s routing table and no default route is configured. What happens?',
+            'answers': [
+              'The packet is forwarded to the nearest router for further processing',
+              'The router drops the packet and sends an ICMP Destination Unreachable message back to the source',
+              'The router holds the packet until the routing table is updated',
+              'The router broadcasts the packet on all interfaces to find the destination',
+            ],
+            'correct': 1,
+            'explanation':
+                'If no matching route exists and no default route (0.0.0.0/0) is configured, the router drops the packet and sends ICMP Type 3 (Destination Unreachable) back to the source.',
+          },
+          {
+            'question':
+                'What is route summarisation and what benefit does it provide in a large OSPF network?',
+            'answers': [
+              'Route summarisation combines multiple specific routes into a single aggregate route — reducing routing table size, decreasing LSA flooding, and accelerating convergence',
+              'Route summarisation compresses routing table entries to reduce memory usage on routers',
+              'Route summarisation prevents routing loops by combining conflicting routes',
+              'Route summarisation is only used in BGP to aggregate customer prefixes for ISPs',
+            ],
+            'correct': 0,
+            'explanation':
+                'Route summarisation at OSPF area boundaries reduces LSAs flooded throughout the network. Instead of 256 /24 routes, a single /16 summary covers all of them. Benefits: smaller routing tables, less LSA processing, faster SPF calculations.',
+          },
+          {
+            'question':
+                'A network engineer runs "show ip route" and sees: O 192.168.5.0/24 [110/20] via 10.0.0.1, 00:05:32, GigabitEthernet0/0. What does each component mean?',
+            'answers': [
+              'O=OSPF source, 192.168.5.0/24=destination, [110/20]=AD/metric, via 10.0.0.1=next-hop, 00:05:32=route age, Gi0/0=egress interface',
+              'O=outbound route, [110/20]=source port/destination port, via 10.0.0.1=gateway, 00:05:32=TTL',
+              'O=OSPF, [110/20]=bandwidth/delay metric, via 10.0.0.1=OSPF router ID',
+              'O=optional route, 192.168.5.0/24=subnet, [110/20]=priority/cost, 00:05:32=expiry timer',
+            ],
+            'correct': 0,
+            'explanation':
+                'Cisco routing table: Code (O=OSPF) | Network | [AD/Metric] | via Next-Hop | Age | Egress Interface. AD 110 = OSPF. Metric 20 = OSPF cost. This output is fundamental to network troubleshooting.',
+          },
+        ];
+
+      case 'module-05':
+        return [
+          {
+            'question':
+                'A host boots and sends a DHCP Discover packet to 255.255.255.255. The DHCP server is on a different subnet. The router between them is not forwarding DHCP broadcasts. What must be configured on the router to fix this?',
+            'answers': [
+              'A static route to the DHCP server subnet',
+              'IP helper-address (DHCP relay) on the router\'s interface facing the clients — converts broadcasts to unicast and forwards to the DHCP server\'s IP',
+              'A DHCP pool on the router itself',
+              'Port forwarding for UDP port 67 on the firewall',
+            ],
+            'correct': 1,
+            'explanation':
+                'DHCP uses broadcasts (UDP port 67/68) that routers do not forward by default. The ip helper-address command converts the broadcast DHCP Discover to a unicast packet addressed to the DHCP server. This is the standard enterprise DHCP design — one server serving multiple subnets.',
+          },
+          {
+            'question':
+                'A DNS resolver receives a query for "mail.company.com". It has no cached answer. Describe the recursive resolution process that follows.',
+            'answers': [
+              'The resolver queries company.com\'s authoritative server directly for the A record',
+              'The resolver queries a root nameserver for ".", which refers to the .com TLD server, which refers to company.com\'s authoritative nameserver, which returns the A record — the resolver caches and returns it to the client',
+              'The resolver broadcasts the query on the local network segment to find an authoritative server',
+              'The resolver queries the ISP\'s DNS server, which already has the answer cached',
+            ],
+            'correct': 1,
+            'explanation':
+                'DNS recursive resolution: (1) Root servers → .com TLD servers. (2) .com TLD → company.com authoritative servers. (3) Authoritative server returns A record. (4) Resolver caches and returns to client.',
+          },
+          {
+            'question':
+                'A company has a single public IP address from their ISP. They have 200 internal hosts that need internet access. What technology allows this and what are its two forms?',
+            'answers': [
+              'VPN — tunnels all internal traffic through the single public IP',
+              'NAT (Network Address Translation) — PAT (Port Address Translation/NAT overload) maps many private IPs to one public IP using unique port numbers; static NAT maps one private IP to one public IP permanently',
+              'DHCP — assigns the single public IP to whichever host needs it at the time',
+              'BGP — advertises the single IP to all 200 hosts for direct internet access',
+            ],
+            'correct': 1,
+            'explanation':
+                'PAT (NAT overload) allows 200 hosts to share one public IP. Each internal connection gets a unique source port number in the translation table. Static NAT is one-to-one, used for servers that need a permanent public IP.',
+          },
+          {
+            'question':
+                'A DHCP server assigns a lease to a host. The host is shut down without releasing the lease. After many such events, the DHCP pool is exhausted. What are two solutions?',
+            'answers': [
+              'Increase the DHCP pool size and disable IP address reuse',
+              'Reduce the lease time (e.g., 4 hours instead of 8 days) so addresses are returned faster, and implement DHCP snooping to prevent rogue servers from exhausting the pool',
+              'Assign static IPs to all devices to eliminate DHCP dependency',
+              'Enable DHCP failover so a second server handles overflow addresses',
+            ],
+            'correct': 1,
+            'explanation':
+                'Shorter lease times mean addresses are returned to the pool faster when devices disconnect without releasing. For environments with many transient devices (guest WiFi, classrooms), lease times of 1-4 hours are appropriate.',
+          },
+          {
+            'question':
+                'A security team asks why internal server IP addresses should not appear in public DNS records. What is the risk they are concerned about?',
+            'answers': [
+              'Public DNS records cause DNS cache poisoning attacks',
+              'Exposing internal RFC 1918 addresses in public DNS reveals network topology to attackers — enabling reconnaissance for targeted attacks even though the addresses are not routable from the internet',
+              'Internal IPs in public DNS cause routing loops between internal and external resolvers',
+              'Public DNS records have a maximum size limit that internal IP records would exceed',
+            ],
+            'correct': 1,
+            'explanation':
+                'Information disclosure: internal IP addresses in public DNS reveal network architecture. An attacker learns subnet ranges and server naming conventions. Use split-horizon DNS: internal DNS returns RFC 1918 addresses; external DNS returns only public IPs.',
+          },
+          {
+            'question':
+                'An engineer examines a NAT translation table: Inside Local 192.168.1.10:54231 → Inside Global 203.0.113.5:54231 → Outside Global 142.250.80.100:443. What do these three addresses represent?',
+            'answers': [
+              'Source IP before NAT, destination IP, and gateway IP',
+              'Inside Local = private IP of the host; Inside Global = public IP assigned to represent this host on the internet; Outside Global = the destination server\'s public IP',
+              'RFC 1918 address, translated address, and return path address',
+              'DHCP-assigned IP, static NAT IP, and BGP-advertised IP',
+            ],
+            'correct': 1,
+            'explanation':
+                'NAT terminology: Inside Local = actual private IP (192.168.1.10). Inside Global = how the source appears outside — the public IP (203.0.113.5). Outside Global = the destination server\'s IP (142.250.80.100:443). The NAT device maintains this table to translate return traffic.',
+          },
+          {
+            'question':
+                'What is the difference between an A record, AAAA record, MX record, and CNAME record in DNS?',
+            'answers': [
+              'A=hostname to IPv4, AAAA=hostname to IPv6, MX=mail server for a domain, CNAME=alias pointing one hostname to another hostname',
+              'A=IPv4 address, AAAA=IPv4 address with authentication, MX=maximum hops, CNAME=canonical name for IP',
+              'A=authoritative server, AAAA=backup authoritative server, MX=master exchange, CNAME=certified name',
+              'All four record types store IP addresses — they differ only in the protocol version they support',
+            ],
+            'correct': 0,
+            'explanation':
+                'DNS record types: A = hostname → IPv4. AAAA = hostname → IPv6. MX = mail servers for a domain with priority values. CNAME = alias pointing one hostname to another. CNAMEs cannot coexist with other records at the zone apex.',
+          },
+          {
+            'question':
+                'A company uses NAT with a pool of 5 public IP addresses shared among 500 internal hosts. What happens when all 5 public IPs have their maximum port connections exhausted?',
+            'answers': [
+              'New connections are queued until a port becomes available',
+              'The router randomly drops the oldest connections to free up ports',
+              'New outbound connections fail — the NAT table is full and no translation entry can be created for additional sessions',
+              'The router automatically requests additional public IPs from the ISP',
+            ],
+            'correct': 2,
+            'explanation':
+                'PAT supports ~65,535 port numbers per public IP. With 5 public IPs, the theoretical maximum is ~325,000 simultaneous sessions. When exhausted, new connection attempts fail because no unique translation entry can be created.',
+          },
+          {
+            'question':
+                'What is DDNS (Dynamic DNS) and what problem does it solve?',
+            'answers': [
+              'DDNS encrypts DNS queries to prevent snooping by ISPs',
+              'DDNS automatically updates DNS A records when an IP address changes — solving the problem of hosts with dynamic IPs becoming unreachable when their IP changes',
+              'DDNS distributes DNS resolution across multiple servers for load balancing',
+              'DDNS caches DNS responses locally to reduce resolution time',
+            ],
+            'correct': 1,
+            'explanation':
+                'Dynamic DNS: a DDNS client detects IP address changes and automatically updates the DNS A record. This allows a hostname to always resolve to the current IP even when the ISP changes it.',
+          },
+          {
+            'question':
+                'An administrator notices that DNS queries are being answered in 5ms for some domains and 250ms for others. What explains this difference?',
+            'answers': [
+              'The 5ms responses are for local .local domains; 250ms responses are for internet domains',
+              'The 5ms responses are served from the resolver\'s cache (TTL not expired); 250ms responses require full recursive resolution to authoritative servers',
+              'The 5ms domains use IPv4; 250ms domains use IPv6 which has higher latency',
+              'The 250ms domains have longer DNS records that take more time to transmit',
+            ],
+            'correct': 1,
+            'explanation':
+                'DNS caching: cached responses (5ms) come from local memory. Uncached responses (250ms) require the full recursive resolution path. Low TTL values = fresher records but more queries; high TTL = faster responses but slower propagation of changes.',
+          },
+        ];
+
+      case 'module-06':
+        return [
+          {
+            'question':
+                'An attacker sends forged DHCP Offer packets faster than the legitimate DHCP server, causing hosts to receive attacker-controlled IP addresses and default gateways. What attack is this and what prevents it?',
+            'answers': [
+              'ARP poisoning — Dynamic ARP Inspection prevents forged ARP packets',
+              'DHCP starvation — port security limits the number of MAC addresses per port',
+              'Rogue DHCP server attack — DHCP snooping designates trusted ports and drops DHCP Offer/Ack packets arriving on untrusted ports',
+              'VLAN hopping — disabling DTP on access ports prevents the attacker from reaching other VLANs',
+            ],
+            'correct': 2,
+            'explanation':
+                'DHCP snooping creates a trust boundary. Ports connected to DHCP servers are marked trusted; all other ports are untrusted. DHCP Offer and Ack from untrusted ports are dropped. DHCP snooping also builds a binding table used by Dynamic ARP Inspection.',
+          },
+          {
+            'question':
+                'A firewall is configured as stateful. A client sends a TCP SYN to a web server. The firewall allows it. The server responds with SYN-ACK. How does the stateful firewall handle the return traffic?',
+            'answers': [
+              'The firewall requires an explicit inbound rule allowing SYN-ACK packets from the server',
+              'The firewall tracks the original outbound SYN in its connection state table and automatically allows the return SYN-ACK — no explicit inbound rule needed for established connections',
+              'The firewall drops the SYN-ACK because no inbound rule exists',
+              'The stateful firewall forwards all return traffic regardless of connection state',
+            ],
+            'correct': 1,
+            'explanation':
+                'Stateful firewalls maintain a connection state table. When the SYN-ACK arrives, it matches the existing state and is automatically permitted. This is why stateful firewalls are far more secure than stateless ones.',
+          },
+          {
+            'question':
+                'An IDS alert fires on a connection that turns out to be legitimate business traffic. What type of alert is this, and what is the operational risk of too many of them?',
+            'answers': [
+              'True negative — the IDS correctly ignored malicious traffic',
+              'True positive — the IDS correctly identified a genuine threat',
+              'False positive — legitimate traffic flagged as malicious. Too many false positives cause alert fatigue, where analysts ignore alerts, allowing real threats to go undetected',
+              'False negative — malicious traffic that the IDS missed entirely',
+            ],
+            'correct': 2,
+            'explanation':
+                'False positives are operationally dangerous: when analysts see hundreds of false alarms daily, they tune out alerts — creating the exact blind spot attackers exploit. IDS tuning to reduce false positives is critical.',
+          },
+          {
+            'question':
+                'A network engineer must allow HTTP and HTTPS traffic from the internet to a web server in a DMZ, while blocking all direct internet traffic to the internal LAN. Describe the correct firewall zone architecture.',
+            'answers': [
+              'Two zones: internet and internal LAN. Web server sits in the internal LAN behind the firewall',
+              'Three zones: internet (untrusted), DMZ (semi-trusted for public-facing servers), internal LAN (trusted). Rules: internet→DMZ allow HTTP/HTTPS; internet→LAN deny all; DMZ→LAN deny all except required application traffic',
+              'Single zone with firewall rules differentiating traffic by IP address and port',
+              'Two zones: DMZ and internal LAN. Internet connects directly to the DMZ switch without a firewall',
+            ],
+            'correct': 1,
+            'explanation':
+                'Three-zone DMZ architecture: the DMZ sits between two firewall interfaces. Public-facing servers go in the DMZ. If a DMZ server is compromised, the attacker cannot directly reach the internal LAN.',
+          },
+          {
+            'question':
+                'A network admin wants to control which devices can access the network based on their identity, not just their IP or MAC address. Which technology enforces this?',
+            'answers': [
+              'Port Security — restricts access by MAC address per switch port',
+              '802.1X (port-based Network Access Control) — requires devices to authenticate via RADIUS before the switch port is placed in the network VLAN',
+              'DHCP snooping — prevents unauthorised devices from receiving IP addresses',
+              'ACLs — block traffic from unknown IP addresses at the router',
+            ],
+            'correct': 1,
+            'explanation':
+                '802.1X: before a device can access the network, the switch requires it to authenticate against a RADIUS server. Until authentication succeeds, the port is in an unauthorised state. After success, the port is placed in the correct VLAN.',
+          },
+          {
+            'question':
+                'A company implements an ACL: (1) Permit TCP 192.168.1.0/24 any eq 80, (2) Permit TCP 192.168.1.0/24 any eq 443, (3) Deny IP any any. A host at 192.168.1.50 tries to send a DNS query (UDP port 53). What happens?',
+            'answers': [
+              'The DNS query is permitted by rule 1 because port 80 is close to port 53',
+              'The DNS query is permitted because DNS is a core protocol that ACLs cannot block',
+              'The DNS query matches rule 3 (deny) and is dropped — the ACL only permits HTTP and HTTPS from the subnet',
+              'The DNS query is forwarded because UDP is not covered by TCP-based ACL rules',
+            ],
+            'correct': 2,
+            'explanation':
+                'ACLs are processed top-down, first-match. UDP/53 (DNS) matches neither TCP rule — it falls through to Rule 3 (deny) and is dropped. This is a common misconfiguration: admins permit web traffic but forget DNS, ICMP, NTP.',
+          },
+          {
+            'question':
+                'What is the difference between an IDS and an IPS, and where is each typically deployed?',
+            'answers': [
+              'IDS and IPS are identical — the terms are interchangeable in modern security',
+              'IDS is deployed inline and actively blocks malicious traffic; IPS is deployed out-of-band and only sends alerts',
+              'IDS is out-of-band (receives a copy of traffic) — detects and alerts but cannot block. IPS is inline — can detect AND actively block malicious traffic in real time',
+              'IDS monitors internal network traffic; IPS monitors only internet-facing traffic',
+            ],
+            'correct': 2,
+            'explanation':
+                'IDS receives a copy of traffic via SPAN port — passive, cannot block, only alerts. IPS sits inline — all traffic passes through it, enabling active blocking. Many modern NGFWs incorporate IPS functionality inline.',
+          },
+          {
+            'question':
+                'A penetration tester connects to a guest WiFi network and attempts to scan hosts on the corporate VLAN. The scan returns no results despite the corporate VLAN being on the same physical access point. What control prevented this?',
+            'answers': [
+              'The firewall blocked the scanner\'s traffic because it came from an unknown IP',
+              'VLAN segmentation — the guest and corporate networks are on separate VLANs, and the router/firewall blocks unsolicited inbound scans from the guest VLAN to the corporate VLAN',
+              'The access point\'s transmit power was too low for the scanner to reach corporate hosts',
+              'WPA2 encryption prevented the scanner from seeing corporate traffic',
+            ],
+            'correct': 1,
+            'explanation':
+                'Proper segmentation places guest users on an isolated VLAN with internet access only — no access to corporate VLANs. The firewall/router between VLANs blocks lateral movement.',
+          },
+          {
+            'question':
+                'A router ACL is applied outbound on the interface connected to the internet. At which point is the ACL evaluated?',
+            'answers': [
+              'When the packet arrives on the router\'s internal interface (inbound evaluation)',
+              'After routing, just before the packet leaves the internet-facing interface (outbound evaluation)',
+              'Both inbound and outbound — the ACL is evaluated twice for every packet',
+              'The ACL is evaluated at the firewall, not the router',
+            ],
+            'correct': 1,
+            'explanation':
+                'ACL direction is from the router\'s perspective: outbound = evaluated as packet leaves an interface, after routing. Inbound ACLs are more efficient — they drop unwanted traffic before routing.',
+          },
+          {
+            'question':
+                'What does a next-generation firewall (NGFW) do that a traditional stateful firewall cannot?',
+            'answers': [
+              'NGFW operates at Layer 3 and 4; traditional firewalls only operate at Layer 2',
+              'NGFW performs deep packet inspection at Layer 7 — identifying applications regardless of port, integrating IPS, URL filtering, SSL inspection, and user identity awareness into a single policy engine',
+              'NGFW can filter traffic based on MAC addresses; traditional firewalls cannot',
+              'NGFW processes traffic faster than traditional firewalls using dedicated ASICs',
+            ],
+            'correct': 1,
+            'explanation':
+                'Traditional stateful firewalls match on IP/port/protocol (Layers 3-4). NGFWs add Layer 7 inspection: recognise applications regardless of port, enforce per-application policies, integrate IPS, perform SSL inspection, and apply policies based on user identity.',
+          },
+        ];
+
+      case 'module-07':
+        return [
+          {
+            'question':
+                'A company deploys a new 802.11ax (WiFi 6) access point in a high-density conference room. Users report significantly better performance compared to the old 802.11ac AP, despite similar channel width. What technology in 802.11ax primarily enables this improvement?',
+            'answers': [
+              'Beamforming — directs the signal specifically at each client device',
+              'OFDMA (Orthogonal Frequency-Division Multiple Access) — allows the AP to serve multiple clients simultaneously on different sub-channels, reducing contention in high-density environments',
+              'MU-MIMO — enables multiple simultaneous streams to different clients',
+              'WPA3 encryption — reduces overhead compared to WPA2, freeing bandwidth for data',
+            ],
+            'correct': 1,
+            'explanation':
+                'OFDMA is the key WiFi 6 improvement for high-density. In 802.11ac, only one client transmits per time slot. OFDMA divides channels into resource units — multiple clients transmit simultaneously on different sub-carriers, dramatically reducing contention.',
+          },
+          {
+            'question':
+                'A wireless network uses WPA2-Enterprise. A laptop connects without prompting for a password. Explain what is happening.',
+            'answers': [
+              'The network is open and unsecured — no authentication is required',
+              'The laptop has a saved password from a previous connection',
+              'WPA2-Enterprise uses 802.1X authentication — the laptop presents a certificate to a RADIUS server. The certificate was pre-installed, so authentication happens automatically without a user-visible password prompt',
+              'WPA2-Enterprise uses MAC address authentication — the laptop\'s MAC is pre-approved',
+            ],
+            'correct': 2,
+            'explanation':
+                'WPA2-Enterprise (802.1X) replaces the shared PSK with per-user/device authentication via RADIUS. EAP-TLS (certificate-based) requires no password prompt if the cert is pre-installed. Each device has a unique credential that can be individually revoked.',
+          },
+          {
+            'question':
+                'An engineer surveys a building and finds multiple APs on channel 6 in adjacent areas, causing co-channel interference. What is the correct channel plan for 2.4GHz to minimise interference?',
+            'answers': [
+              'Use channels 1, 6, and 11 — the only three non-overlapping channels in 2.4GHz (20MHz wide)',
+              'Use channels 1, 4, 8, and 11 — four non-overlapping channels in 2.4GHz',
+              'Use channels 1, 3, 5, 7, 9, and 11 — even-numbered spacing prevents overlap',
+              'The 2.4GHz band has 13 non-overlapping channels — use any combination',
+            ],
+            'correct': 0,
+            'explanation':
+                '2.4GHz has only channels 1, 6, and 11 as non-overlapping with 20MHz channel width. Adjacent channels (e.g., 1 and 3) overlap in frequency and cause interference. 5GHz has many more non-overlapping channels.',
+          },
+          {
+            'question':
+                'A security audit finds a rogue AP broadcasting the same SSID as the corporate network with stronger signal. Users\' devices automatically connect to it. What attack is this and what are the consequences?',
+            'answers': [
+              'Deauthentication attack — the rogue AP disconnects users from the legitimate AP',
+              'Evil Twin attack — the rogue AP intercepts all user traffic as a man-in-the-middle, enabling credential theft, session hijacking, and malware injection',
+              'WPS brute force attack — the rogue AP uses WPS to crack the network password',
+              'Beacon flooding attack — the rogue AP overwhelms clients with fake beacon frames',
+            ],
+            'correct': 1,
+            'explanation':
+                'Evil Twin: the rogue AP (same SSID, stronger signal) intercepts all client traffic. Defences: 802.1X/WPA2-Enterprise with certificate validation (a rogue AP cannot present a valid cert); WIDS to detect rogue APs; always-on VPN.',
+          },
+          {
+            'question':
+                'What is the purpose of a wireless LAN controller (WLC) in an enterprise WiFi deployment, compared to autonomous APs?',
+            'answers': [
+              'A WLC increases the range of each AP by boosting signal strength',
+              'A WLC centralises management, RF optimisation, roaming, and security policy for all APs — autonomous APs are independently managed with separate configurations and cannot support seamless roaming',
+              'A WLC provides DHCP and DNS services that autonomous APs cannot offer',
+              'A WLC is required to support WPA2 — autonomous APs only support WPA',
+            ],
+            'correct': 1,
+            'explanation':
+                'Controller-based (CAPWAP) architecture: APs are lightweight — they only handle RF. The WLC handles authentication, policy, roaming handoffs, and configuration. Benefits: single-pane management, seamless roaming, dynamic RF management, rogue AP detection.',
+          },
+          {
+            'question':
+                'A user 30 metres from an AP gets excellent signal but poor throughput. A client 5 metres away gets excellent throughput. What is the most likely cause?',
+            'answers': [
+              'The AP is transmitting at too high a power level, causing interference at 30 metres',
+              'The distant client is connecting at a lower modulation rate (e.g., BPSK/QPSK) due to signal degradation — the AP must accommodate this slower rate, which consumes more airtime per transmission',
+              'The AP\'s radio frequency is being absorbed by building materials at 30 metres',
+              'The distant client\'s antenna is incorrectly oriented for optimal signal reception',
+            ],
+            'correct': 1,
+            'explanation':
+                'WiFi uses adaptive modulation: as signal degrades, clients drop to lower modulation schemes. Lower modulation = lower data rate but takes the same airtime. When a slow client transmits, it consumes channel time that faster clients could use — the "slow client problem."',
+          },
+          {
+            'question':
+                'What does the hidden node problem cause in wireless networks, and what mechanism attempts to address it?',
+            'answers': [
+              'Hidden nodes create duplicate SSIDs that confuse clients — beacon frames address this',
+              'Two clients cannot hear each other but can both hear the AP — they transmit simultaneously, causing collisions at the AP that neither detects. RTS/CTS allows clients to reserve the channel before transmitting',
+              'Clients hidden behind walls cannot authenticate to the AP — 802.1X addresses this',
+              'Hidden nodes reduce signal strength — power control mechanisms compensate',
+            ],
+            'correct': 1,
+            'explanation':
+                'Hidden node: Client A and Client B are both in range of the AP but not each other. Both transmit simultaneously — a collision occurs at the AP. RTS/CTS: Client A sends RTS → AP responds CTS → Client B defers → Client A transmits.',
+          },
+          {
+            'question':
+                'A network engineer must provide WiFi coverage for a large warehouse with metal shelving. 2.4GHz and 5GHz are both available. Which band is more appropriate and why?',
+            'answers': [
+              '5GHz — higher frequency provides better penetration through metal obstacles',
+              '2.4GHz — lower frequency has better range and penetration through obstacles including metal shelving, at the cost of fewer non-overlapping channels',
+              '5GHz — it has more non-overlapping channels, reducing interference from metal reflections',
+              '2.4GHz — it is immune to multipath interference caused by metal surfaces',
+            ],
+            'correct': 1,
+            'explanation':
+                '2.4GHz has longer wavelength = better wall and obstacle penetration and longer range. 5GHz has shorter wavelength = shorter range and higher absorption by obstacles. For warehouses with metal shelving, 2.4GHz is more practical.',
+          },
+          {
+            'question':
+                'What is BSS (Basic Service Set) vs ESS (Extended Service Set) in WiFi terminology?',
+            'answers': [
+              'BSS is the wireless standard for 2.4GHz; ESS is the standard for 5GHz',
+              'BSS is a single AP with its associated clients; ESS is multiple APs sharing the same SSID, forming a unified network that supports roaming between APs',
+              'BSS provides basic encryption; ESS provides enterprise-grade encryption',
+              'BSS is used for indoor deployments; ESS extends coverage to outdoor areas',
+            ],
+            'correct': 1,
+            'explanation':
+                'BSS: one AP + its associated client stations = a single wireless cell identified by BSSID (the AP\'s MAC). ESS: multiple BSSs sharing the same SSID — clients can roam between APs without reconfiguring. Enterprise networks are always ESS.',
+          },
+          {
+            'question':
+                'WPA3 replaced WPA2 as the latest WiFi security standard. What specific cryptographic improvement does WPA3-Personal provide over WPA2-Personal?',
+            'answers': [
+              'WPA3 uses AES-256 instead of AES-128 for encryption',
+              'WPA3 uses SAE (Simultaneous Authentication of Equals) instead of PSK — providing forward secrecy so that capturing the handshake and later learning the password cannot decrypt previously captured traffic',
+              'WPA3 requires certificate-based authentication eliminating the need for passwords',
+              'WPA3 uses TKIP encryption which is stronger than CCMP used in WPA2',
+            ],
+            'correct': 1,
+            'explanation':
+                'WPA2-Personal vulnerability: offline dictionary attacks against captured 4-way handshakes. WPA3 SAE provides forward secrecy — each session uses a unique key. Knowing the password after the fact cannot decrypt previously captured sessions.',
+          },
+        ];
+
+      case 'module-08':
+        return [
+          {
+            'question':
+                'A network engineer runs "ping 8.8.8.8" from a host and gets 100% packet loss. They run "ping 192.168.1.1" (default gateway) and get replies. What layer and component should they investigate next?',
+            'answers': [
+              'Layer 1 — physical cable between host and switch',
+              'Layer 2 — switch port VLAN configuration',
+              'Layer 3 — the router\'s routing table, default route, or the uplink between the router and ISP. The gateway is reachable but packets are not reaching the internet',
+              'Layer 4 — firewall is blocking ICMP outbound',
+            ],
+            'correct': 2,
+            'explanation':
+                'Gateway responds → Layers 1-3 to the gateway work. Next steps: (1) check if the router has a default route; (2) ping the ISP\'s next-hop router from the router; (3) check WAN interface status; (4) check NAT translations.',
+          },
+          {
+            'question':
+                'A "show interface" command on a router shows: "GigabitEthernet0/1 is up, line protocol is down." What does this status indicate?',
+            'answers': [
+              'The interface has no IP address configured',
+              'The physical layer (Layer 1) is connected (carrier detected) but the data link layer (Layer 2) is not establishing — common causes: keepalive mismatch, encapsulation mismatch, or the remote device is not sending Layer 2 frames',
+              'The interface is administratively shutdown by the "shutdown" command',
+              'The interface has a speed or duplex mismatch with the connected device',
+            ],
+            'correct': 1,
+            'explanation':
+                '"Up/down": up = physical signal detected (Layer 1 OK), line protocol down = Layer 2 not functioning. Status combinations: up/up = fully operational; up/down = Layer 2 issue; down/down = no physical signal; administratively down/down = shutdown applied.',
+          },
+          {
+            'question':
+                'An engineer uses traceroute and sees: Hop 1: 1ms, Hop 2: 2ms, Hop 3: 150ms, Hop 4: 152ms, Hop 5: 153ms. What does this indicate?',
+            'answers': [
+              'The problem is at the remote server — Hop 5 has the highest latency',
+              'The latency was introduced between Hop 2 and Hop 3 — the 148ms increase at Hop 3 indicates a slow or congested WAN link or geographic distance between those two routers',
+              'The entire path is slow — all hops above 1ms indicate network problems',
+              'Hop 3 is a firewall adding inspection latency — subsequent hops show normal performance',
+            ],
+            'correct': 1,
+            'explanation':
+                'Traceroute measures cumulative latency. The jump from 2ms to 150ms at Hop 3 shows the latency was introduced by the link between Hop 2 and Hop 3 — likely a WAN link, geographic distance, or congestion.',
+          },
+          {
+            'question':
+                'SNMP is used to monitor network devices. What is the difference between SNMP polling and SNMP traps, and which is more efficient for real-time alerting?',
+            'answers': [
+              'SNMP polling sends data continuously; traps send data only on demand — polling is better for real-time alerts',
+              'SNMP polling (manager queries device at intervals) generates regular traffic regardless of events; SNMP traps (device proactively notifies manager when an event occurs) are more efficient for alerts',
+              'SNMP polling uses UDP; traps use TCP — traps are more reliable for critical alerts',
+              'SNMP traps require SNMPv3; polling works with SNMPv1 and v2c',
+            ],
+            'correct': 1,
+            'explanation':
+                'SNMP polling generates predictable traffic, good for trending data. SNMP traps are near-real-time with minimal overhead. Best practice: use both — traps for immediate alerts, polling for performance baselines.',
+          },
+          {
+            'question':
+                'A network engineer needs to capture traffic on a switch port to diagnose an issue. The switch supports SPAN (Switched Port Analyser). What does SPAN do?',
+            'answers': [
+              'SPAN blocks traffic on a port for analysis without affecting production traffic',
+              'SPAN copies traffic from a source port or VLAN to a designated destination port where a packet analyser (e.g., Wireshark) is connected — no impact on source traffic',
+              'SPAN compresses traffic statistics and sends them to a syslog server',
+              'SPAN creates a second virtual port mirroring the configuration of the source port',
+            ],
+            'correct': 1,
+            'explanation':
+                'SPAN (Port Mirroring) copies all frames from the source port to a destination port. The source traffic is not affected — SPAN is non-intrusive. RSPAN extends mirroring across multiple switches.',
+          },
+          {
+            'question':
+                'A network monitoring system shows an interface with utilisation consistently above 90% during business hours. What are the correct next steps?',
+            'answers': [
+              'Immediately replace the link with a faster one — 90% utilisation always requires hardware upgrade',
+              'Identify the traffic causing congestion using NetFlow or SNMP top-talkers analysis; implement QoS to prioritise business-critical traffic; evaluate whether a link upgrade is required',
+              'Apply an ACL to block the top-consuming IP address',
+              'Enable compression on the interface to reduce bandwidth consumption',
+            ],
+            'correct': 1,
+            'explanation':
+                'Before upgrading, understand what is consuming bandwidth. NetFlow identifies top talkers and applications. QoS can prioritise business applications over bulk transfers. A link upgrade should be a data-driven decision.',
+          },
+          {
+            'question':
+                'What is the difference between syslog severity levels and why does the level matter for network management?',
+            'answers': [
+              'Syslog levels only affect how fast messages are delivered',
+              'Syslog defines 8 severity levels (0=Emergency to 7=Debug). Setting the logging level determines which messages are sent — too verbose floods the syslog server; too restrictive misses warnings',
+              'Syslog severity levels are vendor-specific — Cisco and Juniper use different scales',
+              'Syslog levels only apply to interface status messages',
+            ],
+            'correct': 1,
+            'explanation':
+                'Syslog severity: 0=Emergency, 1=Alert, 2=Critical, 3=Error, 4=Warning, 5=Notice, 6=Informational, 7=Debug. Debug generates enormous volume. Production: typically level 6 or level 4 for warning-and-above.',
+          },
+          {
+            'question':
+                'An engineer is asked to implement QoS to protect VoIP calls from being degraded by bulk file transfers on the same WAN link. Which QoS mechanism should be applied?',
+            'answers': [
+              'Traffic shaping — slows VoIP traffic to match the speed of file transfers',
+              'DSCP marking + LLQ (Low Latency Queue) — VoIP packets are marked EF (Expedited Forwarding, DSCP 46) and placed in a strict priority queue that is always serviced before other queues',
+              'WRED (Weighted Random Early Detection) — randomly drops file transfer packets to make room for VoIP',
+              'Traffic policing — limits VoIP bandwidth to a fixed rate',
+            ],
+            'correct': 1,
+            'explanation':
+                'VoIP requirements: low latency (<150ms), low jitter (<30ms), low packet loss (<1%). LLQ provides a strict priority queue always serviced first. DSCP EF marking allows routers throughout the path to identify VoIP packets.',
+          },
+          {
+            'question':
+                'A change management process requires a rollback plan before any network change. An engineer is upgrading IOS on a core switch. What should the rollback plan include?',
+            'answers': [
+              'A note that the previous IOS version was installed',
+              'A verified backup of the current IOS image and running configuration stored on a TFTP server, the ability to boot the previous image, a defined rollback trigger, a change window, and a tested restore procedure',
+              'Contact information for the switch vendor\'s support line',
+              'A plan to notify users that the network will be unavailable during the upgrade',
+            ],
+            'correct': 1,
+            'explanation':
+                'A proper rollback plan: (1) verified backup of current image + config; (2) defined rollback triggers; (3) tested rollback procedure; (4) time-boxed maintenance window; (5) communication plan. The most common failure is discovering the backup doesn\'t work during the incident.',
+          },
+          {
+            'question':
+                'NetFlow is configured on a router to monitor traffic patterns. What information does NetFlow provide that simple SNMP interface counters cannot?',
+            'answers': [
+              'NetFlow provides interface utilisation at higher granularity than SNMP polling',
+              'NetFlow provides per-flow visibility: source/destination IP, port, protocol, bytes, and packets per conversation — SNMP shows only total interface byte counts with no insight into who is talking to whom',
+              'NetFlow monitors packet loss and retransmissions; SNMP only counts total packets',
+              'NetFlow works on wireless interfaces; SNMP only monitors wired interfaces',
+            ],
+            'correct': 1,
+            'explanation':
+                'SNMP: total bytes in/out, error counts. NetFlow: full flow records (src IP:port → dst IP:port, protocol, bytes, packets). This answers: "Who are the top talkers?", "What application is consuming bandwidth?", "Who is connecting to this server?"',
+          },
+        ];
+
+      default:
+        return [
+          {
+            'question': 'What does a router use to make forwarding decisions?',
+            'answers': [
+              'MAC address table',
+              'IP routing table — matches destination IP to next-hop or egress interface',
+              'ARP cache',
+              'DNS records',
+            ],
+            'correct': 1,
+            'explanation':
+                'Routers use the IP routing table to forward packets. They match the destination IP address against routes using longest prefix match and forward to the next-hop router or directly connected network.',
+          },
+        ];
+    }
   }
 }

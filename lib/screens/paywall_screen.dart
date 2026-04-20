@@ -6,7 +6,6 @@ import 'subscription_service.dart';
 import 'app_theme.dart';
 
 class PaywallScreen extends StatefulWidget {
-  /// The course the user was trying to open — pre-selects single plan
   final String courseId;
   final String courseTitle;
   final Color courseColor;
@@ -22,21 +21,33 @@ class PaywallScreen extends StatefulWidget {
   State<PaywallScreen> createState() => _PaywallScreenState();
 }
 
+enum _Plan { single, bundle4, all }
+
 class _PaywallScreenState extends State<PaywallScreen> {
   List<Package> _packages = [];
   bool _loading = true;
+  bool _loadError = false; // NEW: surface load failures to the user
   bool _purchasing = false;
-  bool _selectedAll = false; // false = single course selected by default
+  _Plan _selected = _Plan.single;
 
-  Package? get _singlePackage => _packages.firstWhere(
-    (p) => p.storeProduct.identifier == kSingleCourseProductId,
-    orElse: () => _packages.isNotEmpty ? _packages.first : throw Exception(),
-  );
+  // ── Find the right package for the selected plan ──────────────────────────
+  Package? _packageFor(_Plan plan) {
+    final id = {
+      _Plan.single: kProductSingle,
+      _Plan.bundle4: kProductBundle4,
+      _Plan.all: kProductBundleAll,
+    }[plan]!;
 
-  Package? get _allPackage => _packages.firstWhere(
-    (p) => p.storeProduct.identifier == kAllCoursesProductId,
-    orElse: () => _packages.length > 1 ? _packages.last : throw Exception(),
-  );
+    try {
+      return _packages.firstWhere(
+        (p) => p.storeProduct.identifier == id,
+      );
+    } catch (_) {
+      // Product ID not found — do NOT silently fall back to another product.
+      // Return null so the UI can show a clear error.
+      return null;
+    }
+  }
 
   @override
   void initState() {
@@ -44,53 +55,96 @@ class _PaywallScreenState extends State<PaywallScreen> {
     _loadPackages();
   }
 
+  // ── Load packages with retry ──────────────────────────────────────────────
   Future<void> _loadPackages() async {
+    setState(() {
+      _loading = true;
+      _loadError = false;
+    });
     final packages = await SubscriptionService.getPackages();
     if (mounted) {
       setState(() {
         _packages = packages;
         _loading = false;
+        // If RC returned nothing, surface the error so user can retry.
+        _loadError = packages.isEmpty;
       });
     }
   }
 
+  // ── Purchase flow ─────────────────────────────────────────────────────────
   Future<void> _purchase() async {
-    if (_purchasing || _packages.isEmpty) return;
+    if (_purchasing) return;
+
+    // Guard: packages not loaded.
+    if (_packages.isEmpty) {
+      _showError(
+          'Products are still loading. Please wait a moment and try again.');
+      return;
+    }
+
+    final package = _packageFor(_selected);
+
+    // Guard: specific product not found in RevenueCat offerings.
+    if (package == null) {
+      _showError(
+        'This product is not available right now. '
+        'Please check your App Store connection and try again.',
+      );
+      return;
+    }
+
     HapticFeedback.mediumImpact();
-
-    final package = _selectedAll ? _allPackage : _singlePackage;
-    if (package == null) return;
-
     setState(() => _purchasing = true);
 
     try {
       final success = await SubscriptionService.purchase(
         package,
-        courseId: _selectedAll ? null : widget.courseId,
+        courseId: _selected == _Plan.single ? widget.courseId : null,
+        // bundle4: selectedCourseIds is null here because the user picks
+        // courses after purchase (or on the courses screen). The entitlement
+        // is what actually gates access. You can wire up a course-picker
+        // sheet here if you want to collect selection at purchase time.
+        selectedCourseIds: null,
       );
+
       if (success && mounted) {
-        Navigator.pop(context, true); // true = access granted
+        // Briefly show success haptic before popping.
+        HapticFeedback.heavyImpact();
+        Navigator.pop(context, true);
       }
     } catch (e) {
-      if (mounted) {
-        _showError('Purchase failed. Please try again.');
-      }
+      // purchase() throws a clean String for user-facing errors.
+      if (mounted) _showError(e.toString());
     } finally {
       if (mounted) setState(() => _purchasing = false);
     }
   }
 
+  // ── Restore purchases ─────────────────────────────────────────────────────
   Future<void> _restore() async {
+    if (_purchasing) return;
     HapticFeedback.selectionClick();
     setState(() => _purchasing = true);
-    final restored = await SubscriptionService.restore();
-    if (mounted) {
-      setState(() => _purchasing = false);
+
+    try {
+      final restored = await SubscriptionService.restore();
+      if (!mounted) return;
       if (restored) {
+        HapticFeedback.heavyImpact();
         Navigator.pop(context, true);
       } else {
-        _showError('No active subscription found.');
+        _showError(
+          'No previous purchases found for this Apple ID. '
+          'If you believe this is an error, contact support.',
+        );
       }
+    } catch (_) {
+      if (mounted) {
+        _showError('Could not restore purchases. Please try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _purchasing = false);
     }
   }
 
@@ -98,7 +152,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
     showCupertinoDialog(
       context: context,
       builder: (_) => CupertinoAlertDialog(
-        title: const Text('Oops'),
+        title: const Text('Something went wrong'),
         content: Text(message),
         actions: [
           CupertinoDialogAction(
@@ -108,6 +162,29 @@ class _PaywallScreenState extends State<PaywallScreen> {
         ],
       ),
     );
+  }
+
+  String get _ctaLabel {
+    if (_purchasing) return 'Processing…';
+    switch (_selected) {
+      case _Plan.single:
+        return 'Start 7-Day Free Trial';
+      case _Plan.bundle4:
+        return 'Buy Now · \$99.99';
+      case _Plan.all:
+        return 'Buy Now · \$149.99';
+    }
+  }
+
+  String get _trialNotice {
+    switch (_selected) {
+      case _Plan.single:
+        return '7 days free, then \$14.99 one-time. Yours forever.';
+      case _Plan.bundle4:
+        return 'One-time payment. Choose any 4 courses. Yours forever.';
+      case _Plan.all:
+        return 'One-time payment. Every course + all future content. Yours forever.';
+    }
   }
 
   @override
@@ -124,327 +201,381 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   strokeWidth: 2,
                 ),
               )
-            : Column(
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+            // ── Load error state with retry button ───────────────────────
+            : _loadError
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(40),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // ── Close button ──────────────────────────────────
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: GestureDetector(
-                              onTap: () => Navigator.pop(context, false),
-                              child: Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: theme.surface,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: theme.border),
-                                ),
-                                child: Icon(
-                                  CupertinoIcons.xmark,
-                                  size: 14,
-                                  color: theme.subtext,
-                                ),
-                              ),
-                            ),
+                          Icon(
+                            CupertinoIcons.wifi_exclamationmark,
+                            size: 48,
+                            color: theme.subtext,
                           ),
-
-                          const SizedBox(height: 24),
-
-                          // ── Hero icon ─────────────────────────────────────
-                          Container(
-                            width: 72,
-                            height: 72,
-                            decoration: BoxDecoration(
-                              color: widget.courseColor.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Icon(
-                              CupertinoIcons.lock_open_fill,
-                              color: widget.courseColor,
-                              size: 32,
-                            ),
-                          ),
-
                           const SizedBox(height: 20),
-
-                          // ── Headline ──────────────────────────────────────
                           Text(
-                            'Unlock ${widget.courseTitle}',
+                            'Could not load products',
                             style: TextStyle(
-                              fontSize: 28,
+                              fontSize: 18,
                               fontWeight: FontWeight.w700,
                               color: theme.text,
-                              letterSpacing: -0.8,
-                              height: 1.1,
+                              letterSpacing: -0.4,
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Start your 7-day free trial today.\nCancel anytime.',
+                            'Check your internet connection\nand try again.',
+                            textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 15,
+                              fontSize: 14,
                               color: theme.subtext,
                               height: 1.5,
                             ),
                           ),
-
-                          const SizedBox(height: 32),
-
-                          // ── Feature bullets ───────────────────────────────
-                          _buildFeature(
-                            icon: CupertinoIcons.checkmark_circle_fill,
-                            text: 'Flashcard lessons for every module',
-                            color: AppColors.green,
-                            theme: theme,
-                          ),
-                          _buildFeature(
-                            icon: CupertinoIcons.checkmark_circle_fill,
-                            text: 'Quiz after every module to test knowledge',
-                            color: AppColors.green,
-                            theme: theme,
-                          ),
-                          _buildFeature(
-                            icon: CupertinoIcons.checkmark_circle_fill,
-                            text: 'Track streaks, badges & quiz scores',
-                            color: AppColors.green,
-                            theme: theme,
-                          ),
-                          _buildFeature(
-                            icon: CupertinoIcons.checkmark_circle_fill,
-                            text: 'Certification-focused content',
-                            color: AppColors.green,
-                            theme: theme,
-                          ),
-
-                          const SizedBox(height: 32),
-
-                          // ── Plan selector ─────────────────────────────────
-                          Text(
-                            'CHOOSE YOUR PLAN',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: theme.subtext,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Single course plan
-                          _buildPlanTile(
-                            selected: !_selectedAll,
-                            title: widget.courseTitle,
-                            subtitle: '1 course · billed monthly',
-                            price: '\$14.99',
-                            badge: null,
-                            color: widget.courseColor,
-                            theme: theme,
-                            onTap: () => setState(() => _selectedAll = false),
-                          ),
-
-                          const SizedBox(height: 10),
-
-                          // All courses plan
-                          _buildPlanTile(
-                            selected: _selectedAll,
-                            title: 'All Courses',
-                            subtitle: 'Every course · billed monthly',
-                            price: '\$29.99',
-                            badge: 'BEST VALUE',
-                            color: AppColors.primary,
-                            theme: theme,
-                            onTap: () => setState(() => _selectedAll = true),
-                          ),
-
                           const SizedBox(height: 24),
-
-                          // ── Trial notice ──────────────────────────────────
-                          Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: widget.courseColor.withValues(alpha: 0.07),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: widget.courseColor.withValues(
-                                  alpha: 0.18,
+                          GestureDetector(
+                            onTap: _loadPackages,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 28,
+                                vertical: 14,
+                              ),
+                              decoration: BoxDecoration(
+                                color: widget.courseColor,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: const Text(
+                                'Retry',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
                                 ),
                               ),
                             ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  CupertinoIcons.gift_fill,
-                                  size: 18,
-                                  color: widget.courseColor,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    '7 days free, then '
-                                    '${_selectedAll ? '\$29.99' : '\$14.99'}'
-                                    '/month. Cancel anytime in Settings.',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: theme.subtext,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
                           ),
-
-                          const SizedBox(height: 32),
                         ],
                       ),
                     ),
-                  ),
-
-                  // ── Bottom CTA ────────────────────────────────────────────
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-                    child: Column(
-                      children: [
-                        GestureDetector(
-                          onTap: _purchasing ? null : _purchase,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 17),
-                            decoration: BoxDecoration(
-                              color: _purchasing
-                                  ? widget.courseColor.withValues(alpha: 0.5)
-                                  : widget.courseColor,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: _purchasing
-                                ? const Center(
-                                    child: SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2,
-                                      ),
+                  )
+                // ── Normal paywall ────────────────────────────────────────
+                : Column(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Close
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: GestureDetector(
+                                  onTap: () => Navigator.pop(context, false),
+                                  child: Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: theme.surface,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: theme.border),
                                     ),
-                                  )
-                                : const Text(
-                                    'Start Free Trial',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                      letterSpacing: -0.3,
+                                    child: Icon(
+                                      CupertinoIcons.xmark,
+                                      size: 14,
+                                      color: theme.subtext,
                                     ),
                                   ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        GestureDetector(
-                          onTap: _restore,
-                          child: Text(
-                            'Restore purchases',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: theme.subtext,
-                              decoration: TextDecoration.underline,
-                              decorationColor: theme.subtext,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Subscriptions auto-renew unless cancelled 24 hours\nbefore the end of the current period.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: theme.subtext.withValues(alpha: 0.6),
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
+                                ),
+                              ),
+                              const SizedBox(height: 24),
 
-  Widget _buildFeature({
-    required IconData icon,
-    required String text,
-    required Color color,
-    required ThemeNotifier theme,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 14,
-                color: theme.text,
-                letterSpacing: -0.2,
-              ),
-            ),
-          ),
-        ],
+                              // Hero icon
+                              Container(
+                                width: 72,
+                                height: 72,
+                                decoration: BoxDecoration(
+                                  color: widget.courseColor.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Icon(
+                                  CupertinoIcons.lock_open_fill,
+                                  color: widget.courseColor,
+                                  size: 32,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+
+                              // Headline
+                              Text(
+                                'Unlock ${widget.courseTitle}',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w700,
+                                  color: theme.text,
+                                  letterSpacing: -0.8,
+                                  height: 1.1,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'One-time payment. Learn at your own pace.\nKeep access forever.',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: theme.subtext,
+                                  height: 1.5,
+                                ),
+                              ),
+                              const SizedBox(height: 28),
+
+                              // Feature list
+                              ...[
+                                'Flashcard lessons for every module',
+                                'Quizzes after every module',
+                                'Track streaks, badges & scores',
+                                'Certification-focused content',
+                                'Lifetime access — no subscription',
+                              ].map(
+                                (f) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        CupertinoIcons.checkmark_circle_fill,
+                                        size: 18,
+                                        color: AppColors.green,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          f,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: theme.text,
+                                            letterSpacing: -0.2,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 28),
+
+                              // Plan selector
+                              Text(
+                                'CHOOSE YOUR PLAN',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: theme.subtext,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              _buildPlanTile(
+                                plan: _Plan.single,
+                                title: widget.courseTitle,
+                                subtitle: '1 course · 7-day free trial',
+                                price: '\$14.99',
+                                badge: 'FREE TRIAL',
+                                badgeColor: AppColors.green,
+                                color: widget.courseColor,
+                                theme: theme,
+                                // Warn if not loaded from RC
+                                unavailable: _packageFor(_Plan.single) == null,
+                              ),
+                              const SizedBox(height: 10),
+
+                              _buildPlanTile(
+                                plan: _Plan.bundle4,
+                                title: 'Any 4 Courses',
+                                subtitle: 'Pick any 4 courses · one-time',
+                                price: '\$99.99',
+                                badge: 'SAVE 58%',
+                                badgeColor: AppColors.amber,
+                                color: AppColors.amber,
+                                theme: theme,
+                                unavailable: _packageFor(_Plan.bundle4) == null,
+                              ),
+                              const SizedBox(height: 10),
+
+                              _buildPlanTile(
+                                plan: _Plan.all,
+                                title: 'Everything',
+                                subtitle:
+                                    'All courses + future content · one-time',
+                                price: '\$149.99',
+                                badge: 'BEST VALUE',
+                                badgeColor: AppColors.primary,
+                                color: AppColors.primary,
+                                theme: theme,
+                                unavailable: _packageFor(_Plan.all) == null,
+                              ),
+                              const SizedBox(height: 24),
+
+                              // Notice box
+                              Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: widget.courseColor.withOpacity(0.07),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: widget.courseColor.withOpacity(0.18),
+                                  ),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      _selected == _Plan.single
+                                          ? CupertinoIcons.gift_fill
+                                          : CupertinoIcons.checkmark_seal_fill,
+                                      size: 18,
+                                      color: widget.courseColor,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        _trialNotice,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: theme.subtext,
+                                          height: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // ── CTA ────────────────────────────────────────────
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                        child: Column(
+                          children: [
+                            GestureDetector(
+                              onTap: _purchasing ? null : _purchase,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 150),
+                                width: double.infinity,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 17),
+                                decoration: BoxDecoration(
+                                  color: _purchasing
+                                      ? widget.courseColor.withOpacity(0.5)
+                                      : widget.courseColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: _purchasing
+                                    ? const Center(
+                                        child: SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      )
+                                    : Text(
+                                        _ctaLabel,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                          letterSpacing: -0.3,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            GestureDetector(
+                              onTap: _purchasing ? null : _restore,
+                              child: Text(
+                                'Restore purchases',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: theme.subtext,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: theme.subtext,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Payment processed by Apple. All sales final.\nContact support for refund requests.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: theme.subtext.withOpacity(0.6),
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
       ),
     );
   }
 
   Widget _buildPlanTile({
-    required bool selected,
+    required _Plan plan,
     required String title,
     required String subtitle,
     required String price,
-    required String? badge,
+    required String badge,
+    required Color badgeColor,
     required Color color,
     required ThemeNotifier theme,
-    required VoidCallback onTap,
+    required bool unavailable, // grayed out if RC didn't return this product
   }) {
+    final selected = _selected == plan;
+    final effectiveColor = unavailable ? theme.subtext : color;
+
     return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
+      onTap: unavailable
+          ? null
+          : () {
+              HapticFeedback.selectionClick();
+              setState(() => _selected = plan);
+            },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: selected
-              ? color.withValues(alpha: theme.isDark ? 0.12 : 0.06)
+              ? effectiveColor.withOpacity(theme.isDark ? 0.12 : 0.06)
               : theme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? color.withValues(alpha: 0.5) : theme.border,
+            color: selected ? effectiveColor.withOpacity(0.5) : theme.border,
             width: selected ? 2 : 1,
           ),
         ),
         child: Row(
           children: [
-            // Radio dot
+            // Radio
             Container(
               width: 20,
               height: 20,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: selected ? color : Colors.transparent,
+                color: selected ? effectiveColor : Colors.transparent,
                 border: Border.all(
-                  color: selected ? color : theme.subtext,
+                  color: selected ? effectiveColor : theme.subtext,
                   width: 2,
                 ),
               ),
@@ -464,32 +595,30 @@ class _PaywallScreenState extends State<PaywallScreen> {
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: theme.text,
+                          color: unavailable ? theme.subtext : theme.text,
                           letterSpacing: -0.3,
                         ),
                       ),
-                      if (badge != null) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: color,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            badge,
-                            style: const TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: 0.5,
-                            ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: unavailable ? theme.border : badgeColor,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          unavailable ? 'UNAVAILABLE' : badge,
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
                           ),
                         ),
-                      ],
+                      ),
                     ],
                   ),
                   const SizedBox(height: 2),
@@ -505,7 +634,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: selected ? color : theme.subtext,
+                color: selected ? effectiveColor : theme.subtext,
                 letterSpacing: -0.4,
               ),
             ),
