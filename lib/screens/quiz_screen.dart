@@ -4078,10 +4078,10 @@ class _QuizScreenState extends State<QuizScreen> {
                 'ElastiCache (Redis or Memcached) caches hot data in memory — reducing repetitive database queries. Read latency drops from milliseconds to microseconds.',
           },
           {
-            'question': 'What is Amazon Aurora?',
+            'question': 'What is Amazon Aurora vs standard RDS MySQL?',
             'answers': [
-              'A NoSQL database; RDS MySQL is relational',
-              'MySQL/PostgreSQL-compatible with a distributed fault-tolerant storage layer — up to 5x throughput of standard MySQL at 1/10th commercial database cost',
+              'Aurora is a NoSQL database; RDS MySQL is relational',
+              'Aurora is MySQL/PostgreSQL-compatible with a distributed fault-tolerant storage layer — up to 5x throughput of standard MySQL at 1/10th commercial database cost',
               'Aurora runs in a single AZ; RDS MySQL runs multi-AZ',
               'Aurora is cheaper in all scenarios',
             ],
@@ -4387,7 +4387,7 @@ class _QuizScreenState extends State<QuizScreen> {
             'question': 'What is an AWS Savings Plan vs Reserved Instance?',
             'answers': [
               'Savings Plans are always cheaper',
-              'Savings Plans commit to a spending level (/\$hour) with more flexibility on instance type/size/region vs Reserved Instances which lock to specific instance type',
+              'Savings Plans commit to a spending level (\$/hour) with more flexibility on instance type/size/region vs Reserved Instances which lock to specific instance type',
               'Reserved Instances offer more flexibility',
               'They are identical products',
             ],
@@ -4546,7 +4546,7 @@ class _QuizScreenState extends State<QuizScreen> {
             'question': 'What does "Repurchase" mean in the 6 Rs?',
             'answers': [
               'Buying new on-premises servers instead of migrating',
-              'Moving from a self-managed application to a SaaS equivalent — e.g. replacing self-hosted email to Microsoft 365',
+              'Moving from a self-managed application to a SaaS equivalent — e.g. replacing self-hosted email with Microsoft 365',
               'Renegotiating the cloud provider agreement',
               'Purchasing Reserved Instances after initial On-Demand assessment',
             ],
@@ -4739,10 +4739,401 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Binary Cyber Pro — 8 modules
+  // Binary Cyber Pro — 8 modules (ALL modules present — 01 through 08)
   // ═══════════════════════════════════════════════════════════════════════════
   List<Map<String, dynamic>> _cyberProQuestions(String moduleId) {
     switch (moduleId) {
+      // ── Module 01: Cybersecurity Foundations ─────────────────────────────
+      case 'module-01':
+        return [
+          {
+            'question': 'What does the CIA Triad stand for in cybersecurity?',
+            'answers': [
+              'Computing, Infrastructure, Availability',
+              'Confidentiality, Integrity, Availability — the three core pillars of information security',
+              'Cyber Intelligence Agency framework',
+              'Controlled Information Access',
+            ],
+            'correct': 1,
+            'explanation':
+                'CIA Triad: Confidentiality (only authorised access), Integrity (data is accurate and unaltered), Availability (systems accessible when needed). Every security control maps to one or more of these pillars.',
+          },
+          {
+            'question':
+                'What is the difference between a threat, vulnerability, and risk?',
+            'answers': [
+              'They are three different words for the same concept',
+              'Threat = potential harm event; Vulnerability = weakness that can be exploited; Risk = likelihood × impact of a threat exploiting a vulnerability',
+              'Vulnerability = potential harm; Threat = weakness; Risk = the attacker',
+              'Risk = technical flaw; Threat = policy gap; Vulnerability = attack method',
+            ],
+            'correct': 1,
+            'explanation':
+                'Threat: something that could cause harm (e.g. ransomware). Vulnerability: a weakness (e.g. unpatched software). Risk = Threat × Vulnerability × Impact. Reducing any factor reduces overall risk.',
+          },
+          {
+            'question':
+                'What is the difference between symmetric and asymmetric encryption?',
+            'answers': [
+              'Symmetric is stronger; asymmetric is faster',
+              'Symmetric uses one shared key for encrypt and decrypt; asymmetric uses a public/private key pair — public to encrypt, private to decrypt',
+              'Asymmetric uses one key; symmetric uses two',
+              'They are identical — the names refer to key length only',
+            ],
+            'correct': 1,
+            'explanation':
+                'Symmetric (AES): one shared secret key — fast, used for bulk data. Asymmetric (RSA, ECC): key pair — public key encrypts, private key decrypts. Asymmetric solves the key distribution problem but is slower.',
+          },
+          {
+            'question': 'What is defence in depth?',
+            'answers': [
+              'Using one very strong security control instead of many weak ones',
+              'Layering multiple independent security controls so that if one fails, others still protect the asset',
+              'Defending only the network perimeter',
+              'A military strategy applied to physical security only',
+            ],
+            'correct': 1,
+            'explanation':
+                'Defence in depth: no single control is perfect. Layer firewalls, IDS, endpoint protection, MFA, and encryption. An attacker must defeat all layers — dramatically increasing cost and detection probability.',
+          },
+          {
+            'question': 'What is the principle of least privilege?',
+            'answers': [
+              'Only senior staff need security training',
+              'Users and systems should have only the minimum permissions required to perform their function — nothing more',
+              'Privileged accounts should be shared to reduce password fatigue',
+              'All users start with admin rights that are removed when abused',
+            ],
+            'correct': 1,
+            'explanation':
+                'Least privilege limits blast radius. A compromised account with minimal permissions causes minimal damage. Applies to users, services, APIs, and database accounts equally.',
+          },
+          {
+            'question':
+                'What is a security control and what are the three main categories?',
+            'answers': [
+              'A software product; categories are antivirus, firewall, and VPN',
+              'A safeguard to reduce risk; categories are Preventive (stops attacks), Detective (identifies attacks), and Corrective (responds to attacks)',
+              'A compliance requirement; categories are legal, technical, and financial',
+              'An audit finding; categories are critical, high, and medium',
+            ],
+            'correct': 1,
+            'explanation':
+                'Preventive controls (firewalls, MFA) stop attacks before they succeed. Detective controls (IDS, SIEM, logs) identify attacks in progress. Corrective controls (incident response, patching) restore normal operation after an attack.',
+          },
+          {
+            'question': 'What is social engineering and why is it effective?',
+            'answers': [
+              'Hacking social media platforms to steal data',
+              'Manipulating people psychologically to divulge confidential information or take harmful actions — bypasses technical controls by targeting the human element',
+              'Engineering social features into applications',
+              'A network attack targeting social networks',
+            ],
+            'correct': 1,
+            'explanation':
+                'Social engineering exploits human psychology — urgency, authority, fear, trust. Even organisations with strong technical controls are vulnerable. Phishing, pretexting, and vishing are common forms. Security awareness training is the primary defence.',
+          },
+          {
+            'question': 'What is the purpose of a security policy?',
+            'answers': [
+              'To document every technical configuration in the organisation',
+              'To define management\'s intentions and rules for protecting information assets — providing the framework that all security controls must support',
+              'To list all known vulnerabilities in the environment',
+              'To satisfy regulatory requirements only',
+            ],
+            'correct': 1,
+            'explanation':
+                'Security policies establish the "what and why" — management direction for information security. They are high-level and technology-agnostic. Standards, procedures, and guidelines implement the policies.',
+          },
+          {
+            'question': 'What is non-repudiation in cybersecurity?',
+            'answers': [
+              'The ability to deny performing an action',
+              'Ensuring that a party cannot deny having sent or received information — typically achieved through digital signatures',
+              'Preventing unauthorised access to systems',
+              'Encrypting communications to prevent eavesdropping',
+            ],
+            'correct': 1,
+            'explanation':
+                'Non-repudiation prevents parties from denying their actions. Digital signatures bind an action to an identity cryptographically. Critical for legal agreements, financial transactions, and audit trails.',
+          },
+          {
+            'question':
+                'What is the difference between authentication and authorisation?',
+            'answers': [
+              'They are the same process',
+              'Authentication verifies who you are; authorisation determines what you are permitted to do — authentication always precedes authorisation',
+              'Authorisation verifies identity; authentication grants access',
+              'Authentication is for users; authorisation is for systems',
+            ],
+            'correct': 1,
+            'explanation':
+                'Authentication (AuthN): verify identity — username/password, MFA, certificate. Authorisation (AuthZ): what actions/resources are permitted — RBAC, ACLs, policies. You must know WHO before deciding WHAT they can do.',
+          },
+        ];
+
+      // ── Module 02: Cryptography & PKI ─────────────────────────────────────
+      case 'module-02':
+        return [
+          {
+            'question':
+                'What is hashing and how does it differ from encryption?',
+            'answers': [
+              'They are the same — hashing is just faster encryption',
+              'Hashing is a one-way function producing a fixed-length digest — it cannot be reversed. Encryption is two-way — data can be decrypted with the correct key',
+              'Hashing uses a key; encryption does not',
+              'Encryption produces a fixed-length output; hashing produces variable-length output',
+            ],
+            'correct': 1,
+            'explanation':
+                'Hashing (SHA-256, MD5) = one-way, fixed-size output, no key. Used for integrity verification and password storage. Encryption (AES, RSA) = reversible with key. Used for confidentiality. Never use MD5 or SHA-1 for security — use SHA-256 or better.',
+          },
+          {
+            'question': 'What is a digital certificate and what does it prove?',
+            'answers': [
+              'A file proving you have completed security training',
+              'A digitally signed document binding a public key to an identity — issued by a Certificate Authority, proving that a public key belongs to the stated entity',
+              'An encrypted password stored on a server',
+              'A government-issued document for cybersecurity professionals',
+            ],
+            'correct': 1,
+            'explanation':
+                'A digital certificate (X.509) binds a public key to an identity (domain, organisation, person). The CA signs it, vouching for the identity. Your browser trusts the CA, therefore trusts the certificate — the basis of HTTPS.',
+          },
+          {
+            'question': 'What is TLS and what problem does it solve?',
+            'answers': [
+              'A firewall protocol protecting network perimeters',
+              'Transport Layer Security — provides encrypted, authenticated communication over the network, preventing eavesdropping and tampering in transit',
+              'A DNS security extension preventing cache poisoning',
+              'A VPN protocol for remote access',
+            ],
+            'correct': 1,
+            'explanation':
+                'TLS (successor to SSL) encrypts data in transit using asymmetric crypto for key exchange and symmetric crypto for bulk data. The padlock in your browser = TLS. Without it, all HTTP traffic is plaintext — visible to any attacker on the network.',
+          },
+          {
+            'question':
+                'What is a Certificate Authority (CA) and why is it trusted?',
+            'answers': [
+              'A government body that approves cybersecurity standards',
+              'An organisation that issues and signs digital certificates — trusted because browser/OS vendors include their root certificates in a pre-installed trust store',
+              'A server that stores encryption keys for users',
+              'A type of firewall that validates certificates',
+            ],
+            'correct': 1,
+            'explanation':
+                'CAs (DigiCert, Let\'s Encrypt, GlobalSign) are trusted because their root certificates are pre-installed in operating systems and browsers. The chain of trust: Root CA → Intermediate CA → End-entity certificate.',
+          },
+          {
+            'question':
+                'What is a man-in-the-middle (MitM) attack and how does TLS prevent it?',
+            'answers': [
+              'An attacker physically between two computers intercepting cables',
+              'An attacker intercepting and potentially altering communications between two parties who believe they are communicating directly — TLS prevents it via certificate validation and encryption',
+              'An attacker who steals a user\'s session cookie after login',
+              'A DDoS attack targeting network infrastructure',
+            ],
+            'correct': 1,
+            'explanation':
+                'MitM: attacker positions between client and server, relaying traffic they can read or modify. TLS prevents it: the server\'s certificate is validated against a trusted CA. A MitM cannot present a valid certificate for a domain they don\'t control.',
+          },
+          {
+            'question': 'What is the purpose of salting a password hash?',
+            'answers': [
+              'Making the password longer before hashing',
+              'Adding a unique random value to each password before hashing — preventing rainbow table attacks by ensuring identical passwords produce different hashes',
+              'Encrypting the hash with an additional key',
+              'Storing the hash in a separate database for security',
+            ],
+            'correct': 1,
+            'explanation':
+                'Without salt: two users with "Password123" produce identical hashes. With salt: each gets a unique random value prepended — their hashes are completely different. Defeats rainbow tables and prevents bulk cracking of leaked hash databases.',
+          },
+          {
+            'question': 'What is PKI (Public Key Infrastructure)?',
+            'answers': [
+              'A physical key management system for data centres',
+              'The complete system of hardware, software, policies, and procedures for creating, managing, distributing, and revoking digital certificates and key pairs',
+              'A protocol for encrypting emails',
+              'A type of firewall using public key authentication',
+            ],
+            'correct': 1,
+            'explanation':
+                'PKI encompasses CAs, registration authorities, certificate repositories, certificate revocation (CRL/OCSP), and the policies governing all of it. The foundation of HTTPS, S/MIME, code signing, and VPN authentication.',
+          },
+          {
+            'question': 'What does end-to-end encryption (E2EE) guarantee?',
+            'answers': [
+              'Data is encrypted between the client and the server\'s load balancer only',
+              'Only the communicating endpoints can read the messages — not the service provider, not network operators, not anyone intercepting traffic',
+              'Data is encrypted at rest in the database',
+              'The server decrypts and re-encrypts messages for each recipient',
+            ],
+            'correct': 1,
+            'explanation':
+                'E2EE (Signal, WhatsApp): keys exist only at the endpoints. The service provider cannot read messages even if compelled. Compare to standard HTTPS where the server decrypts your data to process it.',
+          },
+          {
+            'question': 'What is certificate pinning and when is it used?',
+            'answers': [
+              'Physically securing server hardware with a lock',
+              'Hardcoding a specific certificate or public key into an application so it only trusts that exact certificate — protecting against rogue CA-issued certificates',
+              'Renewing a certificate before it expires',
+              'Pinning a certificate to a specific server IP address',
+            ],
+            'correct': 1,
+            'explanation':
+                'Certificate pinning: mobile apps hardcode the expected certificate/public key. Even if an attacker has a CA-issued certificate for your domain (through a compromised CA), the pinned app will reject it. Used in high-security banking apps.',
+          },
+          {
+            'question':
+                'What is the difference between symmetric encryption algorithms AES and 3DES?',
+            'answers': [
+              'AES uses asymmetric keys; 3DES uses symmetric keys',
+              'AES is the modern standard — faster and more secure with key sizes of 128/192/256 bits. 3DES applies DES three times — slow and considered weak, being phased out',
+              'They are identical — 3DES is just the older name for AES',
+              'AES is for data at rest; 3DES is for data in transit',
+            ],
+            'correct': 1,
+            'explanation':
+                'AES (Advanced Encryption Standard) replaced 3DES. AES-256 is the current standard for symmetric encryption — fast, secure, hardware-accelerated on modern CPUs. 3DES has effective 112-bit security and is deprecated by NIST.',
+          },
+        ];
+
+      // ── Module 03: Network Security Fundamentals ──────────────────────────
+      case 'module-03':
+        return [
+          {
+            'question': 'What is a firewall and what is its primary function?',
+            'answers': [
+              'A physical barrier preventing physical access to servers',
+              'A network security device that monitors and controls incoming and outgoing traffic based on predefined security rules — acting as a barrier between trusted and untrusted networks',
+              'An antivirus program that scans files for malware',
+              'A tool for encrypting network communications',
+            ],
+            'correct': 1,
+            'explanation':
+                'Firewalls enforce network segmentation. They inspect packets and apply rules (allow/deny) based on IP, port, protocol, and in NGFW — application and user identity. The first line of perimeter defence.',
+          },
+          {
+            'question':
+                'What is a VPN and what security problem does it solve?',
+            'answers': [
+              'A tool for accessing geo-blocked content',
+              'Virtual Private Network — creates an encrypted tunnel over a public network, allowing remote users or sites to communicate securely as if on a private network',
+              'A tool for monitoring employee internet usage',
+              'A type of firewall for cloud environments',
+            ],
+            'correct': 1,
+            'explanation':
+                'VPN: encrypts traffic between endpoints over untrusted networks (internet). Remote access VPN = road warrior connecting to office. Site-to-site VPN = connecting two offices. IPSec and TLS (SSL VPN) are common protocols.',
+          },
+          {
+            'question':
+                'What is network segmentation and why is it a security best practice?',
+            'answers': [
+              'Splitting bandwidth across multiple connections for performance',
+              'Dividing a network into isolated segments using VLANs or firewalls — limiting lateral movement so a compromised device cannot freely reach all other systems',
+              'Backing up network configurations to separate servers',
+              'Distributing network traffic across multiple ISPs',
+            ],
+            'correct': 1,
+            'explanation':
+                'Segmentation contains breaches. If an attacker compromises a workstation in Segment A, they cannot directly reach the database in Segment B. Each segment boundary requires authentication/authorisation — slowing attackers dramatically.',
+          },
+          {
+            'question': 'What is ARP poisoning and what attack does it enable?',
+            'answers': [
+              'Flooding ARP tables to crash network switches',
+              'Sending forged ARP replies to map an attacker\'s MAC to a legitimate IP — enabling man-in-the-middle attacks where the attacker intercepts traffic intended for another host',
+              'Poisoning DNS caches with incorrect IP addresses',
+              'Overloading routers with excessive ARP broadcasts',
+            ],
+            'correct': 1,
+            'explanation':
+                'ARP poisoning: attacker sends forged ARP replies, associating their MAC with the gateway\'s IP. All traffic from victims is sent to the attacker who relays it — invisible MitM. Dynamic ARP Inspection (DAI) on switches prevents this.',
+          },
+          {
+            'question':
+                'What is DNS poisoning (cache poisoning) and its impact?',
+            'answers': [
+              'Overloading a DNS server to make it unavailable',
+              'Injecting fraudulent DNS records into a resolver\'s cache — redirecting users to malicious IP addresses when they type a legitimate domain name',
+              'Deleting DNS records to prevent domain resolution',
+              'Registering similar domain names to confuse users',
+            ],
+            'correct': 1,
+            'explanation':
+                'DNS poisoning: corrupts the resolver\'s cache so domain.com resolves to the attacker\'s IP. Users visit what they think is their bank but land on a phishing site. DNSSEC validates DNS responses using digital signatures — the primary defence.',
+          },
+          {
+            'question': 'What is a DMZ in network security architecture?',
+            'answers': [
+              'A demilitarised zone — a physical area around the data centre',
+              'A network segment between two firewalls that hosts public-facing servers — isolated so a compromised server cannot directly reach the internal network',
+              'A VLAN reserved for management traffic only',
+              'A segment with no security controls for testing purposes',
+            ],
+            'correct': 1,
+            'explanation':
+                'DMZ sits between the internet-facing firewall and the internal firewall. Web servers, mail relays, and DNS servers live here. If an attacker compromises a DMZ server, they hit the internal firewall before reaching the LAN.',
+          },
+          {
+            'question':
+                'What is port scanning and why do both attackers and defenders use it?',
+            'answers': [
+              'Physically scanning server ports for cable connections',
+              'Probing a target system to identify open TCP/UDP ports and the services running on them — attackers use it for reconnaissance; defenders use it to discover their own attack surface',
+              'Monitoring network traffic for suspicious patterns',
+              'Encrypting specific network ports to prevent eavesdropping',
+            ],
+            'correct': 1,
+            'explanation':
+                'Nmap is the standard tool. Open ports = potential attack surface. A defender running regular port scans discovers unexpected open services before attackers do. Any port open to the internet without business justification should be closed.',
+          },
+          {
+            'question':
+                'What is a DDoS attack and what makes it difficult to defend against?',
+            'answers': [
+              'A single attacker overwhelming a server — easily blocked by banning one IP',
+              'Distributed Denial of Service — thousands to millions of compromised devices flooding a target simultaneously, making it difficult to distinguish attack traffic from legitimate traffic',
+              'An attack that deletes data from a server',
+              'An attack that steals credentials through brute force',
+            ],
+            'correct': 1,
+            'explanation':
+                'DDoS traffic comes from legitimate-looking IPs worldwide (botnet). You cannot simply block one source. Modern defences: cloud-based scrubbing centres, rate limiting, anycast diffusion, BGP blackholing. Cloud providers (AWS Shield, Cloudflare) absorb volumetric attacks.',
+          },
+          {
+            'question':
+                'What is network access control (NAC) and what does it enforce?',
+            'answers': [
+              'Controlling physical access to the data centre',
+              'A security framework verifying device health and identity before granting network access — ensuring only compliant, authorised devices can connect',
+              'A firewall rule set controlling which ports are accessible',
+              'Monitoring network bandwidth consumption by user',
+            ],
+            'correct': 1,
+            'explanation':
+                'NAC checks: is the device managed? Is the OS patched? Is antivirus up to date? Based on results, the device is granted full access, limited guest access, or quarantined. 802.1X is the authentication component of NAC.',
+          },
+          {
+            'question':
+                'What is the purpose of network traffic analysis (NTA) tools?',
+            'answers': [
+              'Blocking malicious traffic automatically at the firewall',
+              'Capturing and analysing network flows to detect anomalies, lateral movement, data exfiltration, and suspicious behaviour that perimeter controls miss',
+              'Encrypting all network traffic between systems',
+              'Managing IP address assignments across the network',
+            ],
+            'correct': 1,
+            'explanation':
+                'NTA tools (Darktrace, Zeek, Corelight) build a baseline of normal behaviour. Deviations — unusual connection volumes, unexpected data transfers, abnormal protocols — are flagged. Critical for detecting threats that have bypassed perimeter controls.',
+          },
+        ];
+
+      // ── Module 04: Ethical Hacking & Penetration Testing ──────────────────
       case 'module-04':
         return [
           {
@@ -4869,6 +5260,7 @@ class _QuizScreenState extends State<QuizScreen> {
           },
         ];
 
+      // ── Module 05: Malware & Threats ──────────────────────────────────────
       case 'module-05':
         return [
           {
@@ -4996,6 +5388,7 @@ class _QuizScreenState extends State<QuizScreen> {
           },
         ];
 
+      // ── Module 06: Web Application Security ──────────────────────────────
       case 'module-06':
         return [
           {
@@ -5121,6 +5514,7 @@ class _QuizScreenState extends State<QuizScreen> {
           },
         ];
 
+      // ── Module 07: Identity & Access Management ───────────────────────────
       case 'module-07':
         return [
           {
@@ -5247,6 +5641,7 @@ class _QuizScreenState extends State<QuizScreen> {
           },
         ];
 
+      // ── Module 08: Incident Response & Digital Forensics ──────────────────
       case 'module-08':
         return [
           {
@@ -5392,6 +5787,9 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Network Pro — 8 modules
+  // ═══════════════════════════════════════════════════════════════════════════
   List<Map<String, dynamic>> _networkProQuestions(String moduleId) {
     switch (moduleId) {
       case 'module-01':
@@ -5407,7 +5805,7 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 1,
             'explanation':
-                'Layer 2 (Data Link) adds source and destination MAC addresses to create a frame. Switches operate at Layer 2 — they learn MAC addresses on each port and forward frames only to the port where the destination MAC is located. Hubs operate at Layer 1 and have no awareness of addresses — they broadcast all signals to all ports.',
+                'Layer 2 (Data Link) adds source and destination MAC addresses to create a frame. Switches operate at Layer 2 — they learn MAC addresses on each port and forward frames only to the port where the destination MAC is located. Hubs operate at Layer 1 and have no awareness of addresses.',
           },
           {
             'question':
@@ -5420,11 +5818,11 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 2,
             'explanation':
-                'Successful ping by IP confirms Layer 3 routing is working. The failure is at Layer 7 (Application) — specifically DNS. The client cannot resolve the hostname to an IP address. DNS operates at Layer 7 and uses UDP/TCP port 53. Check DNS server configuration and connectivity to the DNS resolver.',
+                'Successful ping by IP confirms Layer 3 routing is working. The failure is at Layer 7 (Application) — specifically DNS. DNS operates at Layer 7 and uses UDP/TCP port 53.',
           },
           {
             'question':
-                'A network engineer captures packets and sees a TCP segment with SYN flag set, source port 54231, destination port 443. What is happening and at which layer does this occur?',
+                'A network engineer captures packets and sees a TCP segment with SYN flag set, source port 54231, destination port 443. What is happening and at which layer?',
             'answers': [
               'Layer 2 — a switch is initiating a spanning tree election',
               'Layer 3 — a router is establishing a routing adjacency',
@@ -5433,7 +5831,7 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 2,
             'explanation':
-                'TCP operates at Layer 4 (Transport). The SYN flag initiates the three-way handshake (SYN → SYN-ACK → ACK). Source port 54231 is an ephemeral client port; destination port 443 is HTTPS. The client is establishing a reliable connection before any application data (TLS negotiation, HTTP) is exchanged.',
+                'TCP operates at Layer 4 (Transport). The SYN flag initiates the three-way handshake (SYN → SYN-ACK → ACK). Destination port 443 is HTTPS.',
           },
           {
             'question':
@@ -5446,7 +5844,7 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 2,
             'explanation':
-                'VLANs are separate Layer 2 broadcast domains. Communication between them requires a Layer 3 device (router or Layer 3 switch) to route packets between the different subnets. A Layer 2 switch cannot forward traffic between VLANs without configured SVIs (Switched Virtual Interfaces) and routing enabled.',
+                'VLANs are separate Layer 2 broadcast domains. Communication between them requires a Layer 3 device (router or Layer 3 switch) to route packets between different subnets.',
           },
           {
             'question':
@@ -5459,7 +5857,7 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 1,
             'explanation':
-                'TCP (Layer 4) provides reliable, ordered, error-checked delivery via sequence numbers, acknowledgements, and retransmission. UDP provides no guarantee of delivery, order, or error recovery — dropped packets are simply lost. For video streaming, a dropped frame is preferable to the delay caused by retransmission. For file transfers, every byte must arrive intact, so TCP is required.',
+                'TCP provides reliable, ordered, error-checked delivery via sequence numbers, acknowledgements, and retransmission. UDP provides no guarantee — dropped packets are simply lost. For streaming, a dropped frame beats retransmission delay.',
           },
           {
             'question':
@@ -5472,7 +5870,7 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 2,
             'explanation':
-                'ICMP ping success confirms Layers 1-3 are working. The failure is above Layer 3. SMTP uses TCP port 25 (server-to-server) or 587 (client submission) — a firewall may be blocking these specific ports while allowing HTTP/HTTPS. The mail application configuration or DNS MX record could also be the issue at Layer 7.',
+                'ICMP ping success confirms Layers 1-3 are working. SMTP uses TCP port 25 (server-to-server) or 587 (client submission) — a firewall may be blocking these specific ports while allowing HTTP/HTTPS.',
           },
           {
             'question':
@@ -5485,11 +5883,11 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 2,
             'explanation':
-                'The TCP/IP model has 4 layers: Network Access (OSI Layers 1-2), Internet (OSI Layer 3), Transport (OSI Layer 4), and Application (OSI Layers 5-7). The Application layer in TCP/IP encompasses OSI\'s Session (5), Presentation (6), and Application (7) layers. Protocols like HTTP, FTP, DNS, and SMTP all operate at this combined layer.',
+                'TCP/IP model has 4 layers: Network Access (OSI 1-2), Internet (OSI 3), Transport (OSI 4), Application (OSI 5-7). The Application layer in TCP/IP encompasses Session, Presentation, and Application.',
           },
           {
             'question':
-                'A packet needs to travel from 192.168.1.10 to 10.0.0.50 across three routers. What changes and what stays the same at each router hop?',
+                'A packet travels from 192.168.1.10 to 10.0.0.50 across three routers. What changes and what stays the same at each router hop?',
             'answers': [
               'The source and destination IP addresses change at each hop; MAC addresses stay the same',
               'The source and destination MAC addresses are rewritten at each hop; the source and destination IP addresses remain unchanged end-to-end',
@@ -5498,7 +5896,7 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 1,
             'explanation':
-                'IP addresses (Layer 3) identify the ultimate source and destination — they remain unchanged across the entire path. MAC addresses (Layer 2) are local to each network segment. At each router, the frame is stripped, the IP packet is re-encapsulated in a new frame with the router\'s MAC as source and the next-hop device\'s MAC as destination.',
+                'IP addresses (Layer 3) remain unchanged across the entire path. MAC addresses (Layer 2) are local to each segment. At each router, the frame is stripped and re-encapsulated with the next-hop MAC addresses.',
           },
           {
             'question':
@@ -5511,20 +5909,20 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 2,
             'explanation':
-                'ARP operates at the Layer 2/3 boundary. When a host needs to send to an IP on the same subnet, it broadcasts an ARP request. The owner of that IP replies with its MAC address. The requesting host caches this in its ARP table. Without ARP, Layer 3 packets cannot be encapsulated into Layer 2 frames for local delivery.',
+                'ARP operates at the Layer 2/3 boundary. When a host needs to send to an IP on the same subnet, it broadcasts an ARP request. The owner replies with its MAC address.',
           },
           {
             'question':
-                'An engineer troubleshooting a connectivity issue works from the bottom of the OSI model upward. They confirm the cable is connected (Layer 1), the switch port is up (Layer 2), and the IP address is correctly configured (Layer 3). The problem persists. What should they check next?',
+                'An engineer confirms cable connected (Layer 1), switch port up (Layer 2), and IP correctly configured (Layer 3). The problem persists. What should they check next?',
             'answers': [
               'Replace the network cable — physical issues can be intermittent',
               'Layer 4 — check if the specific TCP/UDP port the application uses is being blocked by a firewall or not listening on the server',
-              'Layer 1 again — duplex mismatch causes intermittent issues that appear resolved',
-              'Layer 2 again — VLAN membership may be incorrect on the switch port',
+              'Layer 1 again — duplex mismatch causes intermittent issues',
+              'Layer 2 again — VLAN membership may be incorrect',
             ],
             'correct': 1,
             'explanation':
-                'The bottom-up troubleshooting approach confirms each layer before moving up. Layers 1-3 are confirmed working. Layer 4 is next: is the server listening on the required port? Is a firewall blocking that port? Use netstat or ss on the server to check listening ports, and test with telnet or nc to the specific port to verify reachability.',
+                'Bottom-up troubleshooting: Layers 1-3 confirmed. Layer 4 is next: is the server listening on the required port? Is a firewall blocking it? Use netstat or nc to verify.',
           },
         ];
 
@@ -5541,33 +5939,33 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 1,
             'explanation':
-                '/27 borrows 3 bits from the host portion: 2³=8 subnets. Each subnet has 5 host bits: 2⁵-2=30 usable hosts. This exactly meets the requirement — 6 departments each needing up to 30 hosts. /28 gives only 14 usable hosts (insufficient). /26 gives only 4 subnets (not enough departments).',
+                '/27 borrows 3 bits: 2³=8 subnets. Each has 5 host bits: 2⁵-2=30 usable hosts. Exactly meets the requirement — 6 departments each needing up to 30 hosts.',
           },
           {
             'question':
-                'A host has IP address 172.16.45.200/20. What is the network address, broadcast address, and valid host range for this subnet?',
+                'A host has IP address 172.16.45.200/20. What is the network address and broadcast address?',
             'answers': [
-              'Network: 172.16.45.0, Broadcast: 172.16.45.255, Hosts: 172.16.45.1–172.16.45.254',
-              'Network: 172.16.32.0, Broadcast: 172.16.47.255, Hosts: 172.16.32.1–172.16.47.254',
-              'Network: 172.16.40.0, Broadcast: 172.16.47.255, Hosts: 172.16.40.1–172.16.47.254',
-              'Network: 172.16.0.0, Broadcast: 172.16.255.255, Hosts: 172.16.0.1–172.16.255.254',
+              'Network: 172.16.45.0, Broadcast: 172.16.45.255',
+              'Network: 172.16.32.0, Broadcast: 172.16.47.255',
+              'Network: 172.16.40.0, Broadcast: 172.16.47.255',
+              'Network: 172.16.0.0, Broadcast: 172.16.255.255',
             ],
             'correct': 1,
             'explanation':
-                '/20 means 20 network bits, 12 host bits. The subnet mask is 255.255.240.0. In the third octet: 240 in binary is 11110000. 45 AND 240 = 32 (network). Network: 172.16.32.0, Broadcast: 172.16.47.255, Usable hosts: 172.16.32.1 to 172.16.47.254 (4094 hosts).',
+                '/20 means subnet mask 255.255.240.0. Third octet: 240 = 11110000. 45 AND 240 = 32. Network: 172.16.32.0, Broadcast: 172.16.47.255, Usable: 172.16.32.1–172.16.47.254.',
           },
           {
             'question':
-                'A company has 5 point-to-point WAN links between routers. They want to waste as few IP addresses as possible. Which subnet mask should they use for each link?',
+                'A company has 5 point-to-point WAN links between routers. They want to waste as few IP addresses as possible. Which subnet mask should they use?',
             'answers': [
               '/24 — standard subnet size for simplicity',
-              '/30 — provides exactly 2 usable host addresses per link (4 addresses: network, 2 hosts, broadcast)',
+              '/30 — provides exactly 2 usable host addresses per link',
               '/29 — provides 6 usable host addresses, enough for future expansion',
               '/31 — not valid, no usable host addresses',
             ],
             'correct': 1,
             'explanation':
-                '/30 provides 4 addresses: 1 network, 2 usable hosts (one per router end), 1 broadcast. This is the industry standard for point-to-point links.',
+                '/30 provides 4 addresses: 1 network, 2 usable hosts (one per router end), 1 broadcast. Industry standard for point-to-point links.',
           },
           {
             'question':
@@ -5580,20 +5978,20 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 3,
             'explanation':
-                '/26 in the last octet: mask is 192. 128 network address. 128+64-1=191 is the broadcast address. Valid hosts: 10.10.10.129 to 10.10.10.190. 10.10.10.191 is the broadcast address — not assignable to a host.',
+                '/26 mask = 192. Network: .128. Broadcast: .128+64-1=.191. Valid hosts: .129 to .190. 10.10.10.191 is the broadcast address — not assignable to a host.',
           },
           {
             'question':
-                'A network admin receives a complaint that two hosts — 192.168.1.65/26 and 192.168.1.130/26 — cannot communicate without a router even though they are on the same physical switch. Why?',
+                'Two hosts — 192.168.1.65/26 and 192.168.1.130/26 — cannot communicate without a router even though on the same switch. Why?',
             'answers': [
               'The switch is misconfigured and needs a static route',
-              'They are in different /26 subnets: .65 is in 192.168.1.64/26 (.64-.127) and .130 is in 192.168.1.128/26 (.128-.191) — a router is required to forward between subnets',
+              'They are in different /26 subnets: .65 is in 192.168.1.64/26 and .130 is in 192.168.1.128/26 — a router is required',
               'Both hosts have the same subnet mask so they should communicate directly',
-              '192.168.1.130 is a broadcast address and cannot be assigned to a host',
+              '192.168.1.130 is a broadcast address',
             ],
             'correct': 1,
             'explanation':
-                '/26 creates four subnets: .0-.63, .64-.127, .128-.191, .192-.255. Host .65 is in the .64/26 subnet; host .130 is in the .128/26 subnet. Even on the same switch, hosts in different subnets must communicate via a router.',
+                '/26 creates four subnets: .0-.63, .64-.127, .128-.191, .192-.255. Host .65 is in .64/26; host .130 is in .128/26. Different subnets require routing even on the same switch.',
           },
           {
             'question':
@@ -5601,29 +5999,29 @@ class _QuizScreenState extends State<QuizScreen> {
             'answers': [
               'Global unicast — routable on the public internet',
               'Multicast — sends to all IPv6 devices on the local segment',
-              'Link-local — automatically configured on every IPv6 interface, used for communication on the local link only, never routed beyond the local segment',
-              'Anycast — routes to the nearest node in a group of servers with the same address',
+              'Link-local — automatically configured on every IPv6 interface, used for local link communication only, never routed',
+              'Anycast — routes to the nearest node in a group',
             ],
             'correct': 2,
             'explanation':
-                'FE80::/10 addresses are link-local — automatically generated from the MAC address (EUI-64) or randomly. They are mandatory on every IPv6 interface and used for neighbour discovery, router discovery, and DHCPv6. They are never forwarded by routers.',
+                'FE80::/10 link-local addresses are automatically generated and mandatory on every IPv6 interface. Used for neighbour discovery, router discovery, and DHCPv6. Never forwarded by routers.',
           },
           {
             'question':
-                'A host sends a packet to 255.255.255.255. What type of transmission is this and what is its scope?',
+                'A host sends a packet to 255.255.255.255. What type of transmission is this?',
             'answers': [
-              'Multicast — delivered to a group of subscribed hosts across multiple subnets',
+              'Multicast — delivered to a group of subscribed hosts',
               'Unicast — delivered to a single specific host',
               'Limited broadcast — delivered to all hosts on the local subnet only, routers do not forward it',
               'Directed broadcast — delivered to all hosts in a specific remote subnet',
             ],
             'correct': 2,
             'explanation':
-                '255.255.255.255 is the limited broadcast address. It is delivered to all hosts on the local network segment. Routers do not forward limited broadcasts. DHCP Discover uses this address because the client does not yet know its subnet.',
+                '255.255.255.255 is the limited broadcast address — all hosts on the local network segment. Routers do not forward it. DHCP Discover uses this address.',
           },
           {
             'question':
-                'An organisation needs 500 IP addresses for a new office. They are assigned 203.0.113.0/23 from their ISP. How many usable host addresses does this provide?',
+                'An organisation needs 500 IP addresses. They are assigned 203.0.113.0/23. How many usable host addresses does this provide?',
             'answers': [
               '254 usable hosts',
               '510 usable hosts (2⁹ - 2 = 510)',
@@ -5632,33 +6030,33 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 1,
             'explanation':
-                '/23 has 9 host bits (32-23=9). Total addresses: 2⁹=512. Subtract network and broadcast: 512-2=510 usable hosts. This covers 203.0.113.1 to 203.0.114.254.',
+                '/23 has 9 host bits. Total: 2⁹=512. Subtract network and broadcast: 510 usable hosts. Covers 203.0.113.1 to 203.0.114.254.',
           },
           {
             'question':
-                'What is VLSM (Variable Length Subnet Masking) and why is it used instead of fixed-length subnetting?',
+                'What is VLSM and why is it used instead of fixed-length subnetting?',
             'answers': [
-              'VLSM uses the same subnet mask for all subnets — it simplifies routing table management',
-              'VLSM allows different subnet masks within the same address space — a /30 for WAN links and /24 for large LANs from the same block, minimising IP address waste',
-              'VLSM automatically assigns IP addresses to hosts using DHCP',
-              'VLSM is only used with IPv6 — IPv4 always uses fixed-length subnetting',
+              'VLSM uses the same subnet mask for all subnets',
+              'VLSM allows different subnet masks within the same address space — a /30 for WAN links and /24 for large LANs, minimising IP address waste',
+              'VLSM automatically assigns IP addresses using DHCP',
+              'VLSM is only used with IPv6',
             ],
             'correct': 1,
             'explanation':
-                'VLSM allows subnets of different sizes within the same address space. A WAN link needs only 2 hosts (/30), a small office needs 10 hosts (/28), a large LAN needs 200 hosts (/24). VLSM requires a classless routing protocol (OSPF, EIGRP, BGP).',
+                'VLSM allows subnets of different sizes within the same block. WAN link needs /30, small office needs /28, large LAN needs /24. Requires a classless routing protocol (OSPF, EIGRP, BGP).',
           },
           {
             'question':
-                'A router has the following routes: 10.0.0.0/8, 10.1.0.0/16, and 10.1.1.0/24. A packet arrives destined for 10.1.1.50. Which route does the router use?',
+                'A router has routes: 10.0.0.0/8, 10.1.0.0/16, and 10.1.1.0/24. A packet arrives for 10.1.1.50. Which route is used?',
             'answers': [
-              '10.0.0.0/8 — it is the largest supernet covering this address',
-              '10.1.0.0/16 — it is the most specific match covering the /24',
+              '10.0.0.0/8 — the largest supernet covering this address',
+              '10.1.0.0/16 — the most specific match covering the /24',
               '10.1.1.0/24 — longest prefix match selects the most specific route',
-              'All three routes — the router load-balances across all matching routes',
+              'All three routes — the router load-balances',
             ],
             'correct': 2,
             'explanation':
-                'Routers use longest prefix match — the most specific (longest) matching route wins. 10.1.1.50 matches all three routes, but /24 is the most specific. More specific routes always win over less specific ones.',
+                'Routers use longest prefix match — the most specific (longest) matching route wins. 10.1.1.50 matches all three, but /24 is most specific. More specific always wins.',
           },
         ];
 
@@ -5666,7 +6064,7 @@ class _QuizScreenState extends State<QuizScreen> {
         return [
           {
             'question':
-                'A switch receives a frame with a destination MAC address that is not in its MAC address table. What does the switch do?',
+                'A switch receives a frame with a destination MAC address not in its MAC address table. What does the switch do?',
             'answers': [
               'Drops the frame — unknown destinations are discarded for security',
               'Sends the frame back to the source requesting the destination MAC',
@@ -5675,124 +6073,124 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 2,
             'explanation':
-                'When a switch encounters an unknown unicast destination, it floods the frame out all ports except the ingress port. The intended recipient receives the frame and responds — the switch learns the destination MAC from that reply and adds it to the MAC table.',
+                'Unknown unicast: switch floods out all ports except ingress. The intended recipient receives it and responds — the switch learns the destination MAC from that reply.',
           },
           {
             'question':
-                'Two switches are connected with a single uplink. VLANs 10, 20, and 30 need to pass between them. The engineer configures the link as a trunk. What protocol negotiates trunking on Cisco switches and what does it do?',
+                'Two switches are connected. VLANs 10, 20, and 30 need to pass between them. The link is configured as a trunk. What Cisco protocol negotiates trunking?',
             'answers': [
               'STP — prevents loops and negotiates which VLANs are active',
-              'DTP (Dynamic Trunking Protocol) — negotiates whether the link becomes a trunk and which encapsulation (802.1Q) to use',
+              'DTP (Dynamic Trunking Protocol) — negotiates whether the link becomes a trunk and which encapsulation to use',
               'VTP (VLAN Trunking Protocol) — synchronises VLAN databases between switches',
               'LACP — bundles multiple links and negotiates VLAN tagging',
             ],
             'correct': 1,
             'explanation':
-                'DTP (Dynamic Trunking Protocol) is Cisco-proprietary and automatically negotiates trunk links between switches. It determines whether a port becomes a trunk and negotiates 802.1Q encapsulation. Best practice is to disable DTP on production ports and manually configure trunks.',
+                'DTP is Cisco-proprietary and automatically negotiates trunk links. Best practice: disable DTP on production ports and manually configure trunks.',
           },
           {
             'question':
-                'A network engineer notices that traffic between VLAN 10 and VLAN 20 is unexpectedly reaching hosts in both VLANs without passing through a router. Investigation reveals the attack originated from a host in VLAN 10. What attack occurred?',
+                'Traffic between VLAN 10 and VLAN 20 is reaching both VLANs without passing through a router. The attack originated from VLAN 10. What attack occurred?',
             'answers': [
               'MAC spoofing — the attacker changed their MAC to match a VLAN 20 host',
               'ARP poisoning — the attacker redirected VLAN 20 traffic through their host',
-              'VLAN hopping via double tagging — the attacker sent frames with two 802.1Q tags; the first switch stripped the outer tag matching the native VLAN, and the second switch forwarded based on the inner tag',
-              'STP manipulation — the attacker became the root bridge and captured inter-VLAN traffic',
+              'VLAN hopping via double tagging — the attacker sent frames with two 802.1Q tags; the first switch stripped the outer tag, the second forwarded based on the inner tag',
+              'STP manipulation — the attacker became the root bridge',
             ],
             'correct': 2,
             'explanation':
-                'Double-tagging VLAN hopping: the attacker sends a frame with two 802.1Q tags — the outer tag matches the native VLAN. The first switch strips the outer tag and the second switch forwards to the target VLAN. Mitigation: change the native VLAN to an unused VLAN ID.',
+                'Double-tagging VLAN hopping: outer tag matches native VLAN, stripped by first switch. Second switch forwards based on inner tag. Mitigation: change native VLAN to an unused VLAN ID.',
           },
           {
             'question':
-                'Spanning Tree Protocol elects a root bridge. Which switch becomes the root bridge and why?',
+                'Spanning Tree Protocol elects a root bridge. Which switch becomes root and why?',
             'answers': [
-              'The switch with the highest MAC address — it has priority in the election',
-              'The switch with the most ports — it can connect the most segments',
-              'The switch with the lowest Bridge ID (combination of priority value and MAC address) — lowest priority wins, with MAC address as tiebreaker',
-              'The switch configured first — it claims root status before others boot',
+              'The switch with the highest MAC address',
+              'The switch with the most ports',
+              'The switch with the lowest Bridge ID (priority + MAC address) — lowest priority wins, MAC is tiebreaker',
+              'The switch configured first',
             ],
             'correct': 2,
             'explanation':
-                'STP elects the root bridge based on Bridge ID = Priority (default 32768) + VLAN ID + MAC address. The switch with the lowest Bridge ID wins. Network engineers set the priority manually to ensure the most capable switch is root.',
+                'STP Bridge ID = Priority (default 32768) + VLAN ID + MAC. Lowest Bridge ID wins. Engineers set priority manually to ensure the most capable switch is root.',
           },
           {
             'question':
-                'An access port on a switch is assigned to VLAN 30. The connected host has no VLAN awareness. How does the host communicate on VLAN 30?',
+                'An access port is assigned to VLAN 30. The connected host has no VLAN awareness. How does the host communicate on VLAN 30?',
             'answers': [
-              'The host must be configured with 802.1Q tagging to join VLAN 30',
+              'The host must be configured with 802.1Q tagging',
               'The switch tags all frames entering the access port with VLAN 30 — the host sends and receives untagged frames and is unaware of VLAN membership',
-              'The host must use a VLAN-aware network adapter to communicate on VLAN 30',
-              'The host communicates on the native VLAN by default — VLAN 30 requires explicit configuration on the host',
+              'The host must use a VLAN-aware network adapter',
+              'The host communicates on the native VLAN by default',
             ],
             'correct': 1,
             'explanation':
-                'Access ports handle VLAN tagging transparently. The host sends and receives normal untagged Ethernet frames. The switch adds the VLAN 30 tag to all ingress frames and strips it from all egress frames. The host has no knowledge of VLANs.',
+                'Access ports handle VLAN tagging transparently. The switch adds the VLAN 30 tag to ingress frames and strips it from egress frames. The host has no knowledge of VLANs.',
           },
           {
             'question':
-                'A network has three switches in a triangle topology (A-B, B-C, A-C links). STP blocks the A-C link. Link A-B fails. How does STP respond?',
+                'Three switches in a triangle (A-B, B-C, A-C). STP blocks A-C link. Link A-B fails. How does STP respond?',
             'answers': [
-              'The network is partitioned — hosts on switch C cannot reach switch A until A-B is repaired',
-              'STP immediately unblocks A-C — the previously blocked port transitions through Listening and Learning states before reaching Forwarding, taking ~30-50 seconds with classic STP',
-              'STP unblocks A-C instantly — all blocked ports transition to forwarding within 1 second',
-              'Switch C sends a topology change notification and the network administrator must manually unblock A-C',
+              'The network is partitioned until A-B is repaired',
+              'STP unblocks A-C — the previously blocked port transitions through Listening and Learning before Forwarding, taking ~30-50 seconds with classic STP',
+              'STP unblocks A-C instantly within 1 second',
+              'The administrator must manually unblock A-C',
             ],
             'correct': 1,
             'explanation':
-                'When STP detects a topology change, blocked ports transition to Forwarding to restore connectivity. Classic STP takes 30-50 seconds. RSTP (802.1w) converges in 1-2 seconds. Always deploy RSTP in modern networks.',
+                'Classic STP topology change takes 30-50 seconds. RSTP (802.1w) converges in 1-2 seconds. Always deploy RSTP in modern networks.',
           },
           {
             'question':
                 'An engineer configures PortFast on a switch port connected to a PC. What does PortFast do and what risk does it introduce if misconfigured?',
             'answers': [
-              'PortFast increases port speed to maximum — risk is duplex mismatch with slower devices',
-              'PortFast skips the STP Listening and Learning states, immediately placing the port in Forwarding — risk is if connected to a switch, a loop forms instantly before STP can block the port',
-              'PortFast enables BPDU filtering permanently — risk is that STP cannot detect topology changes',
-              'PortFast disables STP entirely on the port — risk is broadcast storms on the segment',
+              'PortFast increases port speed — risk is duplex mismatch',
+              'PortFast skips STP Listening and Learning states, immediately placing the port in Forwarding — risk is if connected to a switch, a loop forms before STP can block it',
+              'PortFast enables BPDU filtering permanently',
+              'PortFast disables STP entirely on the port',
             ],
             'correct': 1,
             'explanation':
-                'PortFast bypasses the 30-second STP delay for ports connected to end devices. Risk: if a switch is connected to a PortFast port, a loop can form before STP blocks it. Always pair PortFast with BPDU Guard.',
+                'PortFast bypasses the 30-second STP delay for end devices. Risk: if a switch connects to a PortFast port, a loop can form instantly. Always pair PortFast with BPDU Guard.',
           },
           {
             'question':
-                'An organisation wants to allow only a single authorised MAC address per switch port and automatically disable the port if an unauthorised device connects. Which feature accomplishes this?',
+                'An organisation wants only a single authorised MAC address per switch port and automatic port disable if an unauthorised device connects. Which feature accomplishes this?',
             'answers': [
-              '802.1X port authentication — requires RADIUS authentication before port access',
+              '802.1X port authentication — requires RADIUS authentication',
               'Dynamic ARP Inspection — validates ARP packets against the DHCP snooping table',
               'Port Security with violation mode shutdown — limits MACs per port and errdisables the port if violated',
               'DHCP snooping — blocks DHCP responses from unauthorised servers',
             ],
             'correct': 2,
             'explanation':
-                'Port Security allows you to specify a maximum number of MAC addresses per port and define the violation action. Violation mode shutdown immediately shuts down the port if an unauthorised MAC is detected.',
+                'Port Security limits MAC addresses per port and defines the violation action. Shutdown mode immediately errdisables the port if an unauthorised MAC is detected.',
           },
           {
             'question':
                 'What is the purpose of the native VLAN on an 802.1Q trunk link?',
             'answers': [
               'The native VLAN carries management traffic and cannot be changed',
-              'The native VLAN is used for inter-VLAN routing between trunk-connected switches',
-              'Frames on the native VLAN are sent untagged across the trunk — both ends must agree on the native VLAN or frames will be misassigned to the wrong VLAN',
-              'The native VLAN is the default VLAN for all access ports on the switch',
+              'The native VLAN is used for inter-VLAN routing',
+              'Frames on the native VLAN are sent untagged across the trunk — both ends must agree or frames will be misassigned',
+              'The native VLAN is the default VLAN for all access ports',
             ],
             'correct': 2,
             'explanation':
-                'The native VLAN on a trunk carries untagged frames. By default this is VLAN 1. Mismatched native VLANs cause a security issue. Best practice: change the native VLAN to an unused VLAN and tag all user VLANs explicitly.',
+                'Native VLAN frames cross the trunk untagged. By default VLAN 1. Mismatched native VLANs cause a security issue. Best practice: change to an unused VLAN ID.',
           },
           {
             'question':
-                'A network engineer must connect 48 access ports to a core switch that only has 4 uplinks available. The engineer adds a second uplink to the core switch, but STP blocks it. What technology allows both uplinks to be active simultaneously?',
+                'A second uplink to the core switch is added but STP blocks it. What technology allows both uplinks active simultaneously?',
             'answers': [
-              'RSTP — enables faster failover but still blocks one link',
-              'EtherChannel (LACP/PAgP) — bundles multiple physical links into a single logical link, providing both redundancy and increased bandwidth',
+              'RSTP — faster failover but still blocks one link',
+              'EtherChannel (LACP/PAgP) — bundles multiple physical links into a single logical link, providing redundancy and increased bandwidth',
               'VTP — synchronises VLANs across the additional uplink',
               'BPDU Guard — disables STP blocking on the second uplink',
             ],
             'correct': 1,
             'explanation':
-                'EtherChannel (IEEE 802.3ad LACP or Cisco PAgP) bundles multiple physical links into one logical interface. STP sees it as a single link (no blocking). Traffic is load-balanced across all member links.',
+                'EtherChannel (LACP or Cisco PAgP) bundles links into one logical interface. STP sees one link (no blocking). Traffic is load-balanced across all member links.',
           },
         ];
 
@@ -5800,124 +6198,124 @@ class _QuizScreenState extends State<QuizScreen> {
         return [
           {
             'question':
-                'A router has OSPF and a static route to the same destination. The static route has AD 1, OSPF has AD 110. Which route is installed in the routing table and why?',
+                'A router has OSPF and a static route to the same destination. Static has AD 1, OSPF has AD 110. Which route is installed?',
             'answers': [
-              'OSPF — dynamic routing protocols are always preferred over static routes',
+              'OSPF — dynamic routing protocols are always preferred',
               'Static route — lower Administrative Distance (1) means it is more trusted than OSPF (110)',
               'Both — the router load-balances between them',
-              'Neither — conflicting routes cause the router to drop traffic to that destination',
+              'Neither — conflicting routes cause the router to drop traffic',
             ],
             'correct': 1,
             'explanation':
-                'Administrative Distance (AD) is the measure of route source trustworthiness. Lower AD = more preferred. Static routes have AD 1. OSPF has AD 110. Common ADs: Connected=0, Static=1, EIGRP=90, OSPF=110, RIP=120, eBGP=20, iBGP=200.',
+                'Administrative Distance = trustworthiness. Lower AD = more preferred. Common ADs: Connected=0, Static=1, EIGRP=90, OSPF=110, RIP=120, eBGP=20, iBGP=200.',
           },
           {
             'question':
-                'OSPF routers on the same segment elect a Designated Router (DR). Router A has priority 100, Router B has priority 1, Router C has priority 100 but was the first to boot. Which becomes DR?',
+                'OSPF routers elect a DR. Router A has priority 100, Router B has priority 1, Router C has priority 100 and booted first. Which becomes DR?',
             'answers': [
               'Router B — lowest priority is elected DR in OSPF',
-              'Router C — the first router to boot always becomes DR regardless of priority',
-              'Router A — tied on priority with C, highest Router ID breaks the tie (highest IP address on a loopback or physical interface)',
+              'Router C — the first router to boot always becomes DR',
+              'Router A — tied on priority with C, highest Router ID breaks the tie',
               'All three — OSPF elects multiple DRs for redundancy',
             ],
             'correct': 2,
             'explanation':
-                'OSPF DR election: highest priority wins. Tie is broken by highest Router ID. Routers A and C are tied at priority 100 — the router with the higher Router ID becomes DR. OSPF DR election is not first-come-first-served when priorities are equal.',
+                'OSPF DR: highest priority wins. Tie broken by highest Router ID. A and C are tied at 100 — the one with the higher Router ID (highest loopback/physical IP) becomes DR.',
           },
           {
             'question':
-                'A network running RIP version 2 has a route that has been unreachable for 180 seconds. What happens next and why is RIP poorly suited for large networks?',
+                'A RIP v2 route has been unreachable for 180 seconds. What happens next and why is RIP poorly suited for large networks?',
             'answers': [
-              'RIP marks the route as invalid after 180 seconds and removes it after the flush timer (240s) — RIP is limited to 15 hops maximum, making it unsuitable for large networks',
-              'RIP immediately floods the network with a route withdrawal message',
+              'RIP marks the route invalid after 180 seconds and removes it after the flush timer (240s) — RIP is limited to 15 hops maximum',
+              'RIP immediately floods a route withdrawal message',
               'RIP waits for the hold-down timer (300s) before removing the route',
               'RIP recalculates the entire routing table using Dijkstra\'s algorithm',
             ],
             'correct': 0,
             'explanation':
-                'RIP timers: Update (30s), Invalid (180s), Flush (240s). RIP limitations: maximum 15 hops, slow convergence, sends full routing table every 30 seconds. OSPF and EIGRP replace RIP in enterprise networks.',
+                'RIP timers: Update (30s), Invalid (180s), Flush (240s). RIP limitations: max 15 hops, slow convergence, sends full routing table every 30 seconds. OSPF and EIGRP replace RIP in enterprise networks.',
           },
           {
             'question':
-                'Two OSPF routers are connected but are not forming a neighbour relationship. Hello packets are being sent but no adjacency forms. What is the most likely cause?',
+                'Two OSPF routers are connected but not forming adjacency. Hello packets are sent but no adjacency forms. Most likely cause?',
             'answers': [
               'The routers have different router IDs — OSPF requires matching router IDs',
-              'OSPF Hello packets must match: Area ID, Hello/Dead intervals, subnet mask, and authentication — a mismatch in any of these prevents adjacency formation',
-              'OSPF requires a static route to the neighbour before adjacency can form',
-              'The routers are in different AS numbers — OSPF requires matching AS configuration',
+              'OSPF Hello packets must match: Area ID, Hello/Dead intervals, subnet mask, and authentication — a mismatch prevents adjacency',
+              'OSPF requires a static route to the neighbour before adjacency',
+              'The routers are in different AS numbers',
             ],
             'correct': 1,
             'explanation':
-                'OSPF neighbour requirements (must match): same Area ID, same Hello interval, same Dead interval, same subnet mask, same authentication. Router IDs must be unique. AS number is an EIGRP/BGP concept — OSPF uses Areas.',
+                'OSPF neighbour requirements (must match): same Area ID, Hello interval, Dead interval, subnet mask, authentication. Router IDs must be unique. AS numbers are EIGRP/BGP concepts.',
           },
           {
             'question':
-                'A company has two ISP connections for redundancy. They want traffic to use ISP-A by default but automatically fail over to ISP-B if ISP-A goes down. What routing approach achieves this?',
+                'A company has two ISPs. They want ISP-A by default and automatic failover to ISP-B. What routing approach achieves this?',
             'answers': [
-              'Configure two default routes with equal cost — traffic load-balances between both ISPs',
-              'Configure a floating static route: default route via ISP-A with AD 1, default route via ISP-B with AD 254 — ISP-B route only enters the routing table if ISP-A route is removed',
-              'Use OSPF with ISP-A as the preferred OSPF path and ISP-B as backup',
-              'Configure policy-based routing to direct traffic based on source address',
+              'Configure two equal-cost default routes — traffic load-balances',
+              'Configure a floating static route: ISP-A with AD 1, ISP-B with AD 254 — ISP-B only enters the table if ISP-A fails',
+              'Use OSPF with ISP-A as the preferred path',
+              'Configure policy-based routing by source address',
             ],
             'correct': 1,
             'explanation':
-                'A floating static route has a higher AD than the primary route. When the primary is active, the floating route is not in the table. If the primary fails, the floating route becomes active. ISP-A static at AD 1 is primary; ISP-B static at AD 254 floats.',
+                'Floating static route: higher AD than the primary. When primary is active, floating route is not in the table. If primary fails, floating route becomes active.',
           },
           {
             'question':
-                'BGP is the routing protocol of the internet. What makes BGP fundamentally different from OSPF and EIGRP?',
+                'What makes BGP fundamentally different from OSPF and EIGRP?',
             'answers': [
-              'BGP uses hop count as its metric — OSPF and EIGRP use bandwidth',
-              'BGP is a path-vector protocol that makes routing decisions based on AS-PATH and policies — not just shortest path. It is designed to route between organisations (eBGP), not just within a network',
-              'BGP converges faster than OSPF because it uses incremental updates',
-              'BGP requires all routers in an AS to be directly connected to each other',
+              'BGP uses hop count as its metric',
+              'BGP is a path-vector protocol making routing decisions based on AS-PATH and policies — designed to route between organisations (eBGP), not within a network',
+              'BGP converges faster than OSPF',
+              'BGP requires all routers in an AS to be directly connected',
             ],
             'correct': 1,
             'explanation':
-                'BGP is a path-vector EGP. It carries AS-PATH, makes decisions based on policy attributes (Local Preference, MED, Weight), and is designed for inter-organisation routing. OSPF/EIGRP are IGPs optimising for shortest path within an organisation.',
+                'BGP is a path-vector EGP. Carries AS-PATH, makes policy-based decisions (Local Preference, MED, Weight). Designed for inter-organisation routing. OSPF/EIGRP are IGPs for intra-organisation.',
           },
           {
             'question':
-                'An engineer is configuring EIGRP. They see the term "feasible successor" in the routing table. What is a feasible successor and why is it important?',
+                'An engineer configuring EIGRP sees "feasible successor" in the topology table. What is this?',
             'answers': [
-              'The current best route to a destination — the route installed in the forwarding table',
-              'A backup route pre-calculated and held in the topology table, ready for instant installation if the successor fails — enabling EIGRP\'s sub-second convergence',
+              'The current best route installed in the forwarding table',
+              'A backup route pre-calculated and held in the topology table — ready for instant installation if the successor fails, enabling sub-second convergence',
               'The next router in the path to the destination',
               'A route learned from a different EIGRP autonomous system',
             ],
             'correct': 1,
             'explanation':
-                'EIGRP: Successor = current best route (in routing table). Feasible Successor = pre-computed backup route in topology table. When a successor fails, EIGRP instantly promotes the feasible successor — no recalculation needed.',
+                'EIGRP: Successor = current best route (in routing table). Feasible Successor = pre-computed backup in topology table. Instant promotion when successor fails — no recalculation needed.',
           },
           {
             'question':
-                'A packet is destined for a network not in the router\'s routing table and no default route is configured. What happens?',
+                'A packet is destined for a network not in the router\'s table and no default route is configured. What happens?',
             'answers': [
               'The packet is forwarded to the nearest router for further processing',
               'The router drops the packet and sends an ICMP Destination Unreachable message back to the source',
               'The router holds the packet until the routing table is updated',
-              'The router broadcasts the packet on all interfaces to find the destination',
+              'The router broadcasts the packet on all interfaces',
             ],
             'correct': 1,
             'explanation':
-                'If no matching route exists and no default route (0.0.0.0/0) is configured, the router drops the packet and sends ICMP Type 3 (Destination Unreachable) back to the source.',
+                'If no matching route and no default route (0.0.0.0/0) exists, the router drops the packet and sends ICMP Type 3 (Destination Unreachable) back to source.',
           },
           {
             'question':
                 'What is route summarisation and what benefit does it provide in a large OSPF network?',
             'answers': [
-              'Route summarisation combines multiple specific routes into a single aggregate route — reducing routing table size, decreasing LSA flooding, and accelerating convergence',
-              'Route summarisation compresses routing table entries to reduce memory usage on routers',
-              'Route summarisation prevents routing loops by combining conflicting routes',
-              'Route summarisation is only used in BGP to aggregate customer prefixes for ISPs',
+              'Combines multiple specific routes into a single aggregate route — reducing routing table size, decreasing LSA flooding, and accelerating convergence',
+              'Compresses routing table entries to reduce memory usage',
+              'Prevents routing loops by combining conflicting routes',
+              'Route summarisation is only used in BGP',
             ],
             'correct': 0,
             'explanation':
-                'Route summarisation at OSPF area boundaries reduces LSAs flooded throughout the network. Instead of 256 /24 routes, a single /16 summary covers all of them. Benefits: smaller routing tables, less LSA processing, faster SPF calculations.',
+                'Route summarisation at OSPF area boundaries reduces LSAs flooded throughout the network. Instead of 256 /24 routes, a single /16 summary covers all of them.',
           },
           {
             'question':
-                'A network engineer runs "show ip route" and sees: O 192.168.5.0/24 [110/20] via 10.0.0.1, 00:05:32, GigabitEthernet0/0. What does each component mean?',
+                'A show ip route output shows: O 192.168.5.0/24 [110/20] via 10.0.0.1, 00:05:32, GigabitEthernet0/0. What does each component mean?',
             'answers': [
               'O=OSPF source, 192.168.5.0/24=destination, [110/20]=AD/metric, via 10.0.0.1=next-hop, 00:05:32=route age, Gi0/0=egress interface',
               'O=outbound route, [110/20]=source port/destination port, via 10.0.0.1=gateway, 00:05:32=TTL',
@@ -5926,7 +6324,7 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 0,
             'explanation':
-                'Cisco routing table: Code (O=OSPF) | Network | [AD/Metric] | via Next-Hop | Age | Egress Interface. AD 110 = OSPF. Metric 20 = OSPF cost. This output is fundamental to network troubleshooting.',
+                'Cisco routing table: Code (O=OSPF) | Network | [AD/Metric] | via Next-Hop | Age | Egress Interface. AD 110 = OSPF. Metric 20 = OSPF cost.',
           },
         ];
 
@@ -5934,7 +6332,7 @@ class _QuizScreenState extends State<QuizScreen> {
         return [
           {
             'question':
-                'A host boots and sends a DHCP Discover packet to 255.255.255.255. The DHCP server is on a different subnet. The router between them is not forwarding DHCP broadcasts. What must be configured on the router to fix this?',
+                'A host sends DHCP Discover to 255.255.255.255. The DHCP server is on a different subnet. The router is not forwarding DHCP broadcasts. What must be configured?',
             'answers': [
               'A static route to the DHCP server subnet',
               'IP helper-address (DHCP relay) on the router\'s interface facing the clients — converts broadcasts to unicast and forwards to the DHCP server\'s IP',
@@ -5943,124 +6341,123 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 1,
             'explanation':
-                'DHCP uses broadcasts (UDP port 67/68) that routers do not forward by default. The ip helper-address command converts the broadcast DHCP Discover to a unicast packet addressed to the DHCP server. This is the standard enterprise DHCP design — one server serving multiple subnets.',
+                'DHCP uses broadcasts (UDP 67/68) that routers don\'t forward by default. ip helper-address converts the broadcast to unicast addressed to the DHCP server — standard enterprise design.',
           },
           {
             'question':
-                'A DNS resolver receives a query for "mail.company.com". It has no cached answer. Describe the recursive resolution process that follows.',
+                'A DNS resolver receives a query for "mail.company.com" with no cached answer. Describe the recursive resolution process.',
             'answers': [
-              'The resolver queries company.com\'s authoritative server directly for the A record',
-              'The resolver queries a root nameserver for ".", which refers to the .com TLD server, which refers to company.com\'s authoritative nameserver, which returns the A record — the resolver caches and returns it to the client',
-              'The resolver broadcasts the query on the local network segment to find an authoritative server',
-              'The resolver queries the ISP\'s DNS server, which already has the answer cached',
+              'The resolver queries company.com\'s authoritative server directly',
+              'The resolver queries a root nameserver, which refers to .com TLD, which refers to company.com\'s authoritative server, which returns the A record — resolver caches and returns to client',
+              'The resolver broadcasts the query on the local network segment',
+              'The resolver queries the ISP\'s DNS server which already has it cached',
             ],
             'correct': 1,
             'explanation':
-                'DNS recursive resolution: (1) Root servers → .com TLD servers. (2) .com TLD → company.com authoritative servers. (3) Authoritative server returns A record. (4) Resolver caches and returns to client.',
+                'DNS recursive resolution: Root → .com TLD → company.com authoritative → A record. Resolver caches the result for the TTL duration.',
           },
           {
             'question':
-                'A company has a single public IP address from their ISP. They have 200 internal hosts that need internet access. What technology allows this and what are its two forms?',
+                'A company has a single public IP. 200 internal hosts need internet access. What technology allows this and what are its two forms?',
             'answers': [
               'VPN — tunnels all internal traffic through the single public IP',
-              'NAT (Network Address Translation) — PAT (Port Address Translation/NAT overload) maps many private IPs to one public IP using unique port numbers; static NAT maps one private IP to one public IP permanently',
-              'DHCP — assigns the single public IP to whichever host needs it at the time',
-              'BGP — advertises the single IP to all 200 hosts for direct internet access',
+              'NAT — PAT (NAT overload) maps many private IPs to one public IP using unique port numbers; static NAT maps one private IP to one public IP permanently',
+              'DHCP — assigns the single public IP to whichever host needs it',
+              'BGP — advertises the single IP to all 200 hosts',
             ],
             'correct': 1,
             'explanation':
-                'PAT (NAT overload) allows 200 hosts to share one public IP. Each internal connection gets a unique source port number in the translation table. Static NAT is one-to-one, used for servers that need a permanent public IP.',
+                'PAT allows 200 hosts to share one public IP via unique source port numbers. Static NAT is one-to-one, used for servers needing a permanent public IP.',
           },
           {
             'question':
-                'A DHCP server assigns a lease to a host. The host is shut down without releasing the lease. After many such events, the DHCP pool is exhausted. What are two solutions?',
+                'A DHCP pool is exhausted because hosts shut down without releasing leases. What are two solutions?',
             'answers': [
               'Increase the DHCP pool size and disable IP address reuse',
-              'Reduce the lease time (e.g., 4 hours instead of 8 days) so addresses are returned faster, and implement DHCP snooping to prevent rogue servers from exhausting the pool',
-              'Assign static IPs to all devices to eliminate DHCP dependency',
-              'Enable DHCP failover so a second server handles overflow addresses',
+              'Reduce the lease time so addresses are returned faster; implement DHCP snooping to prevent rogue servers from exhausting the pool',
+              'Assign static IPs to all devices',
+              'Enable DHCP failover so a second server handles overflow',
             ],
             'correct': 1,
             'explanation':
-                'Shorter lease times mean addresses are returned to the pool faster when devices disconnect without releasing. For environments with many transient devices (guest WiFi, classrooms), lease times of 1-4 hours are appropriate.',
+                'Shorter lease times mean addresses return to the pool faster when devices disconnect without releasing. For transient environments (guest WiFi), 1-4 hour leases are appropriate.',
           },
           {
             'question':
-                'A security team asks why internal server IP addresses should not appear in public DNS records. What is the risk they are concerned about?',
+                'A security team asks why internal server IPs should not appear in public DNS records. What is the risk?',
             'answers': [
               'Public DNS records cause DNS cache poisoning attacks',
-              'Exposing internal RFC 1918 addresses in public DNS reveals network topology to attackers — enabling reconnaissance for targeted attacks even though the addresses are not routable from the internet',
-              'Internal IPs in public DNS cause routing loops between internal and external resolvers',
-              'Public DNS records have a maximum size limit that internal IP records would exceed',
+              'Exposing internal RFC 1918 addresses in public DNS reveals network topology to attackers — enabling reconnaissance even though addresses are not internet-routable',
+              'Internal IPs in public DNS cause routing loops',
+              'Public DNS records have a maximum size limit',
             ],
             'correct': 1,
             'explanation':
-                'Information disclosure: internal IP addresses in public DNS reveal network architecture. An attacker learns subnet ranges and server naming conventions. Use split-horizon DNS: internal DNS returns RFC 1918 addresses; external DNS returns only public IPs.',
+                'Information disclosure: internal IPs reveal subnet ranges and naming conventions. Use split-horizon DNS: internal DNS returns RFC 1918 addresses; external DNS returns only public IPs.',
           },
           {
             'question':
-                'An engineer examines a NAT translation table: Inside Local 192.168.1.10:54231 → Inside Global 203.0.113.5:54231 → Outside Global 142.250.80.100:443. What do these three addresses represent?',
+                'A NAT translation table shows: Inside Local 192.168.1.10:54231 → Inside Global 203.0.113.5:54231 → Outside Global 142.250.80.100:443. What do these represent?',
             'answers': [
               'Source IP before NAT, destination IP, and gateway IP',
-              'Inside Local = private IP of the host; Inside Global = public IP assigned to represent this host on the internet; Outside Global = the destination server\'s public IP',
+              'Inside Local = private IP of the host; Inside Global = public IP on the internet; Outside Global = the destination server\'s public IP',
               'RFC 1918 address, translated address, and return path address',
               'DHCP-assigned IP, static NAT IP, and BGP-advertised IP',
             ],
             'correct': 1,
             'explanation':
-                'NAT terminology: Inside Local = actual private IP (192.168.1.10). Inside Global = how the source appears outside — the public IP (203.0.113.5). Outside Global = the destination server\'s IP (142.250.80.100:443). The NAT device maintains this table to translate return traffic.',
+                'NAT terminology: Inside Local = actual private IP. Inside Global = how the source appears outside. Outside Global = destination server\'s IP. NAT device maintains this table to translate return traffic.',
           },
           {
             'question':
-                'What is the difference between an A record, AAAA record, MX record, and CNAME record in DNS?',
+                'What is the difference between an A record, AAAA record, MX record, and CNAME record?',
             'answers': [
-              'A=hostname to IPv4, AAAA=hostname to IPv6, MX=mail server for a domain, CNAME=alias pointing one hostname to another hostname',
-              'A=IPv4 address, AAAA=IPv4 address with authentication, MX=maximum hops, CNAME=canonical name for IP',
-              'A=authoritative server, AAAA=backup authoritative server, MX=master exchange, CNAME=certified name',
-              'All four record types store IP addresses — they differ only in the protocol version they support',
+              'A=hostname to IPv4, AAAA=hostname to IPv6, MX=mail server for a domain, CNAME=alias pointing one hostname to another',
+              'A=IPv4, AAAA=IPv4 with authentication, MX=maximum hops, CNAME=canonical name for IP',
+              'A=authoritative server, AAAA=backup authoritative, MX=master exchange, CNAME=certified name',
+              'All four store IP addresses — they differ only in protocol version',
             ],
             'correct': 0,
             'explanation':
-                'DNS record types: A = hostname → IPv4. AAAA = hostname → IPv6. MX = mail servers for a domain with priority values. CNAME = alias pointing one hostname to another. CNAMEs cannot coexist with other records at the zone apex.',
+                'A = hostname → IPv4. AAAA = hostname → IPv6. MX = mail servers for a domain with priority. CNAME = alias to another hostname. CNAMEs cannot coexist with other records at the zone apex.',
           },
           {
             'question':
-                'A company uses NAT with a pool of 5 public IP addresses shared among 500 internal hosts. What happens when all 5 public IPs have their maximum port connections exhausted?',
+                'With PAT and a pool of 5 public IPs shared among 500 hosts, what happens when all port connections are exhausted?',
             'answers': [
               'New connections are queued until a port becomes available',
-              'The router randomly drops the oldest connections to free up ports',
-              'New outbound connections fail — the NAT table is full and no translation entry can be created for additional sessions',
+              'The router randomly drops the oldest connections',
+              'New outbound connections fail — the NAT table is full and no translation entry can be created',
               'The router automatically requests additional public IPs from the ISP',
             ],
             'correct': 2,
             'explanation':
-                'PAT supports ~65,535 port numbers per public IP. With 5 public IPs, the theoretical maximum is ~325,000 simultaneous sessions. When exhausted, new connection attempts fail because no unique translation entry can be created.',
+                'PAT supports ~65,535 port numbers per public IP. With 5 public IPs, theoretical max is ~325,000 simultaneous sessions. When exhausted, new connections fail.',
           },
           {
-            'question':
-                'What is DDNS (Dynamic DNS) and what problem does it solve?',
+            'question': 'What is DDNS and what problem does it solve?',
             'answers': [
-              'DDNS encrypts DNS queries to prevent snooping by ISPs',
-              'DDNS automatically updates DNS A records when an IP address changes — solving the problem of hosts with dynamic IPs becoming unreachable when their IP changes',
-              'DDNS distributes DNS resolution across multiple servers for load balancing',
-              'DDNS caches DNS responses locally to reduce resolution time',
+              'DDNS encrypts DNS queries to prevent ISP snooping',
+              'DDNS automatically updates DNS A records when an IP address changes — solving the problem of hosts with dynamic IPs becoming unreachable',
+              'DDNS distributes DNS resolution across multiple servers',
+              'DDNS caches DNS responses locally',
             ],
             'correct': 1,
             'explanation':
-                'Dynamic DNS: a DDNS client detects IP address changes and automatically updates the DNS A record. This allows a hostname to always resolve to the current IP even when the ISP changes it.',
+                'Dynamic DNS: a DDNS client detects IP changes and automatically updates the DNS A record. A hostname always resolves to the current IP even when the ISP changes it.',
           },
           {
             'question':
-                'An administrator notices that DNS queries are being answered in 5ms for some domains and 250ms for others. What explains this difference?',
+                'DNS queries are answered in 5ms for some domains and 250ms for others. What explains this difference?',
             'answers': [
-              'The 5ms responses are for local .local domains; 250ms responses are for internet domains',
+              'The 5ms responses are for local .local domains; 250ms for internet domains',
               'The 5ms responses are served from the resolver\'s cache (TTL not expired); 250ms responses require full recursive resolution to authoritative servers',
-              'The 5ms domains use IPv4; 250ms domains use IPv6 which has higher latency',
-              'The 250ms domains have longer DNS records that take more time to transmit',
+              'The 5ms domains use IPv4; 250ms use IPv6',
+              'The 250ms domains have longer DNS records',
             ],
             'correct': 1,
             'explanation':
-                'DNS caching: cached responses (5ms) come from local memory. Uncached responses (250ms) require the full recursive resolution path. Low TTL values = fresher records but more queries; high TTL = faster responses but slower propagation of changes.',
+                'DNS caching: cached responses (5ms) come from local memory. Uncached (250ms) require the full recursive resolution path. Low TTL = fresher records but more queries.',
           },
         ];
 
@@ -6068,115 +6465,115 @@ class _QuizScreenState extends State<QuizScreen> {
         return [
           {
             'question':
-                'An attacker sends forged DHCP Offer packets faster than the legitimate DHCP server, causing hosts to receive attacker-controlled IP addresses and default gateways. What attack is this and what prevents it?',
+                'An attacker sends forged DHCP Offer packets faster than the legitimate server, causing hosts to receive attacker-controlled IPs and gateways. What attack is this and what prevents it?',
             'answers': [
-              'ARP poisoning — Dynamic ARP Inspection prevents forged ARP packets',
-              'DHCP starvation — port security limits the number of MAC addresses per port',
-              'Rogue DHCP server attack — DHCP snooping designates trusted ports and drops DHCP Offer/Ack packets arriving on untrusted ports',
-              'VLAN hopping — disabling DTP on access ports prevents the attacker from reaching other VLANs',
+              'ARP poisoning — Dynamic ARP Inspection prevents it',
+              'DHCP starvation — port security limits MAC addresses per port',
+              'Rogue DHCP server attack — DHCP snooping designates trusted ports and drops DHCP Offer/Ack from untrusted ports',
+              'VLAN hopping — disabling DTP prevents the attacker reaching other VLANs',
             ],
             'correct': 2,
             'explanation':
-                'DHCP snooping creates a trust boundary. Ports connected to DHCP servers are marked trusted; all other ports are untrusted. DHCP Offer and Ack from untrusted ports are dropped. DHCP snooping also builds a binding table used by Dynamic ARP Inspection.',
+                'DHCP snooping creates a trust boundary. Ports connected to DHCP servers are trusted; all others are untrusted. DHCP Offer and Ack from untrusted ports are dropped.',
           },
           {
             'question':
-                'A firewall is configured as stateful. A client sends a TCP SYN to a web server. The firewall allows it. The server responds with SYN-ACK. How does the stateful firewall handle the return traffic?',
+                'A stateful firewall allows a TCP SYN outbound. The server responds with SYN-ACK. How does the stateful firewall handle the return traffic?',
             'answers': [
-              'The firewall requires an explicit inbound rule allowing SYN-ACK packets from the server',
-              'The firewall tracks the original outbound SYN in its connection state table and automatically allows the return SYN-ACK — no explicit inbound rule needed for established connections',
+              'The firewall requires an explicit inbound rule allowing SYN-ACK',
+              'The firewall tracks the original outbound SYN in its connection state table and automatically allows the return SYN-ACK — no explicit inbound rule needed',
               'The firewall drops the SYN-ACK because no inbound rule exists',
-              'The stateful firewall forwards all return traffic regardless of connection state',
+              'The stateful firewall forwards all return traffic regardless of state',
             ],
             'correct': 1,
             'explanation':
-                'Stateful firewalls maintain a connection state table. When the SYN-ACK arrives, it matches the existing state and is automatically permitted. This is why stateful firewalls are far more secure than stateless ones.',
+                'Stateful firewalls maintain a connection state table. When SYN-ACK arrives, it matches the existing state and is automatically permitted — the key advantage over stateless firewalls.',
           },
           {
             'question':
-                'An IDS alert fires on a connection that turns out to be legitimate business traffic. What type of alert is this, and what is the operational risk of too many of them?',
+                'An IDS alert fires on legitimate business traffic. What type of alert is this and what is the operational risk?',
             'answers': [
               'True negative — the IDS correctly ignored malicious traffic',
               'True positive — the IDS correctly identified a genuine threat',
-              'False positive — legitimate traffic flagged as malicious. Too many false positives cause alert fatigue, where analysts ignore alerts, allowing real threats to go undetected',
-              'False negative — malicious traffic that the IDS missed entirely',
+              'False positive — legitimate traffic flagged as malicious. Too many cause alert fatigue, where analysts ignore alerts, allowing real threats to go undetected',
+              'False negative — malicious traffic the IDS missed',
             ],
             'correct': 2,
             'explanation':
-                'False positives are operationally dangerous: when analysts see hundreds of false alarms daily, they tune out alerts — creating the exact blind spot attackers exploit. IDS tuning to reduce false positives is critical.',
+                'False positives are operationally dangerous: when analysts see hundreds of false alarms daily, they tune out — creating the exact blind spot attackers exploit. IDS tuning is critical.',
           },
           {
             'question':
-                'A network engineer must allow HTTP and HTTPS traffic from the internet to a web server in a DMZ, while blocking all direct internet traffic to the internal LAN. Describe the correct firewall zone architecture.',
+                'A network engineer must allow HTTP/HTTPS from internet to a web server in a DMZ while blocking direct internet traffic to the LAN. What is the correct firewall zone architecture?',
             'answers': [
-              'Two zones: internet and internal LAN. Web server sits in the internal LAN behind the firewall',
-              'Three zones: internet (untrusted), DMZ (semi-trusted for public-facing servers), internal LAN (trusted). Rules: internet→DMZ allow HTTP/HTTPS; internet→LAN deny all; DMZ→LAN deny all except required application traffic',
-              'Single zone with firewall rules differentiating traffic by IP address and port',
-              'Two zones: DMZ and internal LAN. Internet connects directly to the DMZ switch without a firewall',
+              'Two zones: internet and internal LAN. Web server sits in the internal LAN',
+              'Three zones: internet (untrusted), DMZ (semi-trusted for public-facing servers), internal LAN (trusted) — internet→DMZ allows HTTP/HTTPS; internet→LAN deny all',
+              'Single zone with firewall rules differentiating by IP and port',
+              'Two zones: DMZ and internal LAN. Internet connects directly to DMZ without a firewall',
             ],
             'correct': 1,
             'explanation':
-                'Three-zone DMZ architecture: the DMZ sits between two firewall interfaces. Public-facing servers go in the DMZ. If a DMZ server is compromised, the attacker cannot directly reach the internal LAN.',
+                'Three-zone DMZ: DMZ sits between two firewall interfaces. Public-facing servers go in the DMZ. If a DMZ server is compromised, the attacker hits the internal firewall before reaching the LAN.',
           },
           {
             'question':
-                'A network admin wants to control which devices can access the network based on their identity, not just their IP or MAC address. Which technology enforces this?',
+                'A network admin wants to control which devices can access the network based on identity, not just IP or MAC address. Which technology enforces this?',
             'answers': [
               'Port Security — restricts access by MAC address per switch port',
               '802.1X (port-based Network Access Control) — requires devices to authenticate via RADIUS before the switch port is placed in the network VLAN',
-              'DHCP snooping — prevents unauthorised devices from receiving IP addresses',
-              'ACLs — block traffic from unknown IP addresses at the router',
+              'DHCP snooping — prevents unauthorised devices from receiving IPs',
+              'ACLs — block traffic from unknown IP addresses',
             ],
             'correct': 1,
             'explanation':
-                '802.1X: before a device can access the network, the switch requires it to authenticate against a RADIUS server. Until authentication succeeds, the port is in an unauthorised state. After success, the port is placed in the correct VLAN.',
+                '802.1X: before a device can access the network, the switch requires authentication against a RADIUS server. Until authentication succeeds, the port is in an unauthorised state.',
           },
           {
             'question':
-                'A company implements an ACL: (1) Permit TCP 192.168.1.0/24 any eq 80, (2) Permit TCP 192.168.1.0/24 any eq 443, (3) Deny IP any any. A host at 192.168.1.50 tries to send a DNS query (UDP port 53). What happens?',
+                'ACL rules: (1) Permit TCP 192.168.1.0/24 any eq 80, (2) Permit TCP 192.168.1.0/24 any eq 443, (3) Deny IP any any. Host 192.168.1.50 sends a DNS query (UDP port 53). What happens?',
             'answers': [
               'The DNS query is permitted by rule 1 because port 80 is close to port 53',
-              'The DNS query is permitted because DNS is a core protocol that ACLs cannot block',
-              'The DNS query matches rule 3 (deny) and is dropped — the ACL only permits HTTP and HTTPS from the subnet',
-              'The DNS query is forwarded because UDP is not covered by TCP-based ACL rules',
+              'The DNS query is permitted because DNS is a core protocol ACLs cannot block',
+              'The DNS query matches rule 3 (deny) and is dropped — the ACL only permits HTTP and HTTPS',
+              'The DNS query is forwarded because UDP is not covered by TCP-based rules',
             ],
             'correct': 2,
             'explanation':
-                'ACLs are processed top-down, first-match. UDP/53 (DNS) matches neither TCP rule — it falls through to Rule 3 (deny) and is dropped. This is a common misconfiguration: admins permit web traffic but forget DNS, ICMP, NTP.',
+                'ACLs are processed top-down, first-match. UDP/53 (DNS) matches neither TCP rule — it falls through to Rule 3 (deny). This is a common misconfiguration: permitting web traffic but forgetting DNS.',
           },
           {
             'question':
                 'What is the difference between an IDS and an IPS, and where is each typically deployed?',
             'answers': [
-              'IDS and IPS are identical — the terms are interchangeable in modern security',
-              'IDS is deployed inline and actively blocks malicious traffic; IPS is deployed out-of-band and only sends alerts',
+              'IDS and IPS are identical',
+              'IDS is deployed inline and actively blocks; IPS is out-of-band and only alerts',
               'IDS is out-of-band (receives a copy of traffic) — detects and alerts but cannot block. IPS is inline — can detect AND actively block malicious traffic in real time',
-              'IDS monitors internal network traffic; IPS monitors only internet-facing traffic',
+              'IDS monitors internal traffic; IPS monitors only internet-facing traffic',
             ],
             'correct': 2,
             'explanation':
-                'IDS receives a copy of traffic via SPAN port — passive, cannot block, only alerts. IPS sits inline — all traffic passes through it, enabling active blocking. Many modern NGFWs incorporate IPS functionality inline.',
+                'IDS: passive via SPAN port — alerts but cannot block. IPS: inline — active blocking. Many modern NGFWs incorporate IPS functionality inline.',
           },
           {
             'question':
-                'A penetration tester connects to a guest WiFi network and attempts to scan hosts on the corporate VLAN. The scan returns no results despite the corporate VLAN being on the same physical access point. What control prevented this?',
+                'A penetration tester on guest WiFi attempts to scan corporate VLAN hosts on the same physical AP. The scan returns no results. What control prevented this?',
             'answers': [
-              'The firewall blocked the scanner\'s traffic because it came from an unknown IP',
-              'VLAN segmentation — the guest and corporate networks are on separate VLANs, and the router/firewall blocks unsolicited inbound scans from the guest VLAN to the corporate VLAN',
-              'The access point\'s transmit power was too low for the scanner to reach corporate hosts',
+              'The firewall blocked the scanner because it came from an unknown IP',
+              'VLAN segmentation — guest and corporate networks are on separate VLANs, and the router/firewall blocks scans from guest VLAN to corporate VLAN',
+              'The AP\'s transmit power was too low',
               'WPA2 encryption prevented the scanner from seeing corporate traffic',
             ],
             'correct': 1,
             'explanation':
-                'Proper segmentation places guest users on an isolated VLAN with internet access only — no access to corporate VLANs. The firewall/router between VLANs blocks lateral movement.',
+                'Proper segmentation places guest users on an isolated VLAN with internet access only. The firewall/router between VLANs blocks lateral movement.',
           },
           {
             'question':
-                'A router ACL is applied outbound on the interface connected to the internet. At which point is the ACL evaluated?',
+                'A router ACL is applied outbound on the interface connected to the internet. When is the ACL evaluated?',
             'answers': [
-              'When the packet arrives on the router\'s internal interface (inbound evaluation)',
+              'When the packet arrives on the router\'s internal interface (inbound)',
               'After routing, just before the packet leaves the internet-facing interface (outbound evaluation)',
-              'Both inbound and outbound — the ACL is evaluated twice for every packet',
+              'Both inbound and outbound — the ACL is evaluated twice',
               'The ACL is evaluated at the firewall, not the router',
             ],
             'correct': 1,
@@ -6187,14 +6584,14 @@ class _QuizScreenState extends State<QuizScreen> {
             'question':
                 'What does a next-generation firewall (NGFW) do that a traditional stateful firewall cannot?',
             'answers': [
-              'NGFW operates at Layer 3 and 4; traditional firewalls only operate at Layer 2',
-              'NGFW performs deep packet inspection at Layer 7 — identifying applications regardless of port, integrating IPS, URL filtering, SSL inspection, and user identity awareness into a single policy engine',
-              'NGFW can filter traffic based on MAC addresses; traditional firewalls cannot',
-              'NGFW processes traffic faster than traditional firewalls using dedicated ASICs',
+              'NGFW operates at Layer 3 and 4; traditional firewalls only at Layer 2',
+              'NGFW performs deep packet inspection at Layer 7 — identifying applications regardless of port, integrating IPS, URL filtering, SSL inspection, and user identity awareness',
+              'NGFW can filter traffic based on MAC addresses',
+              'NGFW processes traffic faster using dedicated ASICs',
             ],
             'correct': 1,
             'explanation':
-                'Traditional stateful firewalls match on IP/port/protocol (Layers 3-4). NGFWs add Layer 7 inspection: recognise applications regardless of port, enforce per-application policies, integrate IPS, perform SSL inspection, and apply policies based on user identity.',
+                'Traditional stateful firewalls match on IP/port/protocol (Layers 3-4). NGFWs add Layer 7 inspection: recognise apps regardless of port, enforce per-application policies, perform SSL inspection.',
           },
         ];
 
@@ -6202,133 +6599,132 @@ class _QuizScreenState extends State<QuizScreen> {
         return [
           {
             'question':
-                'A company deploys a new 802.11ax (WiFi 6) access point in a high-density conference room. Users report significantly better performance compared to the old 802.11ac AP, despite similar channel width. What technology in 802.11ax primarily enables this improvement?',
+                'A company deploys a new 802.11ax (WiFi 6) AP in a high-density conference room. Users report significantly better performance despite similar channel width. What technology primarily enables this?',
             'answers': [
-              'Beamforming — directs the signal specifically at each client device',
-              'OFDMA (Orthogonal Frequency-Division Multiple Access) — allows the AP to serve multiple clients simultaneously on different sub-channels, reducing contention in high-density environments',
+              'Beamforming — directs the signal at each client device',
+              'OFDMA (Orthogonal Frequency-Division Multiple Access) — allows the AP to serve multiple clients simultaneously on different sub-channels, reducing contention',
               'MU-MIMO — enables multiple simultaneous streams to different clients',
-              'WPA3 encryption — reduces overhead compared to WPA2, freeing bandwidth for data',
+              'WPA3 encryption — reduces overhead compared to WPA2',
             ],
             'correct': 1,
             'explanation':
-                'OFDMA is the key WiFi 6 improvement for high-density. In 802.11ac, only one client transmits per time slot. OFDMA divides channels into resource units — multiple clients transmit simultaneously on different sub-carriers, dramatically reducing contention.',
+                'OFDMA is the key WiFi 6 improvement for high-density. In 802.11ac, only one client transmits per time slot. OFDMA divides channels into resource units — multiple clients transmit simultaneously.',
           },
           {
             'question':
                 'A wireless network uses WPA2-Enterprise. A laptop connects without prompting for a password. Explain what is happening.',
             'answers': [
-              'The network is open and unsecured — no authentication is required',
+              'The network is open and unsecured',
               'The laptop has a saved password from a previous connection',
-              'WPA2-Enterprise uses 802.1X authentication — the laptop presents a certificate to a RADIUS server. The certificate was pre-installed, so authentication happens automatically without a user-visible password prompt',
+              'WPA2-Enterprise uses 802.1X — the laptop presents a certificate to a RADIUS server. The certificate was pre-installed, so authentication happens automatically',
               'WPA2-Enterprise uses MAC address authentication — the laptop\'s MAC is pre-approved',
             ],
             'correct': 2,
             'explanation':
-                'WPA2-Enterprise (802.1X) replaces the shared PSK with per-user/device authentication via RADIUS. EAP-TLS (certificate-based) requires no password prompt if the cert is pre-installed. Each device has a unique credential that can be individually revoked.',
+                'WPA2-Enterprise (802.1X) replaces shared PSK with per-device authentication via RADIUS. EAP-TLS (certificate-based) requires no password prompt if the cert is pre-installed.',
           },
           {
             'question':
-                'An engineer surveys a building and finds multiple APs on channel 6 in adjacent areas, causing co-channel interference. What is the correct channel plan for 2.4GHz to minimise interference?',
+                'Multiple APs are on channel 6 in adjacent areas, causing co-channel interference. What is the correct channel plan for 2.4GHz?',
             'answers': [
               'Use channels 1, 6, and 11 — the only three non-overlapping channels in 2.4GHz (20MHz wide)',
-              'Use channels 1, 4, 8, and 11 — four non-overlapping channels in 2.4GHz',
-              'Use channels 1, 3, 5, 7, 9, and 11 — even-numbered spacing prevents overlap',
-              'The 2.4GHz band has 13 non-overlapping channels — use any combination',
+              'Use channels 1, 4, 8, and 11 — four non-overlapping channels',
+              'Use channels 1, 3, 5, 7, 9, and 11',
+              'The 2.4GHz band has 13 non-overlapping channels',
             ],
             'correct': 0,
             'explanation':
-                '2.4GHz has only channels 1, 6, and 11 as non-overlapping with 20MHz channel width. Adjacent channels (e.g., 1 and 3) overlap in frequency and cause interference. 5GHz has many more non-overlapping channels.',
+                '2.4GHz has only channels 1, 6, and 11 as non-overlapping with 20MHz width. Adjacent channels (e.g., 1 and 3) overlap in frequency and cause interference.',
           },
           {
             'question':
-                'A security audit finds a rogue AP broadcasting the same SSID as the corporate network with stronger signal. Users\' devices automatically connect to it. What attack is this and what are the consequences?',
+                'A security audit finds a rogue AP broadcasting the same SSID with stronger signal. Users\' devices automatically connect. What attack is this?',
             'answers': [
               'Deauthentication attack — the rogue AP disconnects users from the legitimate AP',
-              'Evil Twin attack — the rogue AP intercepts all user traffic as a man-in-the-middle, enabling credential theft, session hijacking, and malware injection',
-              'WPS brute force attack — the rogue AP uses WPS to crack the network password',
+              'Evil Twin attack — the rogue AP intercepts all user traffic as a man-in-the-middle, enabling credential theft and session hijacking',
+              'WPS brute force attack — the rogue AP cracks the network password',
               'Beacon flooding attack — the rogue AP overwhelms clients with fake beacon frames',
             ],
             'correct': 1,
             'explanation':
-                'Evil Twin: the rogue AP (same SSID, stronger signal) intercepts all client traffic. Defences: 802.1X/WPA2-Enterprise with certificate validation (a rogue AP cannot present a valid cert); WIDS to detect rogue APs; always-on VPN.',
+                'Evil Twin: rogue AP (same SSID, stronger signal) intercepts all client traffic. Defences: 802.1X/WPA2-Enterprise with certificate validation; WIDS to detect rogue APs; always-on VPN.',
           },
           {
             'question':
-                'What is the purpose of a wireless LAN controller (WLC) in an enterprise WiFi deployment, compared to autonomous APs?',
+                'What is the purpose of a wireless LAN controller (WLC) compared to autonomous APs?',
             'answers': [
-              'A WLC increases the range of each AP by boosting signal strength',
-              'A WLC centralises management, RF optimisation, roaming, and security policy for all APs — autonomous APs are independently managed with separate configurations and cannot support seamless roaming',
-              'A WLC provides DHCP and DNS services that autonomous APs cannot offer',
-              'A WLC is required to support WPA2 — autonomous APs only support WPA',
+              'A WLC increases the range of each AP',
+              'A WLC centralises management, RF optimisation, roaming, and security policy for all APs — autonomous APs are independently managed and cannot support seamless roaming',
+              'A WLC provides DHCP and DNS services that autonomous APs cannot',
+              'A WLC is required to support WPA2',
             ],
             'correct': 1,
             'explanation':
-                'Controller-based (CAPWAP) architecture: APs are lightweight — they only handle RF. The WLC handles authentication, policy, roaming handoffs, and configuration. Benefits: single-pane management, seamless roaming, dynamic RF management, rogue AP detection.',
+                'Controller-based (CAPWAP): APs are lightweight — only handle RF. The WLC handles authentication, policy, roaming handoffs, and configuration. Single-pane management, seamless roaming, dynamic RF management.',
           },
           {
             'question':
-                'A user 30 metres from an AP gets excellent signal but poor throughput. A client 5 metres away gets excellent throughput. What is the most likely cause?',
+                'A user 30 metres from an AP gets good signal but poor throughput. A client 5 metres away gets excellent throughput. Most likely cause?',
             'answers': [
-              'The AP is transmitting at too high a power level, causing interference at 30 metres',
-              'The distant client is connecting at a lower modulation rate (e.g., BPSK/QPSK) due to signal degradation — the AP must accommodate this slower rate, which consumes more airtime per transmission',
-              'The AP\'s radio frequency is being absorbed by building materials at 30 metres',
-              'The distant client\'s antenna is incorrectly oriented for optimal signal reception',
+              'The AP is transmitting at too high a power level',
+              'The distant client connects at a lower modulation rate (e.g., BPSK/QPSK) due to signal degradation — consuming more airtime per transmission',
+              'The AP\'s radio frequency is absorbed by building materials',
+              'The distant client\'s antenna is incorrectly oriented',
             ],
             'correct': 1,
             'explanation':
-                'WiFi uses adaptive modulation: as signal degrades, clients drop to lower modulation schemes. Lower modulation = lower data rate but takes the same airtime. When a slow client transmits, it consumes channel time that faster clients could use — the "slow client problem."',
+                'WiFi adaptive modulation: as signal degrades, clients drop to lower modulation = lower data rate but same airtime. A slow client consumes channel time that faster clients could use — the "slow client problem."',
           },
           {
             'question':
-                'What does the hidden node problem cause in wireless networks, and what mechanism attempts to address it?',
+                'What does the hidden node problem cause, and what mechanism addresses it?',
             'answers': [
-              'Hidden nodes create duplicate SSIDs that confuse clients — beacon frames address this',
-              'Two clients cannot hear each other but can both hear the AP — they transmit simultaneously, causing collisions at the AP that neither detects. RTS/CTS allows clients to reserve the channel before transmitting',
-              'Clients hidden behind walls cannot authenticate to the AP — 802.1X addresses this',
-              'Hidden nodes reduce signal strength — power control mechanisms compensate',
+              'Hidden nodes create duplicate SSIDs — beacon frames address this',
+              'Two clients cannot hear each other but can both hear the AP — they transmit simultaneously causing collisions at the AP. RTS/CTS allows clients to reserve the channel before transmitting',
+              'Clients hidden behind walls cannot authenticate — 802.1X addresses this',
+              'Hidden nodes reduce signal strength — power control compensates',
             ],
             'correct': 1,
             'explanation':
-                'Hidden node: Client A and Client B are both in range of the AP but not each other. Both transmit simultaneously — a collision occurs at the AP. RTS/CTS: Client A sends RTS → AP responds CTS → Client B defers → Client A transmits.',
+                'Hidden node: Client A and B are in range of the AP but not each other. Both transmit simultaneously — collision at AP. RTS/CTS: Client A sends RTS → AP responds CTS → Client B defers → Client A transmits.',
           },
           {
             'question':
-                'A network engineer must provide WiFi coverage for a large warehouse with metal shelving. 2.4GHz and 5GHz are both available. Which band is more appropriate and why?',
+                'A network engineer must provide WiFi for a large warehouse with metal shelving. Which band is more appropriate?',
             'answers': [
-              '5GHz — higher frequency provides better penetration through metal obstacles',
+              '5GHz — higher frequency provides better penetration through metal',
               '2.4GHz — lower frequency has better range and penetration through obstacles including metal shelving, at the cost of fewer non-overlapping channels',
-              '5GHz — it has more non-overlapping channels, reducing interference from metal reflections',
-              '2.4GHz — it is immune to multipath interference caused by metal surfaces',
+              '5GHz — more non-overlapping channels reduces metal reflection interference',
+              '2.4GHz — immune to multipath interference from metal surfaces',
             ],
             'correct': 1,
             'explanation':
-                '2.4GHz has longer wavelength = better wall and obstacle penetration and longer range. 5GHz has shorter wavelength = shorter range and higher absorption by obstacles. For warehouses with metal shelving, 2.4GHz is more practical.',
+                '2.4GHz longer wavelength = better obstacle penetration and range. 5GHz shorter wavelength = shorter range, higher absorption. For warehouses with metal shelving, 2.4GHz is more practical.',
           },
           {
-            'question':
-                'What is BSS (Basic Service Set) vs ESS (Extended Service Set) in WiFi terminology?',
+            'question': 'What is BSS vs ESS in WiFi terminology?',
             'answers': [
-              'BSS is the wireless standard for 2.4GHz; ESS is the standard for 5GHz',
-              'BSS is a single AP with its associated clients; ESS is multiple APs sharing the same SSID, forming a unified network that supports roaming between APs',
+              'BSS is the wireless standard for 2.4GHz; ESS is for 5GHz',
+              'BSS is a single AP with its associated clients; ESS is multiple APs sharing the same SSID, forming a unified network that supports roaming',
               'BSS provides basic encryption; ESS provides enterprise-grade encryption',
-              'BSS is used for indoor deployments; ESS extends coverage to outdoor areas',
+              'BSS is used for indoor; ESS extends coverage outdoors',
             ],
             'correct': 1,
             'explanation':
-                'BSS: one AP + its associated client stations = a single wireless cell identified by BSSID (the AP\'s MAC). ESS: multiple BSSs sharing the same SSID — clients can roam between APs without reconfiguring. Enterprise networks are always ESS.',
+                'BSS: one AP + associated clients = single wireless cell identified by BSSID (AP\'s MAC). ESS: multiple BSSs sharing the same SSID — clients roam between APs without reconfiguring.',
           },
           {
             'question':
-                'WPA3 replaced WPA2 as the latest WiFi security standard. What specific cryptographic improvement does WPA3-Personal provide over WPA2-Personal?',
+                'What specific cryptographic improvement does WPA3-Personal provide over WPA2-Personal?',
             'answers': [
-              'WPA3 uses AES-256 instead of AES-128 for encryption',
+              'WPA3 uses AES-256 instead of AES-128',
               'WPA3 uses SAE (Simultaneous Authentication of Equals) instead of PSK — providing forward secrecy so that capturing the handshake and later learning the password cannot decrypt previously captured traffic',
-              'WPA3 requires certificate-based authentication eliminating the need for passwords',
-              'WPA3 uses TKIP encryption which is stronger than CCMP used in WPA2',
+              'WPA3 requires certificate-based authentication',
+              'WPA3 uses TKIP which is stronger than CCMP used in WPA2',
             ],
             'correct': 1,
             'explanation':
-                'WPA2-Personal vulnerability: offline dictionary attacks against captured 4-way handshakes. WPA3 SAE provides forward secrecy — each session uses a unique key. Knowing the password after the fact cannot decrypt previously captured sessions.',
+                'WPA2-Personal vulnerability: offline dictionary attacks against captured 4-way handshakes. WPA3 SAE provides forward secrecy — each session uses a unique key. Past traffic cannot be decrypted even if password is later learned.',
           },
         ];
 
@@ -6336,133 +6732,133 @@ class _QuizScreenState extends State<QuizScreen> {
         return [
           {
             'question':
-                'A network engineer runs "ping 8.8.8.8" from a host and gets 100% packet loss. They run "ping 192.168.1.1" (default gateway) and get replies. What layer and component should they investigate next?',
+                'A host gets 100% packet loss to 8.8.8.8 but can ping the default gateway 192.168.1.1. What should be investigated next?',
             'answers': [
               'Layer 1 — physical cable between host and switch',
               'Layer 2 — switch port VLAN configuration',
-              'Layer 3 — the router\'s routing table, default route, or the uplink between the router and ISP. The gateway is reachable but packets are not reaching the internet',
+              'Layer 3 — the router\'s routing table, default route, or the uplink between the router and ISP',
               'Layer 4 — firewall is blocking ICMP outbound',
             ],
             'correct': 2,
             'explanation':
-                'Gateway responds → Layers 1-3 to the gateway work. Next steps: (1) check if the router has a default route; (2) ping the ISP\'s next-hop router from the router; (3) check WAN interface status; (4) check NAT translations.',
+                'Gateway responds → Layers 1-3 to the gateway work. Next: (1) check router has a default route; (2) ping ISP\'s next-hop from the router; (3) check WAN interface status; (4) check NAT translations.',
           },
           {
             'question':
-                'A "show interface" command on a router shows: "GigabitEthernet0/1 is up, line protocol is down." What does this status indicate?',
+                '"GigabitEthernet0/1 is up, line protocol is down." What does this status indicate?',
             'answers': [
               'The interface has no IP address configured',
-              'The physical layer (Layer 1) is connected (carrier detected) but the data link layer (Layer 2) is not establishing — common causes: keepalive mismatch, encapsulation mismatch, or the remote device is not sending Layer 2 frames',
-              'The interface is administratively shutdown by the "shutdown" command',
-              'The interface has a speed or duplex mismatch with the connected device',
+              'The physical layer (Layer 1) is connected but the data link layer (Layer 2) is not establishing — common causes: keepalive mismatch, encapsulation mismatch, or remote device not sending Layer 2 frames',
+              'The interface is administratively shutdown',
+              'The interface has a speed or duplex mismatch',
             ],
             'correct': 1,
             'explanation':
-                '"Up/down": up = physical signal detected (Layer 1 OK), line protocol down = Layer 2 not functioning. Status combinations: up/up = fully operational; up/down = Layer 2 issue; down/down = no physical signal; administratively down/down = shutdown applied.',
+                '"Up/down": up = physical signal (Layer 1 OK), line protocol down = Layer 2 not functioning. Status combinations: up/up = operational; up/down = Layer 2 issue; down/down = no physical signal.',
           },
           {
             'question':
-                'An engineer uses traceroute and sees: Hop 1: 1ms, Hop 2: 2ms, Hop 3: 150ms, Hop 4: 152ms, Hop 5: 153ms. What does this indicate?',
+                'Traceroute shows: Hop 1: 1ms, Hop 2: 2ms, Hop 3: 150ms, Hop 4: 152ms, Hop 5: 153ms. What does this indicate?',
             'answers': [
               'The problem is at the remote server — Hop 5 has the highest latency',
-              'The latency was introduced between Hop 2 and Hop 3 — the 148ms increase at Hop 3 indicates a slow or congested WAN link or geographic distance between those two routers',
+              'The latency was introduced between Hop 2 and Hop 3 — the 148ms jump indicates a slow or congested WAN link or geographic distance',
               'The entire path is slow — all hops above 1ms indicate network problems',
-              'Hop 3 is a firewall adding inspection latency — subsequent hops show normal performance',
+              'Hop 3 is a firewall adding inspection latency',
             ],
             'correct': 1,
             'explanation':
-                'Traceroute measures cumulative latency. The jump from 2ms to 150ms at Hop 3 shows the latency was introduced by the link between Hop 2 and Hop 3 — likely a WAN link, geographic distance, or congestion.',
+                'Traceroute measures cumulative latency. The jump from 2ms to 150ms at Hop 3 shows latency introduced by the link between Hop 2 and Hop 3 — likely a WAN link, geographic distance, or congestion.',
           },
           {
             'question':
-                'SNMP is used to monitor network devices. What is the difference between SNMP polling and SNMP traps, and which is more efficient for real-time alerting?',
+                'What is the difference between SNMP polling and SNMP traps, and which is more efficient for real-time alerting?',
             'answers': [
-              'SNMP polling sends data continuously; traps send data only on demand — polling is better for real-time alerts',
+              'SNMP polling sends data continuously; traps send data only on demand',
               'SNMP polling (manager queries device at intervals) generates regular traffic regardless of events; SNMP traps (device proactively notifies manager when an event occurs) are more efficient for alerts',
-              'SNMP polling uses UDP; traps use TCP — traps are more reliable for critical alerts',
+              'SNMP polling uses UDP; traps use TCP — traps are more reliable',
               'SNMP traps require SNMPv3; polling works with SNMPv1 and v2c',
             ],
             'correct': 1,
             'explanation':
-                'SNMP polling generates predictable traffic, good for trending data. SNMP traps are near-real-time with minimal overhead. Best practice: use both — traps for immediate alerts, polling for performance baselines.',
+                'SNMP polling: predictable traffic, good for trending. SNMP traps: near-real-time, minimal overhead. Best practice: use both — traps for immediate alerts, polling for performance baselines.',
           },
           {
             'question':
-                'A network engineer needs to capture traffic on a switch port to diagnose an issue. The switch supports SPAN (Switched Port Analyser). What does SPAN do?',
+                'A network engineer needs to capture traffic on a switch port to diagnose an issue. The switch supports SPAN. What does SPAN do?',
             'answers': [
               'SPAN blocks traffic on a port for analysis without affecting production traffic',
-              'SPAN copies traffic from a source port or VLAN to a designated destination port where a packet analyser (e.g., Wireshark) is connected — no impact on source traffic',
+              'SPAN copies traffic from a source port or VLAN to a designated destination port where a packet analyser is connected — no impact on source traffic',
               'SPAN compresses traffic statistics and sends them to a syslog server',
               'SPAN creates a second virtual port mirroring the configuration of the source port',
             ],
             'correct': 1,
             'explanation':
-                'SPAN (Port Mirroring) copies all frames from the source port to a destination port. The source traffic is not affected — SPAN is non-intrusive. RSPAN extends mirroring across multiple switches.',
+                'SPAN (Port Mirroring) copies all frames from the source to a destination port. Source traffic is not affected — non-intrusive. RSPAN extends mirroring across multiple switches.',
           },
           {
             'question':
-                'A network monitoring system shows an interface with utilisation consistently above 90% during business hours. What are the correct next steps?',
+                'An interface shows utilisation consistently above 90% during business hours. What are the correct next steps?',
             'answers': [
-              'Immediately replace the link with a faster one — 90% utilisation always requires hardware upgrade',
-              'Identify the traffic causing congestion using NetFlow or SNMP top-talkers analysis; implement QoS to prioritise business-critical traffic; evaluate whether a link upgrade is required',
+              'Immediately replace the link with a faster one — 90% always requires hardware upgrade',
+              'Identify the traffic causing congestion using NetFlow or SNMP top-talkers; implement QoS to prioritise business-critical traffic; evaluate whether a link upgrade is required',
               'Apply an ACL to block the top-consuming IP address',
-              'Enable compression on the interface to reduce bandwidth consumption',
+              'Enable compression on the interface',
             ],
             'correct': 1,
             'explanation':
-                'Before upgrading, understand what is consuming bandwidth. NetFlow identifies top talkers and applications. QoS can prioritise business applications over bulk transfers. A link upgrade should be a data-driven decision.',
+                'Before upgrading, understand what is consuming bandwidth. NetFlow identifies top talkers and applications. QoS can prioritise business applications. Link upgrade should be data-driven.',
           },
           {
             'question':
-                'What is the difference between syslog severity levels and why does the level matter for network management?',
+                'What is the difference between syslog severity levels and why does the level matter?',
             'answers': [
               'Syslog levels only affect how fast messages are delivered',
               'Syslog defines 8 severity levels (0=Emergency to 7=Debug). Setting the logging level determines which messages are sent — too verbose floods the syslog server; too restrictive misses warnings',
-              'Syslog severity levels are vendor-specific — Cisco and Juniper use different scales',
+              'Syslog severity levels are vendor-specific',
               'Syslog levels only apply to interface status messages',
             ],
             'correct': 1,
             'explanation':
-                'Syslog severity: 0=Emergency, 1=Alert, 2=Critical, 3=Error, 4=Warning, 5=Notice, 6=Informational, 7=Debug. Debug generates enormous volume. Production: typically level 6 or level 4 for warning-and-above.',
+                'Syslog severity: 0=Emergency, 1=Alert, 2=Critical, 3=Error, 4=Warning, 5=Notice, 6=Informational, 7=Debug. Production: typically level 6 or level 4 for warning-and-above.',
           },
           {
             'question':
-                'An engineer is asked to implement QoS to protect VoIP calls from being degraded by bulk file transfers on the same WAN link. Which QoS mechanism should be applied?',
+                'An engineer must implement QoS to protect VoIP calls from bulk file transfer degradation. Which mechanism should be applied?',
             'answers': [
-              'Traffic shaping — slows VoIP traffic to match the speed of file transfers',
-              'DSCP marking + LLQ (Low Latency Queue) — VoIP packets are marked EF (Expedited Forwarding, DSCP 46) and placed in a strict priority queue that is always serviced before other queues',
-              'WRED (Weighted Random Early Detection) — randomly drops file transfer packets to make room for VoIP',
+              'Traffic shaping — slows VoIP to match file transfer speed',
+              'DSCP marking + LLQ (Low Latency Queue) — VoIP packets marked EF (DSCP 46) and placed in a strict priority queue always serviced before other queues',
+              'WRED — randomly drops file transfer packets to make room for VoIP',
               'Traffic policing — limits VoIP bandwidth to a fixed rate',
             ],
             'correct': 1,
             'explanation':
-                'VoIP requirements: low latency (<150ms), low jitter (<30ms), low packet loss (<1%). LLQ provides a strict priority queue always serviced first. DSCP EF marking allows routers throughout the path to identify VoIP packets.',
+                'VoIP requirements: low latency (<150ms), low jitter (<30ms), low loss (<1%). LLQ provides a strict priority queue always serviced first. DSCP EF marking allows routers throughout the path to identify VoIP.',
           },
           {
             'question':
-                'A change management process requires a rollback plan before any network change. An engineer is upgrading IOS on a core switch. What should the rollback plan include?',
+                'A change management process requires a rollback plan before a network change. An engineer is upgrading IOS. What should the rollback plan include?',
             'answers': [
               'A note that the previous IOS version was installed',
-              'A verified backup of the current IOS image and running configuration stored on a TFTP server, the ability to boot the previous image, a defined rollback trigger, a change window, and a tested restore procedure',
+              'A verified backup of the current IOS image and running configuration on a TFTP server, the ability to boot the previous image, a defined rollback trigger, a change window, and a tested restore procedure',
               'Contact information for the switch vendor\'s support line',
-              'A plan to notify users that the network will be unavailable during the upgrade',
+              'A plan to notify users that the network will be unavailable',
             ],
             'correct': 1,
             'explanation':
-                'A proper rollback plan: (1) verified backup of current image + config; (2) defined rollback triggers; (3) tested rollback procedure; (4) time-boxed maintenance window; (5) communication plan. The most common failure is discovering the backup doesn\'t work during the incident.',
+                'Proper rollback plan: (1) verified backup of current image + config; (2) defined rollback triggers; (3) tested rollback procedure; (4) time-boxed maintenance window. Most common failure: the backup doesn\'t work during the incident.',
           },
           {
             'question':
-                'NetFlow is configured on a router to monitor traffic patterns. What information does NetFlow provide that simple SNMP interface counters cannot?',
+                'What information does NetFlow provide that simple SNMP interface counters cannot?',
             'answers': [
-              'NetFlow provides interface utilisation at higher granularity than SNMP polling',
+              'NetFlow provides interface utilisation at higher granularity',
               'NetFlow provides per-flow visibility: source/destination IP, port, protocol, bytes, and packets per conversation — SNMP shows only total interface byte counts with no insight into who is talking to whom',
               'NetFlow monitors packet loss and retransmissions; SNMP only counts total packets',
-              'NetFlow works on wireless interfaces; SNMP only monitors wired interfaces',
+              'NetFlow works on wireless interfaces; SNMP only monitors wired',
             ],
             'correct': 1,
             'explanation':
-                'SNMP: total bytes in/out, error counts. NetFlow: full flow records (src IP:port → dst IP:port, protocol, bytes, packets). This answers: "Who are the top talkers?", "What application is consuming bandwidth?", "Who is connecting to this server?"',
+                'SNMP: total bytes in/out, error counts. NetFlow: full flow records (src IP:port → dst IP:port, protocol, bytes, packets). Answers: who are top talkers? what application is consuming bandwidth?',
           },
         ];
 
@@ -6478,7 +6874,7 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 1,
             'explanation':
-                'Routers use the IP routing table to forward packets. They match the destination IP address against routes using longest prefix match and forward to the next-hop router or directly connected network.',
+                'Routers use the IP routing table to forward packets, matching the destination IP using longest prefix match and forwarding to the next-hop or directly connected network.',
           },
         ];
     }
