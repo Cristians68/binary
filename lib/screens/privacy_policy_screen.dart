@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Binary Academy</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f0f;
+      color: #e5e5e5;
+      line-height: 1.7;
+      padding: 40px 24px 80px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .logo {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.5px;
+      margin-bottom: 48px;
+    }
+    .logo span { color: #6366f1; }
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.8px;
+      margin-bottom: 8px;
+    }
+    .updated {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 40px;
+    }
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+      margin: 36px 0 12px;
+      letter-spacing: -0.3px;
+    }
+    p { font-size: 15px; color: #aaa; margin-bottom: 14px; }
+    ul { padding-left: 20px; margin-bottom: 14px; }
+    li { font-size: 15px; color: #aaa; margin-bottom: 6px; }
+    a { color: #6366f1; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .divider {
+      height: 1px;
+      background: #1f1f1f;
+      margin: 40px 0;
+    }
+    .contact-box {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 40px;
+    }
+    .contact-box h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="logo">Binary<span>.</span></div>
+
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: April 2026</p>
+
+  <p>Binary Academy ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use the Binary mobile application.</p>
+
+  <h2>1. Information We Collect</h2>
+  <p>We collect the following information when you use Binary:</p>
+  <ul>
+    <li><strong>Account information:</strong> Your name, email address, and profile photo when you sign in with Google or create an account.</li>
+    <li><strong>Usage data:</strong> Course progress, quiz scores, lesson completions, badges earned, and streak data.</li>
+    <li><strong>Device information:</strong> Device type, operating system version, and a unique device identifier for push notifications (FCM token).</li>
+    <li><strong>Purchase information:</strong> Records of in-app purchases processed through Apple. We do not store payment card details — all payments are handled by Apple.</li>
+  </ul>
+
+  <h2>2. How We Use Your Information</h2>
+  <p>We use your information to:</p>
+  <ul>
+    <li>Provide and improve the Binary learning experience</li>
+    <li>Track your progress and display your achievements</li>
+    <li>Send push notifications about your learning streak and new content (only if you grant permission)</li>
+    <li>Process and verify in-app purchases</li>
+    <li>Respond to support requests</li>
+  </ul>
+
+  <h2>3. Data Storage</h2>
+  <p>Your data is stored securely using Google Firebase (Firestore), which is hosted on Google Cloud infrastructure. Data is stored in secure data centres with encryption at rest and in transit.</p>
+
+  <h2>4. Third-Party Services</h2>
+  <p>Binary uses the following third-party services:</p>
+  <ul>
+    <li><strong>Google Firebase:</strong> Authentication, database, and push notifications. <a href="https://firebase.google.com/support/privacy" target="_blank">Firebase Privacy Policy</a></li>
+    <li><strong>RevenueCat:</strong> In-app purchase management. <a href="https://www.revenuecat.com/privacy" target="_blank">RevenueCat Privacy Policy</a></li>
+    <li><strong>Apple:</strong> Payment processing and app distribution. <a href="https://www.apple.com/legal/privacy/" target="_blank">Apple Privacy Policy</a></li>
+  </ul>
+  <p>We do not sell your personal data to any third parties.</p>
+
+  <h2>5. Push Notifications</h2>
+  <p>We may send you push notifications to remind you about your learning streak or to notify you of new content. You can disable notifications at any time in your device Settings or within the Binary app under Profile → Notifications.</p>
+
+  <h2>6. Data Retention</h2>
+  <p>We retain your data for as long as your account is active. If you delete your account, your personal data and usage history will be permanently deleted from our systems within 30 days.</p>
+
+  <h2>7. Your Rights</h2>
+  <p>You have the right to:</p>
+  <ul>
+    <li>Access the personal data we hold about you</li>
+    <li>Request correction of inaccurate data</li>
+    <li>Request deletion of your account and data (available in-app under Profile → Delete Account)</li>
+    <li>Withdraw consent for push notifications at any time</li>
+  </ul>
+
+  <h2>8. Children's Privacy</h2>
+  <p>Binary is not directed at children under 13. We do not knowingly collect personal information from children under 13. If you believe we have collected data from a child under 13, please contact us immediately.</p>
+
+  <h2>9. Changes to This Policy</h2>
+  <p>We may update this Privacy Policy from time to time. We will notify you of significant changes by updating the "Last updated" date above. Continued use of the app after changes constitutes acceptance of the updated policy.</p>
+
+  <div class="divider"></div>
+
+  <div class="contact-box">
+    <h3>Contact Us</h3>
+    <p style="margin-bottom: 4px;">If you have questions about this Privacy Policy or your data, please contact us:</p>
+    <p style="margin: 0;"><a href="mailto:support@binaryacademy.app">support@binaryacademy.app</a></p>
+  </div>
+
+</body>
+</html>

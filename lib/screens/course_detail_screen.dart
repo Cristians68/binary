@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'lesson_screen.dart';
+import 'offline_service.dart';
 import 'app_theme.dart';
 
 class CourseDetailScreen extends StatefulWidget {
@@ -32,6 +34,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
 
   List<Map<String, dynamic>> _modules = [];
   bool _loading = true;
+  bool _isDownloaded = false;
+  bool _isDownloading = false;
+  double _downloadProgress = 0;
 
   @override
   void initState() {
@@ -44,15 +49,16 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
       parent: _headerController,
       curve: Curves.easeOut,
     );
-    _headerSlide = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
-        .animate(
-          CurvedAnimation(
-            parent: _headerController,
-            curve: Curves.easeOutCubic,
-          ),
-        );
+    _headerSlide =
+        Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(
+      CurvedAnimation(
+        parent: _headerController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
     _headerController.forward();
     _loadModules();
+    _checkDownloadStatus();
   }
 
   @override
@@ -71,6 +77,79 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
         return 'networking';
       default:
         return widget.tag.toLowerCase().replaceAll(' ', '-');
+    }
+  }
+
+  Future<void> _checkDownloadStatus() async {
+    final downloaded = await OfflineService.isCourseDownloaded(_courseId);
+    if (mounted) setState(() => _isDownloaded = downloaded);
+  }
+
+  Future<void> _toggleDownload() async {
+    if (_isDownloading) return;
+    HapticFeedback.mediumImpact();
+
+    if (_isDownloaded) {
+      // Delete
+      final confirmed = await showCupertinoDialog<bool>(
+        context: context,
+        builder: (_) => CupertinoAlertDialog(
+          title: const Text('Remove download?'),
+          content:
+              Text('This will remove the offline content for ${widget.title}.'),
+          actions: [
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Remove'),
+            ),
+            CupertinoDialogAction(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+      await OfflineService.deleteCourse(
+        courseId: _courseId,
+        moduleIds: _modules.map((m) => m['id'] as String).toList(),
+      );
+      if (mounted) setState(() => _isDownloaded = false);
+      return;
+    }
+
+    // Download
+    setState(() {
+      _isDownloading = true;
+      _downloadProgress = 0;
+    });
+
+    await OfflineService.downloadCourse(
+      courseId: _courseId,
+      modules: _modules,
+      onProgress: (done, total) {
+        if (mounted) {
+          setState(() => _downloadProgress = done / total);
+        }
+      },
+    );
+
+    if (mounted) {
+      setState(() {
+        _isDownloading = false;
+        _isDownloaded = true;
+      });
+      HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${widget.title} downloaded for offline use.'),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -96,9 +175,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
 
       if (mounted) {
         setState(() {
-          _modules = modules.isNotEmpty
-              ? modules
-              : _getHardcodedModules(widget.tag);
+          _modules =
+              modules.isNotEmpty ? modules : _getHardcodedModules(widget.tag);
           _loading = false;
         });
       }
@@ -120,56 +198,56 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
           'title': 'Cybersecurity Fundamentals',
           'sub': 'CIA triad, threat landscape & core principles',
           'status': 'active',
-          'order': 1,
+          'order': 1
         },
         {
           'id': 'module-02',
           'title': 'Network Security',
           'sub': 'Firewalls, IDS/IPS, VPNs & secure protocols',
           'status': 'locked',
-          'order': 2,
+          'order': 2
         },
         {
           'id': 'module-03',
           'title': 'Cryptography',
           'sub': 'Encryption, hashing, PKI & digital signatures',
           'status': 'locked',
-          'order': 3,
+          'order': 3
         },
         {
           'id': 'module-04',
           'title': 'Ethical Hacking & Pen Testing',
           'sub': 'Recon, exploitation, tools & methodology',
           'status': 'locked',
-          'order': 4,
+          'order': 4
         },
         {
           'id': 'module-05',
           'title': 'Malware & Threats',
           'sub': 'Viruses, ransomware, trojans & attack vectors',
           'status': 'locked',
-          'order': 5,
+          'order': 5
         },
         {
           'id': 'module-06',
           'title': 'Web Application Security',
           'sub': 'OWASP Top 10, SQLi, XSS & secure coding',
           'status': 'locked',
-          'order': 6,
+          'order': 6
         },
         {
           'id': 'module-07',
           'title': 'Identity & Access Management',
           'sub': 'Authentication, MFA, OAuth & zero trust',
           'status': 'locked',
-          'order': 7,
+          'order': 7
         },
         {
           'id': 'module-08',
           'title': 'Incident Response & Compliance',
           'sub': 'IR lifecycle, GDPR, SOC 2 & forensics basics',
           'status': 'locked',
-          'order': 8,
+          'order': 8
         },
       ];
     } else if (tag == 'ITIL V4') {
@@ -179,35 +257,35 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
           'title': 'Introduction to ITIL V4',
           'sub': 'History, purpose & key concepts',
           'status': 'active',
-          'order': 1,
+          'order': 1
         },
         {
           'id': 'module-02',
           'title': 'Service Value System',
           'sub': 'SVS components & the value chain',
           'status': 'locked',
-          'order': 2,
+          'order': 2
         },
         {
           'id': 'module-03',
           'title': 'Guiding Principles',
           'sub': 'The 7 principles of ITIL V4',
           'status': 'locked',
-          'order': 3,
+          'order': 3
         },
         {
           'id': 'module-04',
           'title': 'The 4 Dimensions',
           'sub': 'People, technology, partners & processes',
           'status': 'locked',
-          'order': 4,
+          'order': 4
         },
         {
           'id': 'module-05',
           'title': 'Key Practices',
           'sub': 'Incident, change & service desk management',
           'status': 'locked',
-          'order': 5,
+          'order': 5
         },
       ];
     } else if (tag == 'CSM') {
@@ -217,35 +295,35 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
           'title': 'Agile & Scrum Basics',
           'sub': 'Agile values, principles & Scrum overview',
           'status': 'active',
-          'order': 1,
+          'order': 1
         },
         {
           'id': 'module-02',
           'title': 'Scrum Roles',
           'sub': 'Product Owner, Scrum Master & Dev Team',
           'status': 'locked',
-          'order': 2,
+          'order': 2
         },
         {
           'id': 'module-03',
           'title': 'Scrum Events',
           'sub': 'Sprints, planning, reviews & retrospectives',
           'status': 'locked',
-          'order': 3,
+          'order': 3
         },
         {
           'id': 'module-04',
           'title': 'Scrum Artifacts',
           'sub': 'Backlog, sprint backlog & increment',
           'status': 'locked',
-          'order': 4,
+          'order': 4
         },
         {
           'id': 'module-05',
           'title': 'Scaling & Advanced Scrum',
           'sub': 'SAFe, LeSS & real-world application',
           'status': 'locked',
-          'order': 5,
+          'order': 5
         },
       ];
     } else if (tag == 'Networking' || tag == 'Binary Network Pro') {
@@ -255,35 +333,35 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
           'title': 'Network Architecture & Topologies',
           'sub': 'Star, mesh, spine-leaf & three-tier design',
           'status': 'active',
-          'order': 1,
+          'order': 1
         },
         {
           'id': 'module-02',
           'title': 'OSI Model & TCP/IP Deep Dive',
           'sub': 'ARP, TCP handshake, QoS & HSRP',
           'status': 'locked',
-          'order': 2,
+          'order': 2
         },
         {
           'id': 'module-03',
           'title': 'IP Addressing, Subnetting & VLSM',
           'sub': 'IPv4, IPv6, NAT/PAT & APIPA',
           'status': 'locked',
-          'order': 3,
+          'order': 3
         },
         {
           'id': 'module-04',
           'title': 'Routing Protocols & WAN',
           'sub': 'OSPF, BGP, EIGRP & PBR',
           'status': 'locked',
-          'order': 4,
+          'order': 4
         },
         {
           'id': 'module-05',
           'title': 'Switching, VLANs & Spanning Tree',
           'sub': 'CAM, DHCP snooping, DAI & BPDU Guard',
           'status': 'locked',
-          'order': 5,
+          'order': 5
         },
       ];
     } else if (tag == 'Binary Cloud') {
@@ -293,42 +371,42 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
           'title': 'What is Cloud Computing?',
           'sub': 'Core concepts, CapEx vs OpEx & the 5 characteristics',
           'status': 'active',
-          'order': 1,
+          'order': 1
         },
         {
           'id': 'module-02',
           'title': 'Cloud Service Models',
           'sub': 'IaaS, PaaS, SaaS & serverless explained',
           'status': 'locked',
-          'order': 2,
+          'order': 2
         },
         {
           'id': 'module-03',
           'title': 'Cloud Deployment Models',
           'sub': 'Public, private, hybrid & multi-cloud',
           'status': 'locked',
-          'order': 3,
+          'order': 3
         },
         {
           'id': 'module-04',
           'title': 'Core Cloud Services',
           'sub': 'Compute, storage, databases & CDNs',
           'status': 'locked',
-          'order': 4,
+          'order': 4
         },
         {
           'id': 'module-05',
           'title': 'Cloud Security Basics',
           'sub': 'Shared responsibility, IAM & encryption',
           'status': 'locked',
-          'order': 5,
+          'order': 5
         },
         {
           'id': 'module-06',
           'title': 'Cloud Networking',
           'sub': 'VPCs, subnets, load balancers & availability zones',
           'status': 'locked',
-          'order': 6,
+          'order': 6
         },
       ];
     } else if (tag == 'Binary Cloud Pro') {
@@ -338,56 +416,56 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
           'title': 'Cloud Architecture Principles',
           'sub': 'Well-Architected, HA, fault tolerance & IaC',
           'status': 'active',
-          'order': 1,
+          'order': 1
         },
         {
           'id': 'module-02',
           'title': 'Advanced Compute',
           'sub': 'Containers, Kubernetes, serverless & instance pricing',
           'status': 'locked',
-          'order': 2,
+          'order': 2
         },
         {
           'id': 'module-03',
           'title': 'Cloud Storage & Databases',
           'sub': 'S3 tiers, NoSQL, read replicas & DR strategies',
           'status': 'locked',
-          'order': 3,
+          'order': 3
         },
         {
           'id': 'module-04',
           'title': 'Advanced Cloud Security',
           'sub': 'Zero trust, CSPM, secrets management & WAF',
           'status': 'locked',
-          'order': 4,
+          'order': 4
         },
         {
           'id': 'module-05',
           'title': 'DevOps & CI/CD',
           'sub': 'Pipelines, blue/green, canary & GitOps',
           'status': 'locked',
-          'order': 5,
+          'order': 5
         },
         {
           'id': 'module-06',
           'title': 'Cost Optimisation',
           'sub': 'Right-sizing, FinOps, tagging & savings plans',
           'status': 'locked',
-          'order': 6,
+          'order': 6
         },
         {
           'id': 'module-07',
           'title': 'Multi-Cloud & Migration',
           'sub': 'The 6 Rs, service mesh & landing zones',
           'status': 'locked',
-          'order': 7,
+          'order': 7
         },
         {
           'id': 'module-08',
           'title': 'Cloud Careers & Certifications',
           'sub': 'AWS roadmap, roles, SLAs & TCO',
           'status': 'locked',
-          'order': 8,
+          'order': 8
         },
       ];
     }
@@ -397,14 +475,13 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
         'title': 'Introduction',
         'sub': 'Getting started',
         'status': 'active',
-        'order': 1,
+        'order': 1
       },
     ];
   }
 
   @override
   Widget build(BuildContext context) {
-    // ── Pull theme so every color responds to light/dark toggle ──
     final theme = AppTheme.of(context);
 
     return Scaffold(
@@ -435,7 +512,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
     return SliverToBoxAdapter(
       child: Stack(
         children: [
-          // ── Gradient header — adapts colour intensity per mode ──
           Container(
             height: 300,
             decoration: BoxDecoration(
@@ -461,13 +537,81 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _BackButton(
-                        color: widget.color,
-                        theme: theme,
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          Navigator.pop(context);
-                        },
+                      // ── Back + Download row ──
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _BackButton(
+                            color: widget.color,
+                            theme: theme,
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              Navigator.pop(context);
+                            },
+                          ),
+                          // Download button
+                          if (!_loading)
+                            GestureDetector(
+                              onTap: _toggleDownload,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: _isDownloaded
+                                      ? AppColors.green.withOpacity(0.12)
+                                      : widget.color.withOpacity(0.10),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: _isDownloaded
+                                        ? AppColors.green.withOpacity(0.25)
+                                        : widget.color.withOpacity(0.20),
+                                  ),
+                                ),
+                                child: _isDownloading
+                                    ? SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          value: _downloadProgress > 0
+                                              ? _downloadProgress
+                                              : null,
+                                          color: widget.color,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            _isDownloaded
+                                                ? CupertinoIcons
+                                                    .checkmark_circle_fill
+                                                : CupertinoIcons
+                                                    .arrow_down_circle_fill,
+                                            size: 14,
+                                            color: _isDownloaded
+                                                ? AppColors.green
+                                                : widget.color,
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Text(
+                                            _isDownloaded
+                                                ? 'Downloaded'
+                                                : 'Download',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: _isDownloaded
+                                                  ? AppColors.green
+                                                  : widget.color,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 32),
                       _TagPill(tag: widget.tag, color: widget.color),
@@ -596,10 +740,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
     final statusColor = isLocked
         ? theme.subtext.withValues(alpha: 0.4)
         : isDone
-        ? AppColors.green
-        : widget.color;
+            ? AppColors.green
+            : widget.color;
 
-    // ── Card decoration adapts to theme ──
     BoxDecoration cardDecoration;
     if (theme.isDark) {
       cardDecoration = BoxDecoration(
@@ -651,18 +794,13 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                   ),
                   transitionsBuilder: (_, animation, __, child) =>
                       SlideTransition(
-                        position:
-                            Tween<Offset>(
-                              begin: const Offset(1, 0),
-                              end: Offset.zero,
-                            ).animate(
-                              CurvedAnimation(
-                                parent: animation,
-                                curve: Curves.easeOutCubic,
-                              ),
-                            ),
-                        child: FadeTransition(opacity: animation, child: child),
-                      ),
+                    position: Tween<Offset>(
+                      begin: const Offset(1, 0),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(
+                        parent: animation, curve: Curves.easeOutCubic)),
+                    child: FadeTransition(opacity: animation, child: child),
+                  ),
                   transitionDuration: const Duration(milliseconds: 400),
                 ),
               );
@@ -673,7 +811,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
         decoration: cardDecoration,
         child: Row(
           children: [
-            // ── Status indicator circle ──
             Container(
               width: 36,
               height: 36,
@@ -685,19 +822,16 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                 child: isDone
                     ? Icon(Icons.check_rounded, size: 18, color: statusColor)
                     : isLocked
-                    ? Icon(
-                        Icons.lock_outline_rounded,
-                        size: 15,
-                        color: statusColor,
-                      )
-                    : Text(
-                        '${index + 1}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: statusColor,
-                        ),
-                      ),
+                        ? Icon(Icons.lock_outline_rounded,
+                            size: 15, color: statusColor)
+                        : Text(
+                            '${index + 1}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: statusColor,
+                            ),
+                          ),
               ),
             ),
             const SizedBox(width: 14),
@@ -723,13 +857,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
               ),
             ),
             const SizedBox(width: 12),
-            // ── Right-side action ──
             if (isDone)
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.green.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
@@ -745,10 +876,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
               )
             else if (isActive)
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 7,
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                 decoration: BoxDecoration(
                   color: widget.color,
                   borderRadius: BorderRadius.circular(10),
@@ -799,13 +928,9 @@ class _BackButtonState extends State<_BackButton>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 120),
-    );
-    _scale = Tween<double>(
-      begin: 1.0,
-      end: 0.88,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+        vsync: this, duration: const Duration(milliseconds: 120));
+    _scale = Tween<double>(begin: 1.0, end: 0.88)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -828,24 +953,19 @@ class _BackButtonState extends State<_BackButton>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: widget.color.withValues(
-              alpha: widget.theme.isDark ? 0.10 : 0.08,
-            ),
+            color: widget.color
+                .withValues(alpha: widget.theme.isDark ? 0.10 : 0.08),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: widget.color.withValues(
-                alpha: widget.theme.isDark ? 0.20 : 0.25,
-              ),
+              color: widget.color
+                  .withValues(alpha: widget.theme.isDark ? 0.20 : 0.25),
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.arrow_back_ios_new_rounded,
-                size: 13,
-                color: widget.color,
-              ),
+              Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 13, color: widget.color),
               const SizedBox(width: 5),
               Text(
                 'Courses',
@@ -883,14 +1003,10 @@ class _TagPillState extends State<_TagPill>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
+        vsync: this, duration: const Duration(milliseconds: 500));
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _scale = Tween<double>(
-      begin: 0.85,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
+    _scale = Tween<double>(begin: 0.85, end: 1.0).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
     Future.delayed(const Duration(milliseconds: 150), () {
       if (mounted) _controller.forward();
     });
@@ -950,14 +1066,11 @@ class _AnimatedModuleState extends State<_AnimatedModule>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 450),
-    );
+        vsync: this, duration: const Duration(milliseconds: 450));
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _slide = Tween<Offset>(
-      begin: const Offset(0, 0.05),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _slide = Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
+        .animate(
+            CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     Future.delayed(widget.delay, () {
       if (mounted) _controller.forward();
     });
@@ -971,7 +1084,7 @@ class _AnimatedModuleState extends State<_AnimatedModule>
 
   @override
   Widget build(BuildContext context) => FadeTransition(
-    opacity: _fade,
-    child: SlideTransition(position: _slide, child: widget.child),
-  );
+        opacity: _fade,
+        child: SlideTransition(position: _slide, child: widget.child),
+      );
 }

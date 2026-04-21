@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of Service — Binary Academy</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f0f;
+      color: #e5e5e5;
+      line-height: 1.7;
+      padding: 40px 24px 80px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .logo { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.5px; margin-bottom: 48px; }
+    .logo span { color: #6366f1; }
+    h1 { font-size: 32px; font-weight: 700; color: #fff; letter-spacing: -0.8px; margin-bottom: 8px; }
+    .updated { font-size: 13px; color: #666; margin-bottom: 40px; }
+    h2 { font-size: 18px; font-weight: 600; color: #fff; margin: 36px 0 12px; letter-spacing: -0.3px; }
+    p { font-size: 15px; color: #aaa; margin-bottom: 14px; }
+    ul { padding-left: 20px; margin-bottom: 14px; }
+    li { font-size: 15px; color: #aaa; margin-bottom: 6px; }
+    a { color: #6366f1; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .divider { height: 1px; background: #1f1f1f; margin: 40px 0; }
+    .contact-box { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 16px; padding: 24px; margin-top: 40px; }
+    .contact-box h3 { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+
+  <div class="logo">Binary<span>.</span></div>
+
+  <h1>Terms of Service</h1>
+  <p class="updated">Last updated: April 2026</p>
+
+  <p>By downloading or using Binary Academy ("the app"), you agree to these Terms of Service. Please read them carefully.</p>
+
+  <h2>1. Acceptance of Terms</h2>
+  <p>By accessing or using Binary, you confirm that you are at least 13 years old and agree to be bound by these Terms. If you do not agree, do not use the app.</p>
+
+  <h2>2. Account</h2>
+  <p>You are responsible for maintaining the confidentiality of your account credentials and for all activity that occurs under your account. You must notify us immediately of any unauthorised use of your account.</p>
+
+  <h2>3. In-App Purchases</h2>
+  <p>Binary offers one-time in-app purchases for course access:</p>
+  <ul>
+    <li><strong>Single Course</strong> — $14.99 (includes a 7-day free trial)</li>
+    <li><strong>Any 4 Courses</strong> — $99.99 one-time</li>
+    <li><strong>All Courses</strong> — $149.99 one-time</li>
+  </ul>
+  <p>All purchases are processed by Apple through the App Store. All sales are final unless required by applicable law. The 7-day free trial for single course access will automatically convert to a paid purchase unless cancelled before the trial ends.</p>
+  <p>To cancel a free trial, go to Settings → Apple ID → Subscriptions on your iPhone.</p>
+
+  <h2>4. Content Licence</h2>
+  <p>Upon purchasing a course, you are granted a personal, non-transferable, non-exclusive licence to access and use that course content for your own learning purposes. You may not share, distribute, reproduce, or resell any course content.</p>
+
+  <h2>5. Intellectual Property</h2>
+  <p>All content in Binary, including flashcards, quizzes, course materials, and the app itself, is owned by Binary Academy and protected by copyright law. You may not copy, modify, or distribute our content without written permission.</p>
+
+  <h2>6. Acceptable Use</h2>
+  <p>You agree not to:</p>
+  <ul>
+    <li>Use the app for any unlawful purpose</li>
+    <li>Attempt to reverse engineer or extract content from the app</li>
+    <li>Create multiple accounts to abuse free trials</li>
+    <li>Share your account credentials with others</li>
+  </ul>
+
+  <h2>7. Disclaimers</h2>
+  <p>Binary provides educational content to help you prepare for IT certifications. We do not guarantee that using Binary will result in passing any certification exam. Certification exams are administered by third parties and we have no affiliation with any certification body.</p>
+  <p>The app is provided "as is" without warranties of any kind, express or implied.</p>
+
+  <h2>8. Limitation of Liability</h2>
+  <p>To the maximum extent permitted by law, Binary Academy shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of the app.</p>
+
+  <h2>9. Account Deletion</h2>
+  <p>You may delete your account at any time from within the app under Profile → Delete Account. Upon deletion, your data will be permanently removed within 30 days.</p>
+
+  <h2>10. Changes to Terms</h2>
+  <p>We may update these Terms from time to time. Continued use of the app after changes are posted constitutes acceptance of the updated Terms.</p>
+
+  <h2>11. Governing Law</h2>
+  <p>These Terms are governed by the laws of the jurisdiction in which Binary Academy operates. Any disputes will be resolved in the courts of that jurisdiction.</p>
+
+  <div class="divider"></div>
+
+  <div class="contact-box">
+    <h3>Contact Us</h3>
+    <p style="margin-bottom: 4px;">Questions about these Terms? Contact us at:</p>
+    <p style="margin: 0;"><a href="mailto:support@binaryacademy.app">support@binaryacademy.app</a></p>
+  </div>
+
+</body>
+</html>
