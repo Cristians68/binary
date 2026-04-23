@@ -3,6 +3,17 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 // ─────────────────────────────────────────────
+// Safe map cast — works on iOS, Android & Web
+// ─────────────────────────────────────────────
+
+Map<String, dynamic> _safeMap(dynamic value) {
+  if (value == null) return {};
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) return value.map((k, v) => MapEntry(k.toString(), v));
+  return {};
+}
+
+// ─────────────────────────────────────────────
 // Models
 // ─────────────────────────────────────────────
 
@@ -157,7 +168,7 @@ class StreakService {
     return _db.collection('users').doc(uid);
   }
 
-  // ── Real-time stream — used by HomeScreen StreamBuilder ───────────────────
+  // ── Real-time stream ──────────────────────────────────────────────────────
   static Stream<Map<String, dynamic>> statsStream() {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return const Stream.empty();
@@ -168,7 +179,7 @@ class StreakService {
         .map((snap) => snap.data() ?? {});
   }
 
-  // ── One-shot fetch — used by LessonsScreen / ProfileScreen ───────────────
+  // ── One-shot fetch ────────────────────────────────────────────────────────
   static Future<Map<String, dynamic>> getStats() async {
     final doc = _userDoc;
     if (doc == null) return {};
@@ -193,7 +204,8 @@ class StreakService {
       final snapshot = await doc.get();
       final data = snapshot.data() ?? {};
 
-      final streakMap = data['streak'] as Map<String, dynamic>? ?? {};
+      // ── FIX: use _safeMap for web compatibility ──
+      final streakMap = _safeMap(data['streak']);
       final streak = StreakData.fromMap(streakMap);
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
@@ -220,7 +232,6 @@ class StreakService {
       final newLongest =
           newCurrent > streak.longest ? newCurrent : streak.longest;
 
-      // Use dot-notation to avoid nested-map iOS crash
       await doc.set({
         'streak.current': newCurrent,
         'streak.longest': newLongest,
@@ -242,15 +253,12 @@ class StreakService {
     try {
       final snapshot = await doc.get();
       final data = snapshot.data() ?? {};
-      final goal = DailyGoalData.fromMap(
-        data['dailyGoal'] as Map<String, dynamic>? ?? {},
-      );
+      final goal = DailyGoalData.fromMap(_safeMap(data['dailyGoal']));
 
       await doc.update({
         'dailyGoal.todayPoints': goal.todayPoints + points,
       });
     } catch (e) {
-      // Document may not exist yet — create it
       try {
         final doc2 = _userDoc;
         if (doc2 != null) {
@@ -340,10 +348,8 @@ class StreakService {
       final snapshot = await doc.get();
       final data = snapshot.data() ?? {};
       return (
-        streak:
-            StreakData.fromMap(data['streak'] as Map<String, dynamic>? ?? {}),
-        goal: DailyGoalData.fromMap(
-            data['dailyGoal'] as Map<String, dynamic>? ?? {}),
+        streak: StreakData.fromMap(_safeMap(data['streak'])),
+        goal: DailyGoalData.fromMap(_safeMap(data['dailyGoal'])),
         badges: _mergeEarned(data, kAllBadges),
       );
     } catch (e) {
@@ -376,9 +382,7 @@ class StreakService {
     Map<String, dynamic> data,
     DateTime today,
   ) async {
-    final goal = DailyGoalData.fromMap(
-      data['dailyGoal'] as Map<String, dynamic>? ?? {},
-    );
+    final goal = DailyGoalData.fromMap(_safeMap(data['dailyGoal']));
 
     final lastReset = goal.lastReset;
     final needsReset = lastReset == null ||
@@ -412,7 +416,6 @@ class StreakService {
     }
   }
 
-  // KEY FIX: dot-notation field path instead of nested map
   static Future<void> _awardBadge(String badgeId) async {
     final doc = _userDoc;
     if (doc == null) return;
@@ -422,7 +425,6 @@ class StreakService {
         'badges.$badgeId': Timestamp.fromDate(DateTime.now()),
       });
     } catch (_) {
-      // Document doesn't exist yet
       await doc.set({
         'badges.$badgeId': Timestamp.fromDate(DateTime.now()),
       }, SetOptions(merge: true));
@@ -430,7 +432,7 @@ class StreakService {
   }
 
   static Set<String> _earnedBadgeIds(Map<String, dynamic> data) {
-    final badgesMap = data['badges'] as Map<String, dynamic>? ?? {};
+    final badgesMap = _safeMap(data['badges']);
     return badgesMap.keys.toSet();
   }
 
@@ -438,7 +440,7 @@ class StreakService {
     Map<String, dynamic> data,
     List<BadgeData> all,
   ) {
-    final badgesMap = data['badges'] as Map<String, dynamic>? ?? {};
+    final badgesMap = _safeMap(data['badges']);
     return all.map((b) {
       final ts = badgesMap[b.id];
       if (ts is Timestamp) {
