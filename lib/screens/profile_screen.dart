@@ -7,12 +7,13 @@ import 'package:url_launcher/url_launcher.dart';
 import 'auth_service.dart';
 import 'welcome_screen.dart';
 import 'badges_screen.dart';
+import 'offline_downloads_screen.dart';
+import 'delete_account_screen.dart';
+import 'legal_screen.dart';
 import 'app_router.dart';
 import 'streak_service.dart';
 import 'app_theme.dart';
 
-// Safely cast a Firestore value to Map<String, dynamic>.
-// On web, nested maps can arrive as Map<Object, Object>.
 Map<String, dynamic> _toMap(dynamic value) {
   if (value == null) return {};
   if (value is Map<String, dynamic>) return value;
@@ -64,7 +65,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     final data = await StreakService.getStats();
     if (!mounted) return;
 
-    // Safe casting — works on iOS, Android, and Web
     final badges = _toMap(data['badges']).length;
     final lessons = (data['completedLessons'] as List<dynamic>?)?.length ?? 0;
 
@@ -101,8 +101,10 @@ class _ProfileScreenState extends State<ProfileScreen>
       return;
     }
     try {
-      final snap =
-          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
       final enabled = (snap.data()?['notificationsEnabled'] as bool?) ?? true;
       if (mounted) {
         setState(() {
@@ -186,11 +188,13 @@ class _ProfileScreenState extends State<ProfileScreen>
               Text('Update your display name',
                   style: TextStyle(fontSize: 13, color: theme.subtext)),
               const SizedBox(height: 20),
-              _buildModalTextField(nameController, 'Your name', false, theme),
+              _buildModalTextField(
+                  nameController, 'Your name', false, theme),
               if (error != null) ...[
                 const SizedBox(height: 10),
                 Text(error!,
-                    style: const TextStyle(fontSize: 13, color: AppColors.red)),
+                    style:
+                        const TextStyle(fontSize: 13, color: AppColors.red)),
               ],
               const SizedBox(height: 20),
               GestureDetector(
@@ -200,7 +204,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                         setModal(() => loading = true);
                         try {
                           await FirebaseAuth.instance.currentUser
-                              ?.updateDisplayName(nameController.text.trim());
+                              ?.updateDisplayName(
+                                  nameController.text.trim());
                           if (ctx.mounted) {
                             Navigator.pop(ctx);
                             setState(() {});
@@ -283,8 +288,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 fontWeight: FontWeight.w600,
                                 color: theme.text)),
                         Text('Daily reminders & course updates',
-                            style:
-                                TextStyle(fontSize: 12, color: theme.subtext)),
+                            style: TextStyle(
+                                fontSize: 12, color: theme.subtext)),
                       ],
                     ),
                   ),
@@ -311,7 +316,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                     const SizedBox(height: 12),
                     _buildNotifRow(theme, '🎓', 'Course completion', true),
                     const SizedBox(height: 12),
-                    _buildNotifRow(theme, '📚', 'New content available', false),
+                    _buildNotifRow(
+                        theme, '📚', 'New content available', false),
                   ],
                 ),
               ),
@@ -467,71 +473,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  void _showOfflineDownloads() {
-    final theme = AppTheme.of(context);
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: theme.surface,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 48),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                  color: theme.subtext.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2)),
-            ),
-            const SizedBox(height: 28),
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                  color: AppColors.green.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(18)),
-              child: const Icon(CupertinoIcons.arrow_down_circle_fill,
-                  color: AppColors.green, size: 30),
-            ),
-            const SizedBox(height: 16),
-            Text('Offline downloads',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: theme.text,
-                    letterSpacing: -0.4)),
-            const SizedBox(height: 8),
-            Text(
-              'Download courses to study without an internet connection. Coming in the next update.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: theme.subtext, height: 1.5),
-            ),
-            const SizedBox(height: 28),
-            GestureDetector(
-              onTap: () => Navigator.pop(ctx),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                decoration: BoxDecoration(
-                    color: theme.border,
-                    borderRadius: BorderRadius.circular(16)),
-                child: Text('Got it',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: theme.subtext)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<void> _openHelpCenter() async {
     final uri = Uri.parse('https://binaryacademy.app/help');
     try {
@@ -571,7 +512,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       SnackBar(
         content: Text(message),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -618,11 +560,13 @@ class _ProfileScreenState extends State<ProfileScreen>
               _buildModalTextField(
                   currentController, 'Current password', true, theme),
               const SizedBox(height: 12),
-              _buildModalTextField(newController, 'New password', true, theme),
+              _buildModalTextField(
+                  newController, 'New password', true, theme),
               if (error != null) ...[
                 const SizedBox(height: 12),
                 Text(error!,
-                    style: const TextStyle(fontSize: 13, color: AppColors.red)),
+                    style:
+                        const TextStyle(fontSize: 13, color: AppColors.red)),
               ],
               const SizedBox(height: 20),
               GestureDetector(
@@ -637,7 +581,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                             password: currentController.text.trim(),
                           );
                           await user.reauthenticateWithCredential(cred);
-                          await user.updatePassword(newController.text.trim());
+                          await user
+                              .updatePassword(newController.text.trim());
                           if (ctx.mounted) Navigator.pop(ctx);
                         } on FirebaseAuthException catch (e) {
                           setModal(() {
@@ -748,7 +693,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 decoration: BoxDecoration(
                   color: AppColors.red.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.red.withOpacity(0.25)),
+                  border:
+                      Border.all(color: AppColors.red.withOpacity(0.25)),
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -876,6 +822,8 @@ class _ProfileScreenState extends State<ProfileScreen>
             slivers: [
               _buildHeader(theme),
               _buildStatsRow(theme),
+
+              // ── Account ──────────────────────────────────────────────────
               _buildSection('Account', theme, [
                 _buildItem(CupertinoIcons.person_fill, 'Edit profile',
                     AppColors.primary, theme,
@@ -893,18 +841,27 @@ class _ProfileScreenState extends State<ProfileScreen>
                     onTap: _showChangePasswordSheet),
                 _buildThemeToggle(theme),
               ]),
+
+              // ── Learning ──────────────────────────────────────────────────
               _buildSection('Learning', theme, [
                 _buildItem(CupertinoIcons.graph_square_fill, 'My stats',
                     AppColors.green, theme,
                     onTap: _showMyStats),
-                _buildItem(
-                    CupertinoIcons.rosette, 'Badges', AppColors.green, theme,
+                _buildItem(CupertinoIcons.rosette, 'Badges',
+                    AppColors.green, theme,
                     onTap: () => Navigator.push(
                         context, AppRouter.push(const BadgesScreen()))),
-                _buildItem(CupertinoIcons.arrow_down_circle_fill,
-                    'Download for offline', AppColors.green, theme,
-                    onTap: _showOfflineDownloads, isLast: true),
+                _buildItem(
+                    CupertinoIcons.arrow_down_circle_fill,
+                    'Download for offline',
+                    AppColors.green,
+                    theme,
+                    onTap: () => Navigator.push(context,
+                        AppRouter.push(OfflineDownloadsScreen())),
+                    isLast: true),
               ]),
+
+              // ── Support ───────────────────────────────────────────────────
               _buildSection('Support', theme, [
                 _buildItem(CupertinoIcons.question_circle_fill, 'Help center',
                     AppColors.amber, theme,
@@ -916,9 +873,20 @@ class _ProfileScreenState extends State<ProfileScreen>
                     AppColors.amber, theme,
                     onTap: _showAboutSheet, isLast: true),
               ]),
+
+              // ── Legal ─────────────────────────────────────────────────────
+              _buildSection('Legal', theme, [
+                _buildItem(CupertinoIcons.doc_text_fill,
+                    'Privacy Policy & Terms', const Color(0xFF8B5CF6), theme,
+                    onTap: () => Navigator.push(
+                        context, AppRouter.push(const LegalScreen())),
+                    isLast: true),
+              ]),
+
+              // ── Sign out ──────────────────────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
                   child: GestureDetector(
                     onTap: _signOut,
                     child: Container(
@@ -927,8 +895,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                       decoration: BoxDecoration(
                         color: AppColors.red.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(18),
-                        border:
-                            Border.all(color: AppColors.red.withOpacity(0.2)),
+                        border: Border.all(
+                            color: AppColors.red.withOpacity(0.2)),
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -943,6 +911,28 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   color: AppColors.red,
                                   letterSpacing: -0.2)),
                         ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Delete account ────────────────────────────────────────────
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 48),
+                  child: GestureDetector(
+                    onTap: () => Navigator.push(context,
+                        AppRouter.push(const DeleteAccountScreen())),
+                    child: Center(
+                      child: Text(
+                        'Delete account',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: theme.subtext.withOpacity(0.6),
+                          decoration: TextDecoration.underline,
+                          decorationColor: theme.subtext.withOpacity(0.4),
+                        ),
                       ),
                     ),
                   ),
@@ -999,7 +989,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                  border:
+                      Border.all(color: AppColors.primary.withOpacity(0.2)),
                 ),
                 child: const Text('IT Learner · Level 1',
                     style: TextStyle(
@@ -1065,7 +1056,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildSection(String title, ThemeNotifier theme, List<Widget> items) {
+  Widget _buildSection(
+      String title, ThemeNotifier theme, List<Widget> items) {
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
@@ -1175,8 +1167,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          border:
-              isLast ? null : Border(bottom: BorderSide(color: theme.border)),
+          border: isLast
+              ? null
+              : Border(bottom: BorderSide(color: theme.border)),
         ),
         child: Row(
           children: [
@@ -1195,7 +1188,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                       fontSize: 14, color: theme.text, letterSpacing: -0.2)),
             ),
             if (trailing != null) ...[trailing, const SizedBox(width: 8)],
-            Icon(CupertinoIcons.chevron_right, size: 13, color: theme.subtext),
+            Icon(CupertinoIcons.chevron_right,
+                size: 13, color: theme.subtext),
           ],
         ),
       ),

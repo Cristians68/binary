@@ -1,8 +1,8 @@
 name: binary
-description: "A new Flutter project."
+description: "Binary Academy — IT certification prep with flashcards and quizzes."
 publish_to: 'none'
 
-version: 1.0.0+29
+version: 1.0.0+1
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
