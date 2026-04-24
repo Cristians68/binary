@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:in_app_review/in_app_review.dart';
 import 'auth_service.dart';
 import 'welcome_screen.dart';
 import 'badges_screen.dart';
@@ -64,10 +65,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _loadStats() async {
     final data = await StreakService.getStats();
     if (!mounted) return;
-
     final badges = _toMap(data['badges']).length;
     final lessons = (data['completedLessons'] as List<dynamic>?)?.length ?? 0;
-
     final rawScores = data['quizScores'];
     List<Map<String, dynamic>> scores = [];
     if (rawScores is List) {
@@ -76,7 +75,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           .map((e) => e.map((k, v) => MapEntry(k.toString(), v)))
           .toList();
     }
-
     String avg = '-';
     if (scores.isNotEmpty) {
       final a = scores.fold<double>(
@@ -84,7 +82,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           scores.length;
       avg = '${a.toStringAsFixed(0)}%';
     }
-
     final streakMap = _toMap(data['streak']);
     setState(() {
       _lessonCount = lessons;
@@ -147,6 +144,292 @@ class _ProfileScreenState extends State<ProfileScreen>
     return name.isNotEmpty ? name[0].toUpperCase() : 'U';
   }
 
+  // ── Help Center — opens in-app browser ────────────────────────────────────
+  Future<void> _openHelpCenter() async {
+    final uri = Uri.parse('https://binaryacademy.app/help');
+    try {
+      await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+    } catch (_) {
+      if (mounted) _showToast('Could not open help center.');
+    }
+  }
+
+  // ── Rate the app — native iOS prompt ──────────────────────────────────────
+  Future<void> _rateApp() async {
+    HapticFeedback.mediumImpact();
+    final inAppReview = InAppReview.instance;
+    if (await inAppReview.isAvailable()) {
+      await inAppReview.requestReview();
+    } else {
+      // Fallback — open App Store page
+      await inAppReview.openStoreListing(
+        appStoreId: '6762030524',
+      );
+    }
+  }
+
+  // ── Feedback sheet ─────────────────────────────────────────────────────────
+  void _showFeedbackSheet() {
+    final theme = AppTheme.of(context);
+    final controller = TextEditingController();
+    int selectedStars = 0;
+    bool submitted = false;
+    bool loading = false;
+
+    HapticFeedback.selectionClick();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModal) {
+          if (submitted) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 56),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: AppColors.green.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(CupertinoIcons.checkmark_circle_fill,
+                        color: AppColors.green, size: 32),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Thanks for your feedback!',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: theme.text,
+                          letterSpacing: -0.4)),
+                  const SizedBox(height: 8),
+                  Text('We read every message and use it to improve Binary.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14, color: theme.subtext, height: 1.5)),
+                  const SizedBox(height: 28),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(ctx),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(16)),
+                      child: const Text('Done',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return Padding(
+            padding: EdgeInsets.fromLTRB(
+                24, 20, 24, MediaQuery.of(ctx).viewInsets.bottom + 40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Handle
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: theme.subtext.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.amber.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      child: const Icon(CupertinoIcons.chat_bubble_text_fill,
+                          color: AppColors.amber, size: 20),
+                    ),
+                    const SizedBox(width: 14),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Send feedback',
+                            style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                color: theme.text,
+                                letterSpacing: -0.4)),
+                        Text('We\'d love to hear from you',
+                            style: TextStyle(fontSize: 13, color: theme.subtext)),
+                      ],
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // Star rating
+                Text('How would you rate Binary?',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: theme.text)),
+                const SizedBox(height: 12),
+                Row(
+                  children: List.generate(5, (i) {
+                    final filled = i < selectedStars;
+                    return GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setModal(() => selectedStars = i + 1);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Icon(
+                          filled ? CupertinoIcons.star_fill : CupertinoIcons.star,
+                          color: filled ? AppColors.amber : theme.subtext.withOpacity(0.4),
+                          size: 32,
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Message field
+                Text('Your message',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: theme.text)),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: theme.bg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: theme.border),
+                  ),
+                  child: TextField(
+                    controller: controller,
+                    maxLines: 4,
+                    style: TextStyle(color: theme.text, fontSize: 15),
+                    decoration: InputDecoration(
+                      hintText:
+                          'Tell us what you love, what could be better, or anything else...',
+                      hintStyle: TextStyle(
+                          color: theme.subtext.withOpacity(0.6), fontSize: 14),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.all(16),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Submit button
+                GestureDetector(
+                  onTap: loading
+                      ? null
+                      : () async {
+                          if (controller.text.trim().isEmpty &&
+                              selectedStars == 0) {
+                            _showToast('Please add a rating or message.');
+                            return;
+                          }
+                          setModal(() => loading = true);
+                          HapticFeedback.mediumImpact();
+
+                          // Save to Firestore
+                          try {
+                            final uid =
+                                FirebaseAuth.instance.currentUser?.uid ?? '';
+                            await FirebaseFirestore.instance
+                                .collection('feedback')
+                                .add({
+                              'uid': uid,
+                              'stars': selectedStars,
+                              'message': controller.text.trim(),
+                              'createdAt': FieldValue.serverTimestamp(),
+                              'appVersion': '1.0.0',
+                            });
+                          } catch (_) {}
+
+                          // If 4-5 stars also trigger native review prompt
+                          if (selectedStars >= 4) {
+                            final inAppReview = InAppReview.instance;
+                            if (await inAppReview.isAvailable()) {
+                              await inAppReview.requestReview();
+                            }
+                          }
+
+                          setModal(() {
+                            loading = false;
+                            submitted = true;
+                          });
+                        },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      color: loading
+                          ? AppColors.primary.withOpacity(0.5)
+                          : AppColors.primary,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: loading
+                        ? const Center(
+                            child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2)))
+                        : const Text('Send feedback',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showToast(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   void _showEditProfile() {
     final theme = AppTheme.of(context);
     final nameController = TextEditingController(
@@ -188,13 +471,11 @@ class _ProfileScreenState extends State<ProfileScreen>
               Text('Update your display name',
                   style: TextStyle(fontSize: 13, color: theme.subtext)),
               const SizedBox(height: 20),
-              _buildModalTextField(
-                  nameController, 'Your name', false, theme),
+              _buildModalTextField(nameController, 'Your name', false, theme),
               if (error != null) ...[
                 const SizedBox(height: 10),
                 Text(error!,
-                    style:
-                        const TextStyle(fontSize: 13, color: AppColors.red)),
+                    style: const TextStyle(fontSize: 13, color: AppColors.red)),
               ],
               const SizedBox(height: 20),
               GestureDetector(
@@ -204,8 +485,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         setModal(() => loading = true);
                         try {
                           await FirebaseAuth.instance.currentUser
-                              ?.updateDisplayName(
-                                  nameController.text.trim());
+                              ?.updateDisplayName(nameController.text.trim());
                           if (ctx.mounted) {
                             Navigator.pop(ctx);
                             setState(() {});
@@ -288,8 +568,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 fontWeight: FontWeight.w600,
                                 color: theme.text)),
                         Text('Daily reminders & course updates',
-                            style: TextStyle(
-                                fontSize: 12, color: theme.subtext)),
+                            style:
+                                TextStyle(fontSize: 12, color: theme.subtext)),
                       ],
                     ),
                   ),
@@ -316,8 +596,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     const SizedBox(height: 12),
                     _buildNotifRow(theme, '🎓', 'Course completion', true),
                     const SizedBox(height: 12),
-                    _buildNotifRow(
-                        theme, '📚', 'New content available', false),
+                    _buildNotifRow(theme, '📚', 'New content available', false),
                   ],
                 ),
               ),
@@ -473,52 +752,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Future<void> _openHelpCenter() async {
-    final uri = Uri.parse('https://binaryacademy.app/help');
-    try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (mounted) _showToast('Could not open help center.');
-      }
-    } catch (_) {
-      if (mounted) _showToast('Could not open help center.');
-    }
-  }
-
-  Future<void> _sendFeedback() async {
-    final uri = Uri(
-      scheme: 'mailto',
-      path: 'support@binaryacademy.app',
-      queryParameters: {
-        'subject': 'Binary App Feedback',
-        'body':
-            'Hi Binary team,\n\n[Please write your feedback here]\n\nApp version: 1.0.0',
-      },
-    );
-    try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      } else {
-        if (mounted) _showToast('Could not open mail app.');
-      }
-    } catch (_) {
-      if (mounted) _showToast('Could not open mail app.');
-    }
-  }
-
-  void _showToast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
   void _showChangePasswordSheet() {
     final theme = AppTheme.of(context);
     final currentController = TextEditingController();
@@ -560,8 +793,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               _buildModalTextField(
                   currentController, 'Current password', true, theme),
               const SizedBox(height: 12),
-              _buildModalTextField(
-                  newController, 'New password', true, theme),
+              _buildModalTextField(newController, 'New password', true, theme),
               if (error != null) ...[
                 const SizedBox(height: 12),
                 Text(error!,
@@ -581,8 +813,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             password: currentController.text.trim(),
                           );
                           await user.reauthenticateWithCredential(cred);
-                          await user
-                              .updatePassword(newController.text.trim());
+                          await user.updatePassword(newController.text.trim());
                           if (ctx.mounted) Navigator.pop(ctx);
                         } on FirebaseAuthException catch (e) {
                           setModal(() {
@@ -683,7 +914,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   Navigator.pushAndRemoveUntil(
                     context,
                     AppRouter.fade(const WelcomeScreen()),
-                    (route) => false,
+                    (r) => false,
                   );
                 }
               },
@@ -693,8 +924,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 decoration: BoxDecoration(
                   color: AppColors.red.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
-                  border:
-                      Border.all(color: AppColors.red.withOpacity(0.25)),
+                  border: Border.all(color: AppColors.red.withOpacity(0.25)),
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -823,7 +1053,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               _buildHeader(theme),
               _buildStatsRow(theme),
 
-              // ── Account ──────────────────────────────────────────────────
+              // ── Account ───────────────────────────────────────────────────
               _buildSection('Account', theme, [
                 _buildItem(CupertinoIcons.person_fill, 'Edit profile',
                     AppColors.primary, theme,
@@ -857,7 +1087,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     AppColors.green,
                     theme,
                     onTap: () => Navigator.push(context,
-                        AppRouter.push(OfflineDownloadsScreen())),
+                        AppRouter.push(const OfflineDownloadsScreen())),
                     isLast: true),
               ]),
 
@@ -866,9 +1096,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                 _buildItem(CupertinoIcons.question_circle_fill, 'Help center',
                     AppColors.amber, theme,
                     onTap: _openHelpCenter),
-                _buildItem(CupertinoIcons.chat_bubble_fill, 'Send feedback',
+                _buildItem(CupertinoIcons.star_fill, 'Rate Binary',
                     AppColors.amber, theme,
-                    onTap: _sendFeedback),
+                    onTap: _rateApp),
+                _buildItem(CupertinoIcons.chat_bubble_text_fill,
+                    'Send feedback', AppColors.amber, theme,
+                    onTap: _showFeedbackSheet),
                 _buildItem(CupertinoIcons.info_circle_fill, 'About Binary',
                     AppColors.amber, theme,
                     onTap: _showAboutSheet, isLast: true),
@@ -895,8 +1128,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                       decoration: BoxDecoration(
                         color: AppColors.red.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                            color: AppColors.red.withOpacity(0.2)),
+                        border:
+                            Border.all(color: AppColors.red.withOpacity(0.2)),
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
