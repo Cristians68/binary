@@ -20,7 +20,7 @@ class SubscriptionGate {
     required Color courseColor,
     required VoidCallback onGranted,
   }) async {
-    final canAccess = false; // TEMP: force paywall for screenshots
+    final canAccess = await SubscriptionService.canAccessCourse(courseId);
 
     if (canAccess) {
       onGranted();

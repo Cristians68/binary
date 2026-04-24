@@ -145,12 +145,24 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   // ── Help Center — opens in-app browser ────────────────────────────────────
-  Future<void> _openHelpCenter() async {
-    final uri = Uri.parse('https://binaryacademy.app/help');
+   Future<void> _openHelpCenter() async {
+    HapticFeedback.selectionClick();
+    final uri = Uri(
+      scheme: 'mailto',
+      path: 'support@binaryacademy.app',
+      queryParameters: {
+        'subject': 'Binary Academy Help',
+        'body': 'Hi Binary support team,\n\n[Describe your issue here]\n\nApp version: 1.0.0',
+      },
+    );
     try {
-      await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        if (mounted) _showToast('Email support@binaryacademy.app for help.');
+      }
     } catch (_) {
-      if (mounted) _showToast('Could not open help center.');
+      if (mounted) _showToast('Email support@binaryacademy.app for help.');
     }
   }
 
