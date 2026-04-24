@@ -91,7 +91,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
     HapticFeedback.mediumImpact();
 
     if (_isDownloaded) {
-      // Delete
       final confirmed = await showCupertinoDialog<bool>(
         context: context,
         builder: (_) => CupertinoAlertDialog(
@@ -120,7 +119,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
       return;
     }
 
-    // Download
     setState(() {
       _isDownloading = true;
       _downloadProgress = 0;
@@ -155,86 +153,58 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
   }
 
   Future<void> _loadModules() async {
-  try {
-    // Load shared module definitions (order, title, subtitle)
-    final snapshot = await FirebaseFirestore.instance
-        .collection('courses')
-        .doc(_courseId)
-        .collection('modules')
-        .orderBy('order')
-        .get();
-
-    // Load THIS user's per-module progress
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    Map<String, String> userModuleStatus = {};
-    if (uid != null) {
-      final userModulesSnap = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('progress')
+    try {
+      // Load shared module definitions (order, title, subtitle)
+      final snapshot = await FirebaseFirestore.instance
+          .collection('courses')
           .doc(_courseId)
           .collection('modules')
+          .orderBy('order')
           .get();
-      userModuleStatus = {
-        for (final d in userModulesSnap.docs)
-          d.id: (d.data()['status'] as String? ?? 'locked')
-      };
-    }
 
-    final modules = snapshot.docs.asMap().entries.map((entry) {
-      final index = entry.key;
-      final doc = entry.value;
-      final data = doc.data();
-
-      String status;
-      if (userModuleStatus.containsKey(doc.id)) {
-        status = userModuleStatus[doc.id]!;
-      } else if (index == 0) {
-        status = 'active'; // first module always unlocked
-      } else {
-        status = 'locked';
+      // Load THIS user's per-module progress
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      Map<String, String> userModuleStatus = {};
+      if (uid != null) {
+        final userModulesSnap = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('progress')
+            .doc(_courseId)
+            .collection('modules')
+            .get();
+        userModuleStatus = {
+          for (final d in userModulesSnap.docs)
+            d.id: (d.data()['status'] as String? ?? 'locked')
+        };
       }
 
-      return {
-        'id': doc.id,
-        'title': data['title'] ?? '',
-        'sub': data['subtitle'] ?? '',
-        'status': status,
-        'order': data['order'] ?? 0,
-      };
-    }).toList();
-
-    if (mounted) {
-      setState(() {
-        _modules = modules.isNotEmpty ? modules : _getHardcodedModules(widget.tag);
-        _loading = false;
-      });
-    }
-  } catch (e) {
-    if (mounted) {
-      setState(() {
-        _modules = _getHardcodedModules(widget.tag);
-        _loading = false;
-      });
-    }
-  }
-}
-
-      final modules = snapshot.docs.map((doc) {
+      final modules = snapshot.docs.asMap().entries.map((entry) {
+        final index = entry.key;
+        final doc = entry.value;
         final data = doc.data();
+
+        String status;
+        if (userModuleStatus.containsKey(doc.id)) {
+          status = userModuleStatus[doc.id]!;
+        } else if (index == 0) {
+          status = 'active'; // first module always unlocked
+        } else {
+          status = 'locked';
+        }
+
         return {
           'id': doc.id,
           'title': data['title'] ?? '',
           'sub': data['subtitle'] ?? '',
-          'status': data['status'] ?? 'locked',
+          'status': status,
           'order': data['order'] ?? 0,
         };
       }).toList();
 
       if (mounted) {
         setState(() {
-          _modules =
-              modules.isNotEmpty ? modules : _getHardcodedModules(widget.tag);
+          _modules = modules.isNotEmpty ? modules : _getHardcodedModules(widget.tag);
           _loading = false;
         });
       }
@@ -251,290 +221,62 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
   List<Map<String, dynamic>> _getHardcodedModules(String tag) {
     if (tag == 'Binary Cyber Pro') {
       return [
-        {
-          'id': 'module-01',
-          'title': 'Cybersecurity Fundamentals',
-          'sub': 'CIA triad, threat landscape & core principles',
-          'status': 'active',
-          'order': 1
-        },
-        {
-          'id': 'module-02',
-          'title': 'Network Security',
-          'sub': 'Firewalls, IDS/IPS, VPNs & secure protocols',
-          'status': 'locked',
-          'order': 2
-        },
-        {
-          'id': 'module-03',
-          'title': 'Cryptography',
-          'sub': 'Encryption, hashing, PKI & digital signatures',
-          'status': 'locked',
-          'order': 3
-        },
-        {
-          'id': 'module-04',
-          'title': 'Ethical Hacking & Pen Testing',
-          'sub': 'Recon, exploitation, tools & methodology',
-          'status': 'locked',
-          'order': 4
-        },
-        {
-          'id': 'module-05',
-          'title': 'Malware & Threats',
-          'sub': 'Viruses, ransomware, trojans & attack vectors',
-          'status': 'locked',
-          'order': 5
-        },
-        {
-          'id': 'module-06',
-          'title': 'Web Application Security',
-          'sub': 'OWASP Top 10, SQLi, XSS & secure coding',
-          'status': 'locked',
-          'order': 6
-        },
-        {
-          'id': 'module-07',
-          'title': 'Identity & Access Management',
-          'sub': 'Authentication, MFA, OAuth & zero trust',
-          'status': 'locked',
-          'order': 7
-        },
-        {
-          'id': 'module-08',
-          'title': 'Incident Response & Compliance',
-          'sub': 'IR lifecycle, GDPR, SOC 2 & forensics basics',
-          'status': 'locked',
-          'order': 8
-        },
+        {'id': 'module-01', 'title': 'Cybersecurity Fundamentals', 'sub': 'CIA triad, threat landscape & core principles', 'status': 'active', 'order': 1},
+        {'id': 'module-02', 'title': 'Network Security', 'sub': 'Firewalls, IDS/IPS, VPNs & secure protocols', 'status': 'locked', 'order': 2},
+        {'id': 'module-03', 'title': 'Cryptography', 'sub': 'Encryption, hashing, PKI & digital signatures', 'status': 'locked', 'order': 3},
+        {'id': 'module-04', 'title': 'Ethical Hacking & Pen Testing', 'sub': 'Recon, exploitation, tools & methodology', 'status': 'locked', 'order': 4},
+        {'id': 'module-05', 'title': 'Malware & Threats', 'sub': 'Viruses, ransomware, trojans & attack vectors', 'status': 'locked', 'order': 5},
+        {'id': 'module-06', 'title': 'Web Application Security', 'sub': 'OWASP Top 10, SQLi, XSS & secure coding', 'status': 'locked', 'order': 6},
+        {'id': 'module-07', 'title': 'Identity & Access Management', 'sub': 'Authentication, MFA, OAuth & zero trust', 'status': 'locked', 'order': 7},
+        {'id': 'module-08', 'title': 'Incident Response & Compliance', 'sub': 'IR lifecycle, GDPR, SOC 2 & forensics basics', 'status': 'locked', 'order': 8},
       ];
     } else if (tag == 'ITIL V4') {
       return [
-        {
-          'id': 'module-01',
-          'title': 'Introduction to ITIL V4',
-          'sub': 'History, purpose & key concepts',
-          'status': 'active',
-          'order': 1
-        },
-        {
-          'id': 'module-02',
-          'title': 'Service Value System',
-          'sub': 'SVS components & the value chain',
-          'status': 'locked',
-          'order': 2
-        },
-        {
-          'id': 'module-03',
-          'title': 'Guiding Principles',
-          'sub': 'The 7 principles of ITIL V4',
-          'status': 'locked',
-          'order': 3
-        },
-        {
-          'id': 'module-04',
-          'title': 'The 4 Dimensions',
-          'sub': 'People, technology, partners & processes',
-          'status': 'locked',
-          'order': 4
-        },
-        {
-          'id': 'module-05',
-          'title': 'Key Practices',
-          'sub': 'Incident, change & service desk management',
-          'status': 'locked',
-          'order': 5
-        },
+        {'id': 'module-01', 'title': 'Introduction to ITIL V4', 'sub': 'History, purpose & key concepts', 'status': 'active', 'order': 1},
+        {'id': 'module-02', 'title': 'Service Value System', 'sub': 'SVS components & the value chain', 'status': 'locked', 'order': 2},
+        {'id': 'module-03', 'title': 'Guiding Principles', 'sub': 'The 7 principles of ITIL V4', 'status': 'locked', 'order': 3},
+        {'id': 'module-04', 'title': 'The 4 Dimensions', 'sub': 'People, technology, partners & processes', 'status': 'locked', 'order': 4},
+        {'id': 'module-05', 'title': 'Key Practices', 'sub': 'Incident, change & service desk management', 'status': 'locked', 'order': 5},
       ];
     } else if (tag == 'CSM') {
       return [
-        {
-          'id': 'module-01',
-          'title': 'Agile & Scrum Basics',
-          'sub': 'Agile values, principles & Scrum overview',
-          'status': 'active',
-          'order': 1
-        },
-        {
-          'id': 'module-02',
-          'title': 'Scrum Roles',
-          'sub': 'Product Owner, Scrum Master & Dev Team',
-          'status': 'locked',
-          'order': 2
-        },
-        {
-          'id': 'module-03',
-          'title': 'Scrum Events',
-          'sub': 'Sprints, planning, reviews & retrospectives',
-          'status': 'locked',
-          'order': 3
-        },
-        {
-          'id': 'module-04',
-          'title': 'Scrum Artifacts',
-          'sub': 'Backlog, sprint backlog & increment',
-          'status': 'locked',
-          'order': 4
-        },
-        {
-          'id': 'module-05',
-          'title': 'Scaling & Advanced Scrum',
-          'sub': 'SAFe, LeSS & real-world application',
-          'status': 'locked',
-          'order': 5
-        },
+        {'id': 'module-01', 'title': 'Agile & Scrum Basics', 'sub': 'Agile values, principles & Scrum overview', 'status': 'active', 'order': 1},
+        {'id': 'module-02', 'title': 'Scrum Roles', 'sub': 'Product Owner, Scrum Master & Dev Team', 'status': 'locked', 'order': 2},
+        {'id': 'module-03', 'title': 'Scrum Events', 'sub': 'Sprints, planning, reviews & retrospectives', 'status': 'locked', 'order': 3},
+        {'id': 'module-04', 'title': 'Scrum Artifacts', 'sub': 'Backlog, sprint backlog & increment', 'status': 'locked', 'order': 4},
+        {'id': 'module-05', 'title': 'Scaling & Advanced Scrum', 'sub': 'SAFe, LeSS & real-world application', 'status': 'locked', 'order': 5},
       ];
     } else if (tag == 'Networking' || tag == 'Binary Network Pro') {
       return [
-        {
-          'id': 'module-01',
-          'title': 'Network Architecture & Topologies',
-          'sub': 'Star, mesh, spine-leaf & three-tier design',
-          'status': 'active',
-          'order': 1
-        },
-        {
-          'id': 'module-02',
-          'title': 'OSI Model & TCP/IP Deep Dive',
-          'sub': 'ARP, TCP handshake, QoS & HSRP',
-          'status': 'locked',
-          'order': 2
-        },
-        {
-          'id': 'module-03',
-          'title': 'IP Addressing, Subnetting & VLSM',
-          'sub': 'IPv4, IPv6, NAT/PAT & APIPA',
-          'status': 'locked',
-          'order': 3
-        },
-        {
-          'id': 'module-04',
-          'title': 'Routing Protocols & WAN',
-          'sub': 'OSPF, BGP, EIGRP & PBR',
-          'status': 'locked',
-          'order': 4
-        },
-        {
-          'id': 'module-05',
-          'title': 'Switching, VLANs & Spanning Tree',
-          'sub': 'CAM, DHCP snooping, DAI & BPDU Guard',
-          'status': 'locked',
-          'order': 5
-        },
+        {'id': 'module-01', 'title': 'Network Architecture & Topologies', 'sub': 'Star, mesh, spine-leaf & three-tier design', 'status': 'active', 'order': 1},
+        {'id': 'module-02', 'title': 'OSI Model & TCP/IP Deep Dive', 'sub': 'ARP, TCP handshake, QoS & HSRP', 'status': 'locked', 'order': 2},
+        {'id': 'module-03', 'title': 'IP Addressing, Subnetting & VLSM', 'sub': 'IPv4, IPv6, NAT/PAT & APIPA', 'status': 'locked', 'order': 3},
+        {'id': 'module-04', 'title': 'Routing Protocols & WAN', 'sub': 'OSPF, BGP, EIGRP & PBR', 'status': 'locked', 'order': 4},
+        {'id': 'module-05', 'title': 'Switching, VLANs & Spanning Tree', 'sub': 'CAM, DHCP snooping, DAI & BPDU Guard', 'status': 'locked', 'order': 5},
       ];
     } else if (tag == 'Binary Cloud') {
       return [
-        {
-          'id': 'module-01',
-          'title': 'What is Cloud Computing?',
-          'sub': 'Core concepts, CapEx vs OpEx & the 5 characteristics',
-          'status': 'active',
-          'order': 1
-        },
-        {
-          'id': 'module-02',
-          'title': 'Cloud Service Models',
-          'sub': 'IaaS, PaaS, SaaS & serverless explained',
-          'status': 'locked',
-          'order': 2
-        },
-        {
-          'id': 'module-03',
-          'title': 'Cloud Deployment Models',
-          'sub': 'Public, private, hybrid & multi-cloud',
-          'status': 'locked',
-          'order': 3
-        },
-        {
-          'id': 'module-04',
-          'title': 'Core Cloud Services',
-          'sub': 'Compute, storage, databases & CDNs',
-          'status': 'locked',
-          'order': 4
-        },
-        {
-          'id': 'module-05',
-          'title': 'Cloud Security Basics',
-          'sub': 'Shared responsibility, IAM & encryption',
-          'status': 'locked',
-          'order': 5
-        },
-        {
-          'id': 'module-06',
-          'title': 'Cloud Networking',
-          'sub': 'VPCs, subnets, load balancers & availability zones',
-          'status': 'locked',
-          'order': 6
-        },
+        {'id': 'module-01', 'title': 'What is Cloud Computing?', 'sub': 'Core concepts, CapEx vs OpEx & the 5 characteristics', 'status': 'active', 'order': 1},
+        {'id': 'module-02', 'title': 'Cloud Service Models', 'sub': 'IaaS, PaaS, SaaS & serverless explained', 'status': 'locked', 'order': 2},
+        {'id': 'module-03', 'title': 'Cloud Deployment Models', 'sub': 'Public, private, hybrid & multi-cloud', 'status': 'locked', 'order': 3},
+        {'id': 'module-04', 'title': 'Core Cloud Services', 'sub': 'Compute, storage, databases & CDNs', 'status': 'locked', 'order': 4},
+        {'id': 'module-05', 'title': 'Cloud Security Basics', 'sub': 'Shared responsibility, IAM & encryption', 'status': 'locked', 'order': 5},
+        {'id': 'module-06', 'title': 'Cloud Networking', 'sub': 'VPCs, subnets, load balancers & availability zones', 'status': 'locked', 'order': 6},
       ];
     } else if (tag == 'Binary Cloud Pro') {
       return [
-        {
-          'id': 'module-01',
-          'title': 'Cloud Architecture Principles',
-          'sub': 'Well-Architected, HA, fault tolerance & IaC',
-          'status': 'active',
-          'order': 1
-        },
-        {
-          'id': 'module-02',
-          'title': 'Advanced Compute',
-          'sub': 'Containers, Kubernetes, serverless & instance pricing',
-          'status': 'locked',
-          'order': 2
-        },
-        {
-          'id': 'module-03',
-          'title': 'Cloud Storage & Databases',
-          'sub': 'S3 tiers, NoSQL, read replicas & DR strategies',
-          'status': 'locked',
-          'order': 3
-        },
-        {
-          'id': 'module-04',
-          'title': 'Advanced Cloud Security',
-          'sub': 'Zero trust, CSPM, secrets management & WAF',
-          'status': 'locked',
-          'order': 4
-        },
-        {
-          'id': 'module-05',
-          'title': 'DevOps & CI/CD',
-          'sub': 'Pipelines, blue/green, canary & GitOps',
-          'status': 'locked',
-          'order': 5
-        },
-        {
-          'id': 'module-06',
-          'title': 'Cost Optimisation',
-          'sub': 'Right-sizing, FinOps, tagging & savings plans',
-          'status': 'locked',
-          'order': 6
-        },
-        {
-          'id': 'module-07',
-          'title': 'Multi-Cloud & Migration',
-          'sub': 'The 6 Rs, service mesh & landing zones',
-          'status': 'locked',
-          'order': 7
-        },
-        {
-          'id': 'module-08',
-          'title': 'Cloud Careers & Certifications',
-          'sub': 'AWS roadmap, roles, SLAs & TCO',
-          'status': 'locked',
-          'order': 8
-        },
+        {'id': 'module-01', 'title': 'Cloud Architecture Principles', 'sub': 'Well-Architected, HA, fault tolerance & IaC', 'status': 'active', 'order': 1},
+        {'id': 'module-02', 'title': 'Advanced Compute', 'sub': 'Containers, Kubernetes, serverless & instance pricing', 'status': 'locked', 'order': 2},
+        {'id': 'module-03', 'title': 'Cloud Storage & Databases', 'sub': 'S3 tiers, NoSQL, read replicas & DR strategies', 'status': 'locked', 'order': 3},
+        {'id': 'module-04', 'title': 'Advanced Cloud Security', 'sub': 'Zero trust, CSPM, secrets management & WAF', 'status': 'locked', 'order': 4},
+        {'id': 'module-05', 'title': 'DevOps & CI/CD', 'sub': 'Pipelines, blue/green, canary & GitOps', 'status': 'locked', 'order': 5},
+        {'id': 'module-06', 'title': 'Cost Optimisation', 'sub': 'Right-sizing, FinOps, tagging & savings plans', 'status': 'locked', 'order': 6},
+        {'id': 'module-07', 'title': 'Multi-Cloud & Migration', 'sub': 'The 6 Rs, service mesh & landing zones', 'status': 'locked', 'order': 7},
+        {'id': 'module-08', 'title': 'Cloud Careers & Certifications', 'sub': 'AWS roadmap, roles, SLAs & TCO', 'status': 'locked', 'order': 8},
       ];
     }
     return [
-      {
-        'id': 'module-01',
-        'title': 'Introduction',
-        'sub': 'Getting started',
-        'status': 'active',
-        'order': 1
-      },
+      {'id': 'module-01', 'title': 'Introduction', 'sub': 'Getting started', 'status': 'active', 'order': 1},
     ];
   }
 
@@ -595,7 +337,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ── Back + Download row ──
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -607,7 +348,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                               Navigator.pop(context);
                             },
                           ),
-                          // Download button
                           if (!_loading)
                             GestureDetector(
                               onTap: _toggleDownload,
@@ -643,10 +383,8 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                                         children: [
                                           Icon(
                                             _isDownloaded
-                                                ? CupertinoIcons
-                                                    .checkmark_circle_fill
-                                                : CupertinoIcons
-                                                    .arrow_down_circle_fill,
+                                                ? CupertinoIcons.checkmark_circle_fill
+                                                : CupertinoIcons.arrow_down_circle_fill,
                                             size: 14,
                                             color: _isDownloaded
                                                 ? AppColors.green
@@ -654,9 +392,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                                           ),
                                           const SizedBox(width: 5),
                                           Text(
-                                            _isDownloaded
-                                                ? 'Downloaded'
-                                                : 'Download',
+                                            _isDownloaded ? 'Downloaded' : 'Download',
                                             style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w600,
@@ -963,16 +699,11 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
   }
 }
 
-// ── Back button ───────────────────────────────────────────────────────────────
 class _BackButton extends StatefulWidget {
   final Color color;
   final ThemeNotifier theme;
   final VoidCallback onTap;
-  const _BackButton({
-    required this.color,
-    required this.theme,
-    required this.onTap,
-  });
+  const _BackButton({required this.color, required this.theme, required this.onTap});
   @override
   State<_BackButton> createState() => _BackButtonState();
 }
@@ -1011,19 +742,16 @@ class _BackButtonState extends State<_BackButton>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: widget.color
-                .withValues(alpha: widget.theme.isDark ? 0.10 : 0.08),
+            color: widget.color.withValues(alpha: widget.theme.isDark ? 0.10 : 0.08),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: widget.color
-                  .withValues(alpha: widget.theme.isDark ? 0.20 : 0.25),
+              color: widget.color.withValues(alpha: widget.theme.isDark ? 0.20 : 0.25),
             ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.arrow_back_ios_new_rounded,
-                  size: 13, color: widget.color),
+              Icon(Icons.arrow_back_ios_new_rounded, size: 13, color: widget.color),
               const SizedBox(width: 5),
               Text(
                 'Courses',
@@ -1042,7 +770,6 @@ class _BackButtonState extends State<_BackButton>
   }
 }
 
-// ── Tag pill ──────────────────────────────────────────────────────────────────
 class _TagPill extends StatefulWidget {
   final String tag;
   final Color color;
@@ -1105,7 +832,6 @@ class _TagPillState extends State<_TagPill>
   }
 }
 
-// ── Scroll-reveal animation ───────────────────────────────────────────────────
 class _AnimatedModule extends StatefulWidget {
   final Widget child;
   final Duration delay;
@@ -1127,8 +853,7 @@ class _AnimatedModuleState extends State<_AnimatedModule>
         vsync: this, duration: const Duration(milliseconds: 450));
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
     _slide = Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
-        .animate(
-            CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     Future.delayed(widget.delay, () {
       if (mounted) _controller.forward();
     });
