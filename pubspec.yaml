@@ -2,7 +2,7 @@ name: binary
 description: "Binary Academy — IT certification prep with flashcards and quizzes."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.0+30
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
