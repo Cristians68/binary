@@ -11,24 +11,27 @@ import 'screens/onboarding_screen.dart';
 import 'screens/app_theme.dart';
 import 'screens/subscription_service.dart';
 import 'screens/notification_service.dart';
+import 'security_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Ensure every user has a Firebase identity so progress is always
-  // scoped to a real UID — never shared across users.
   await _ensureUserIdentity();
-
   await SubscriptionService.configure();
   await NotificationService.init();
-  runApp(const BinaryApp());
+
+  // ── Pre-load theme preference BEFORE runApp so there is zero flash ──
+  final prefs = await SharedPreferences.getInstance();
+  final isDark = prefs.getBool('isDarkMode') ?? false;
+
+  runApp(
+    SecurityGate(
+      child: BinaryApp(initialIsDark: isDark),
+    ),
+  );
 }
 
-/// Signs in anonymously if no user is currently authenticated.
-/// When a user later signs in with email/Google/etc., call
-/// [FirebaseAuth.instance.currentUser?.linkWithCredential()] to
-/// migrate their anonymous progress to a permanent account.
 Future<void> _ensureUserIdentity() async {
   final auth = FirebaseAuth.instance;
   if (auth.currentUser == null) {
@@ -44,44 +47,31 @@ Future<void> _ensureUserIdentity() async {
 }
 
 class BinaryApp extends StatefulWidget {
-  const BinaryApp({super.key});
+  final bool initialIsDark;
+  const BinaryApp({super.key, required this.initialIsDark});
 
   @override
   State<BinaryApp> createState() => _BinaryAppState();
 }
 
 class _BinaryAppState extends State<BinaryApp> {
-  final ThemeNotifier _themeNotifier = ThemeNotifier();
+  late final ThemeNotifier _themeNotifier;
 
   @override
   void initState() {
     super.initState();
-    _themeNotifier.addListener(_onThemeLoaded);
-  }
-
-  void _onThemeLoaded() {
-    if (_themeNotifier.isLoaded && mounted) {
-      setState(() {});
-      _themeNotifier.removeListener(_onThemeLoaded);
-    }
+    // Pass the pre-loaded value — notifier starts correct with no flash
+    _themeNotifier = ThemeNotifier(initialIsDark: widget.initialIsDark);
   }
 
   @override
   void dispose() {
-    _themeNotifier.removeListener(_onThemeLoaded);
     _themeNotifier.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_themeNotifier.isLoaded) {
-      return const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(backgroundColor: Colors.black, body: SizedBox.shrink()),
-      );
-    }
-
     return ListenableBuilder(
       listenable: _themeNotifier,
       builder: (context, _) {
@@ -143,14 +133,10 @@ class _AppEntryState extends State<_AppEntry> {
   }
 
   Future<void> _check() async {
-    // Web always skips onboarding — go straight to WelcomeScreen
     if (kIsWeb) {
       if (mounted) setState(() => _showOnboarding = false);
       return;
     }
-
-    // Key onboarding flag to the current user's UID so each new user
-    // always sees onboarding, regardless of device history.
     final uid = FirebaseAuth.instance.currentUser?.uid;
     final prefs = await SharedPreferences.getInstance();
     final key = uid != null ? 'onboardingComplete_$uid' : 'onboardingComplete';

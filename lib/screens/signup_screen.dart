@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'main_navigation.dart';
+import 'app_router.dart';
+import 'app_theme.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -18,6 +22,7 @@ class _SignupScreenState extends State<SignupScreen>
   bool _obscurePassword = true;
   bool _isLoading = false;
   String _selectedGoal = 'ITIL V4 Foundation';
+  String? _errorMessage;
 
   late AnimationController _controller;
   late Animation<double> _fade;
@@ -53,28 +58,73 @@ class _SignupScreenState extends State<SignupScreen>
   }
 
   void _signup() async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (_, animation, __) => const MainNavigation(),
-          transitionsBuilder: (_, animation, __, child) => FadeTransition(
-            opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-            child: child,
-          ),
-          transitionDuration: const Duration(milliseconds: 500),
-        ),
-        (route) => false,
-      );
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      setState(() => _errorMessage = 'Please fill in all fields.');
+      return;
+    }
+    if (password.length < 6) {
+      setState(() => _errorMessage = 'Password must be at least 6 characters.');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // Create the Firebase Auth account
+      final credential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
+
+      // Set display name
+      await credential.user?.updateDisplayName(name);
+
+      // Save user profile to Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(credential.user!.uid)
+          .set({
+        'name': name,
+        'email': email,
+        'goal': _selectedGoal,
+        'createdAt': FieldValue.serverTimestamp(),
+        'enrolments': {},
+      }, SetOptions(merge: true));
+
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          AppRouter.fade(const MainNavigation()),
+          (route) => false,
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        _errorMessage = e.code == 'email-already-in-use'
+            ? 'An account already exists with this email.'
+            : e.code == 'invalid-email'
+                ? 'Please enter a valid email address.'
+                : e.code == 'weak-password'
+                    ? 'Password is too weak. Use at least 6 characters.'
+                    : 'Something went wrong. Please try again.';
+      });
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = AppTheme.of(context);
+    final isDark = theme.isDark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0F),
+      backgroundColor: theme.bg,
       body: SafeArea(
         child: FadeTransition(
           opacity: _fade,
@@ -87,14 +137,14 @@ class _SignupScreenState extends State<SignupScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 20),
-                  _buildBackButton(context),
+                  _buildBackButton(context, theme),
                   const SizedBox(height: 48),
-                  const Text(
+                  Text(
                     'Create\naccount.',
                     style: TextStyle(
                       fontSize: 44,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: theme.text,
                       letterSpacing: -1.8,
                       height: 1.05,
                     ),
@@ -104,33 +154,57 @@ class _SignupScreenState extends State<SignupScreen>
                     'Start your IT learning journey today.',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.white.withOpacity(0.38),
+                      color: theme.subtext,
                       letterSpacing: -0.3,
                     ),
                   ),
                   const SizedBox(height: 48),
-                  _buildLabel('Full name'),
+                  _buildLabel('Full name', theme),
                   const SizedBox(height: 8),
                   _buildTextField(_nameController, 'John Doe', false,
-                      CupertinoIcons.person),
+                      CupertinoIcons.person, theme),
                   const SizedBox(height: 16),
-                  _buildLabel('Email address'),
+                  _buildLabel('Email address', theme),
                   const SizedBox(height: 8),
                   _buildTextField(_emailController, 'you@example.com', false,
-                      CupertinoIcons.mail),
+                      CupertinoIcons.mail, theme),
                   const SizedBox(height: 16),
-                  _buildLabel('Password'),
+                  _buildLabel('Password', theme),
                   const SizedBox(height: 8),
                   _buildTextField(_passwordController, '••••••••', true,
-                      CupertinoIcons.lock),
+                      CupertinoIcons.lock, theme),
                   const SizedBox(height: 28),
-                  _buildLabel('What is your main learning goal?'),
+                  _buildLabel('What is your main learning goal?', theme),
                   const SizedBox(height: 12),
-                  _buildGoalSelector(),
+                  _buildGoalSelector(theme),
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.red.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                            color: AppColors.red.withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(CupertinoIcons.exclamationmark_circle,
+                              color: AppColors.red, size: 16),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(_errorMessage!,
+                                style: const TextStyle(
+                                    fontSize: 13, color: AppColors.red)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 36),
                   _PressableButton(
                     onTap: _isLoading ? null : _signup,
-                    color: const Color(0xFF6366F1),
+                    color: AppColors.primary,
                     child: _isLoading
                         ? const SizedBox(
                             width: 20,
@@ -159,14 +233,12 @@ class _SignupScreenState extends State<SignupScreen>
                         text: TextSpan(
                           text: 'Already have an account? ',
                           style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white.withOpacity(0.35),
-                          ),
+                              fontSize: 14, color: theme.subtext),
                           children: const [
                             TextSpan(
                               text: 'Sign in',
                               style: TextStyle(
-                                color: Color(0xFF6366F1),
+                                color: AppColors.primary,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -185,7 +257,7 @@ class _SignupScreenState extends State<SignupScreen>
     );
   }
 
-  Widget _buildBackButton(BuildContext context) {
+  Widget _buildBackButton(BuildContext context, ThemeNotifier theme) {
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -194,68 +266,57 @@ class _SignupScreenState extends State<SignupScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.06),
+          color: theme.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: theme.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(CupertinoIcons.chevron_left,
-                size: 14, color: Colors.white.withOpacity(0.5)),
+            Icon(CupertinoIcons.chevron_left, size: 14, color: theme.subtext),
             const SizedBox(width: 4),
-            Text(
-              'Back',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white.withOpacity(0.5),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            Text('Back',
+                style: TextStyle(
+                    fontSize: 14,
+                    color: theme.subtext,
+                    fontWeight: FontWeight.w500)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLabel(String text) {
+  Widget _buildLabel(String text, ThemeNotifier theme) {
     return Text(
       text,
       style: TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w500,
-        color: Colors.white.withOpacity(0.45),
-        letterSpacing: -0.1,
-      ),
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: theme.subtext,
+          letterSpacing: -0.1),
     );
   }
 
-  Widget _buildTextField(
-    TextEditingController controller,
-    String hint,
-    bool isPassword,
-    IconData icon,
-  ) {
+  Widget _buildTextField(TextEditingController controller, String hint,
+      bool isPassword, IconData icon, ThemeNotifier theme) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: theme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: theme.border),
       ),
       child: TextField(
         controller: controller,
         obscureText: isPassword ? _obscurePassword : false,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 15,
-          letterSpacing: -0.2,
-        ),
+        keyboardType: isPassword
+            ? TextInputType.visiblePassword
+            : TextInputType.emailAddress,
+        style: TextStyle(
+            color: theme.text, fontSize: 15, letterSpacing: -0.2),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle:
-              TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 15),
-          prefixIcon:
-              Icon(icon, color: Colors.white.withOpacity(0.25), size: 18),
+          hintStyle: TextStyle(color: theme.subtext, fontSize: 15),
+          prefixIcon: Icon(icon, color: theme.subtext, size: 18),
           suffixIcon: isPassword
               ? GestureDetector(
                   onTap: () =>
@@ -264,7 +325,7 @@ class _SignupScreenState extends State<SignupScreen>
                     _obscurePassword
                         ? CupertinoIcons.eye_slash
                         : CupertinoIcons.eye,
-                    color: Colors.white.withOpacity(0.25),
+                    color: theme.subtext,
                     size: 18,
                   ),
                 )
@@ -277,7 +338,7 @@ class _SignupScreenState extends State<SignupScreen>
     );
   }
 
-  Widget _buildGoalSelector() {
+  Widget _buildGoalSelector(ThemeNotifier theme) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -291,26 +352,26 @@ class _SignupScreenState extends State<SignupScreen>
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOutCubic,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
             decoration: BoxDecoration(
               color: selected
-                  ? const Color(0xFF6366F1).withOpacity(0.18)
-                  : Colors.white.withOpacity(0.04),
+                  ? AppColors.primary.withValues(alpha: 0.12)
+                  : theme.surface,
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
                 color: selected
-                    ? const Color(0xFF6366F1).withOpacity(0.5)
-                    : Colors.white.withOpacity(0.08),
+                    ? AppColors.primary.withValues(alpha: 0.4)
+                    : theme.border,
               ),
             ),
             child: Text(
               goal,
               style: TextStyle(
                 fontSize: 13,
-                color: selected
-                    ? const Color(0xFF6366F1)
-                    : Colors.white.withOpacity(0.45),
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                color: selected ? AppColors.primary : theme.subtext,
+                fontWeight:
+                    selected ? FontWeight.w600 : FontWeight.w400,
                 letterSpacing: -0.1,
               ),
             ),
@@ -346,8 +407,8 @@ class _PressableButtonState extends State<_PressableButton>
     super.initState();
     _controller = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 100));
-    _scale = Tween<double>(begin: 1.0, end: 0.96)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _scale = Tween<double>(begin: 1.0, end: 0.96).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -359,7 +420,8 @@ class _PressableButtonState extends State<_PressableButton>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: widget.onTap == null ? null : (_) => _controller.forward(),
+      onTapDown:
+          widget.onTap == null ? null : (_) => _controller.forward(),
       onTapUp: widget.onTap == null
           ? null
           : (_) {

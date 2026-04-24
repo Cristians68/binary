@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'main_navigation.dart';
 import 'app_router.dart';
+import 'app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -90,14 +91,11 @@ class _LoginScreenState extends State<LoginScreen>
 
   void _forgotPassword() async {
     final email = _emailController.text.trim();
-
     if (email.isEmpty) {
       _showSnackBar('Enter your email address above first.', isError: true);
       return;
     }
-
     setState(() => _resetLoading = true);
-
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
       if (mounted) {
@@ -118,6 +116,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _showSnackBar(String message, {required bool isError}) {
+    final theme = AppTheme.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -126,24 +125,20 @@ class _LoginScreenState extends State<LoginScreen>
               isError
                   ? CupertinoIcons.exclamationmark_circle
                   : CupertinoIcons.checkmark_circle_fill,
-              color: isError
-                  ? const Color(0xFFEF4444)
-                  : const Color(0xFF10B981),
+              color: isError ? AppColors.red : AppColors.green,
               size: 16,
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(fontSize: 13, color: Colors.white),
-              ),
+              child: Text(message,
+                  style: TextStyle(fontSize: 13, color: theme.text)),
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF1C1C24),
+        backgroundColor: theme.surface,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         margin: const EdgeInsets.all(16),
         duration: const Duration(seconds: 4),
       ),
@@ -152,8 +147,10 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = AppTheme.of(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0F),
+      backgroundColor: theme.bg,
       body: SafeArea(
         child: FadeTransition(
           opacity: _fade,
@@ -166,14 +163,14 @@ class _LoginScreenState extends State<LoginScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 20),
-                  _buildBackButton(context),
+                  _buildBackButton(context, theme),
                   const SizedBox(height: 48),
-                  const Text(
+                  Text(
                     'Welcome\nback.',
                     style: TextStyle(
                       fontSize: 44,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: theme.text,
                       letterSpacing: -1.8,
                       height: 1.05,
                     ),
@@ -182,31 +179,21 @@ class _LoginScreenState extends State<LoginScreen>
                   Text(
                     'Sign in to continue learning.',
                     style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white.withOpacity(0.38),
-                      letterSpacing: -0.3,
-                    ),
+                        fontSize: 16,
+                        color: theme.subtext,
+                        letterSpacing: -0.3),
                   ),
                   const SizedBox(height: 48),
-                  _buildLabel('Email address'),
+                  _buildLabel('Email address', theme),
                   const SizedBox(height: 8),
-                  _buildTextField(
-                    _emailController,
-                    'you@example.com',
-                    false,
-                    CupertinoIcons.mail,
-                  ),
+                  _buildTextField(_emailController, 'you@example.com', false,
+                      CupertinoIcons.mail, theme),
                   const SizedBox(height: 16),
-                  _buildLabel('Password'),
+                  _buildLabel('Password', theme),
                   const SizedBox(height: 8),
-                  _buildTextField(
-                    _passwordController,
-                    '••••••••',
-                    true,
-                    CupertinoIcons.lock,
-                  ),
+                  _buildTextField(_passwordController, '••••••••', true,
+                      CupertinoIcons.lock, theme),
                   const SizedBox(height: 8),
-                  // Forgot password — full width tap area
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -221,18 +208,16 @@ class _LoginScreenState extends State<LoginScreen>
                                   width: 14,
                                   height: 14,
                                   child: CircularProgressIndicator(
-                                    color: Color(0xFF6366F1),
-                                    strokeWidth: 2,
-                                  ),
+                                      color: AppColors.primary,
+                                      strokeWidth: 2),
                                 )
                               : const Text(
                                   'Forgot password?',
                                   style: TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFF6366F1),
-                                    fontWeight: FontWeight.w500,
-                                    letterSpacing: -0.1,
-                                  ),
+                                      fontSize: 13,
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: -0.1),
                                 ),
                         ),
                       ),
@@ -243,26 +228,20 @@ class _LoginScreenState extends State<LoginScreen>
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEF4444).withOpacity(0.08),
+                        color: AppColors.red.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                            color: const Color(0xFFEF4444).withOpacity(0.2)),
+                            color: AppColors.red.withValues(alpha: 0.2)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(
-                              CupertinoIcons.exclamationmark_circle,
-                              color: Color(0xFFEF4444),
-                              size: 16),
+                          const Icon(CupertinoIcons.exclamationmark_circle,
+                              color: AppColors.red, size: 16),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFFEF4444),
-                              ),
-                            ),
+                            child: Text(_errorMessage!,
+                                style: const TextStyle(
+                                    fontSize: 13, color: AppColors.red)),
                           ),
                         ],
                       ),
@@ -271,7 +250,7 @@ class _LoginScreenState extends State<LoginScreen>
                   const SizedBox(height: 28),
                   _PressableButton(
                     onTap: _isLoading ? null : _login,
-                    color: const Color(0xFF6366F1),
+                    color: AppColors.primary,
                     child: _isLoading
                         ? const SizedBox(
                             width: 20,
@@ -304,16 +283,13 @@ class _LoginScreenState extends State<LoginScreen>
                           text: TextSpan(
                             text: "Don't have an account? ",
                             style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white.withOpacity(0.35),
-                            ),
+                                fontSize: 14, color: theme.subtext),
                             children: const [
                               TextSpan(
                                 text: 'Sign up',
                                 style: TextStyle(
-                                  color: Color(0xFF6366F1),
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600),
                               ),
                             ],
                           ),
@@ -331,7 +307,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _buildBackButton(BuildContext context) {
+  Widget _buildBackButton(BuildContext context, ThemeNotifier theme) {
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -340,53 +316,44 @@ class _LoginScreenState extends State<LoginScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.06),
+          color: theme.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: theme.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(CupertinoIcons.chevron_left,
-                size: 14, color: Colors.white.withOpacity(0.5)),
+            Icon(CupertinoIcons.chevron_left, size: 14, color: theme.subtext),
             const SizedBox(width: 4),
-            Text(
-              'Back',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white.withOpacity(0.5),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            Text('Back',
+                style: TextStyle(
+                    fontSize: 14,
+                    color: theme.subtext,
+                    fontWeight: FontWeight.w500)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLabel(String text) {
+  Widget _buildLabel(String text, ThemeNotifier theme) {
     return Text(
       text,
       style: TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w500,
-        color: Colors.white.withOpacity(0.45),
-        letterSpacing: -0.1,
-      ),
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: theme.subtext,
+          letterSpacing: -0.1),
     );
   }
 
-  Widget _buildTextField(
-    TextEditingController controller,
-    String hint,
-    bool isPassword,
-    IconData icon,
-  ) {
+  Widget _buildTextField(TextEditingController controller, String hint,
+      bool isPassword, IconData icon, ThemeNotifier theme) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: theme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: theme.border),
       ),
       child: TextField(
         controller: controller,
@@ -394,35 +361,28 @@ class _LoginScreenState extends State<LoginScreen>
         keyboardType: isPassword
             ? TextInputType.visiblePassword
             : TextInputType.emailAddress,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 15,
-          letterSpacing: -0.2,
-        ),
+        style: TextStyle(
+            color: theme.text, fontSize: 15, letterSpacing: -0.2),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: TextStyle(
-            color: Colors.white.withOpacity(0.2),
-            fontSize: 15,
-          ),
-          prefixIcon: Icon(icon,
-              color: Colors.white.withOpacity(0.25), size: 18),
+          hintStyle: TextStyle(color: theme.subtext, fontSize: 15),
+          prefixIcon: Icon(icon, color: theme.subtext, size: 18),
           suffixIcon: isPassword
               ? GestureDetector(
-                  onTap: () => setState(
-                      () => _obscurePassword = !_obscurePassword),
+                  onTap: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                   child: Icon(
                     _obscurePassword
                         ? CupertinoIcons.eye_slash
                         : CupertinoIcons.eye,
-                    color: Colors.white.withOpacity(0.25),
+                    color: theme.subtext,
                     size: 18,
                   ),
                 )
               : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16, vertical: 17),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
         ),
       ),
     );

@@ -13,6 +13,21 @@ Map<String, dynamic> _safeMap(dynamic value) {
   return {};
 }
 
+/// update() with set(merge:true) fallback — safe on all platforms.
+/// Dot-notation keys (e.g. 'streak.current') ONLY work with update().
+/// set(merge:true) treats them as literal key names — never use set() for
+/// dot-notation writes.
+Future<void> _safeUpdate(
+  DocumentReference<Map<String, dynamic>> doc,
+  Map<String, Object?> data,
+) async {
+  try {
+    await doc.update(data);
+  } catch (_) {
+    await doc.set(data, SetOptions(merge: true));
+  }
+}
+
 // ─────────────────────────────────────────────
 // Models
 // ─────────────────────────────────────────────
@@ -70,7 +85,7 @@ class DailyGoalData {
     this.lastReset,
   });
 
-  double get progress => todayPoints / target;
+  double get progress => target > 0 ? todayPoints / target : 0;
   bool get isComplete => todayPoints >= target;
 
   factory DailyGoalData.fromMap(Map<String, dynamic> map) {
@@ -168,7 +183,7 @@ class StreakService {
     return _db.collection('users').doc(uid);
   }
 
-  // ── Real-time stream ──────────────────────────────────────────────────────
+  // ── Real-time stream — used by HomeScreen StreamBuilder ───────────────────
   static Stream<Map<String, dynamic>> statsStream() {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return const Stream.empty();
@@ -203,10 +218,7 @@ class StreakService {
     try {
       final snapshot = await doc.get();
       final data = snapshot.data() ?? {};
-
-      // ── FIX: use _safeMap for web compatibility ──
-      final streakMap = _safeMap(data['streak']);
-      final streak = StreakData.fromMap(streakMap);
+      final streak = StreakData.fromMap(_safeMap(data['streak']));
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
 
@@ -232,11 +244,12 @@ class StreakService {
       final newLongest =
           newCurrent > streak.longest ? newCurrent : streak.longest;
 
-      await doc.set({
+      // ✅ Use _safeUpdate — dot-notation MUST go through update(), not set()
+      await _safeUpdate(doc, {
         'streak.current': newCurrent,
         'streak.longest': newLongest,
         'streak.lastLogin': Timestamp.fromDate(now),
-      }, SetOptions(merge: true));
+      });
 
       await _resetDailyGoalIfNeeded(doc, data, today);
       await _checkStreakBadges(newCurrent);
@@ -255,19 +268,49 @@ class StreakService {
       final data = snapshot.data() ?? {};
       final goal = DailyGoalData.fromMap(_safeMap(data['dailyGoal']));
 
-      await doc.update({
+      await _safeUpdate(doc, {
         'dailyGoal.todayPoints': goal.todayPoints + points,
       });
     } catch (e) {
-      try {
-        final doc2 = _userDoc;
-        if (doc2 != null) {
-          await doc2.set({
-            'dailyGoal.todayPoints': points,
-          }, SetOptions(merge: true));
-        }
-      } catch (_) {}
       debugPrint('StreakService.addPoints error: $e');
+    }
+  }
+
+  // ── Record a completed lesson ─────────────────────────────────────────────
+  /// Call this after a user finishes a flashcard module.
+  /// Increments the lessonsCompleted counter used by HomeScreen and Profile.
+  static Future<void> recordLessonComplete({
+    required String courseId,
+    required String moduleId,
+    required String moduleTitle,
+  }) async {
+    final doc = _userDoc;
+    if (doc == null) return;
+
+    try {
+      final snapshot = await doc.get();
+      final data = snapshot.data() ?? {};
+      final current =
+          ((data['lessonsCompleted'] as num?) ?? 0).toInt();
+
+      // Build a completed lesson entry for the history list
+      final entry = {
+        'courseId': courseId,
+        'moduleId': moduleId,
+        'title': moduleTitle,
+        'completedAt': Timestamp.fromDate(DateTime.now()),
+      };
+
+      await _safeUpdate(doc, {
+        'lessonsCompleted': current + 1,
+        // Append to completedLessons array (used by LessonsScreen history)
+        'completedLessons': FieldValue.arrayUnion([entry]),
+      });
+
+      // Award points for completing a lesson
+      await addPoints(10);
+    } catch (e) {
+      debugPrint('StreakService.recordLessonComplete error: $e');
     }
   }
 
@@ -284,9 +327,10 @@ class StreakService {
 
       final snapshot = await doc.get();
       final data = snapshot.data() ?? {};
-      final quizzesPassed = ((data['quizzesPassed'] as num?) ?? 0).toInt() + 1;
+      final quizzesPassed =
+          ((data['quizzesPassed'] as num?) ?? 0).toInt() + 1;
 
-      await doc.update({'quizzesPassed': quizzesPassed});
+      await _safeUpdate(doc, {'quizzesPassed': quizzesPassed});
 
       final earnedIds = _earnedBadgeIds(data);
       if (!earnedIds.contains('quiz_first')) await _awardBadge('quiz_first');
@@ -366,11 +410,7 @@ class StreakService {
   static Future<void> setDailyTarget(int target) async {
     final doc = _userDoc;
     if (doc == null) return;
-    try {
-      await doc.update({'dailyGoal.target': target});
-    } catch (_) {
-      await doc.set({'dailyGoal.target': target}, SetOptions(merge: true));
-    }
+    await _safeUpdate(doc, {'dailyGoal.target': target});
   }
 
   // ─────────────────────────────────────────────
@@ -383,7 +423,6 @@ class StreakService {
     DateTime today,
   ) async {
     final goal = DailyGoalData.fromMap(_safeMap(data['dailyGoal']));
-
     final lastReset = goal.lastReset;
     final needsReset = lastReset == null ||
         today.isAfter(
@@ -391,10 +430,10 @@ class StreakService {
         );
 
     if (needsReset) {
-      await doc.set({
+      await _safeUpdate(doc, {
         'dailyGoal.todayPoints': 0,
         'dailyGoal.lastReset': Timestamp.fromDate(today),
-      }, SetOptions(merge: true));
+      });
     }
   }
 
@@ -420,20 +459,13 @@ class StreakService {
     final doc = _userDoc;
     if (doc == null) return;
     debugPrint('Awarding badge: $badgeId');
-    try {
-      await doc.update({
-        'badges.$badgeId': Timestamp.fromDate(DateTime.now()),
-      });
-    } catch (_) {
-      await doc.set({
-        'badges.$badgeId': Timestamp.fromDate(DateTime.now()),
-      }, SetOptions(merge: true));
-    }
+    await _safeUpdate(doc, {
+      'badges.$badgeId': Timestamp.fromDate(DateTime.now()),
+    });
   }
 
   static Set<String> _earnedBadgeIds(Map<String, dynamic> data) {
-    final badgesMap = _safeMap(data['badges']);
-    return badgesMap.keys.toSet();
+    return _safeMap(data['badges']).keys.toSet();
   }
 
   static List<BadgeData> _mergeEarned(

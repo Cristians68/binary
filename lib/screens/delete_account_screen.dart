@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'app_theme.dart';
 import 'app_router.dart';
 import 'welcome_screen.dart';
@@ -29,6 +30,30 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
   void dispose() {
     _passwordController.dispose();
     super.dispose();
+  }
+
+  /// Deletes all sub-collections under users/{uid} before deleting the doc
+  Future<void> _deleteUserData(String uid) async {
+    final userRef =
+        FirebaseFirestore.instance.collection('users').doc(uid);
+
+    // Delete progress sub-collection
+    try {
+      final progressSnap = await userRef.collection('progress').get();
+      for (final doc in progressSnap.docs) {
+        // Delete modules sub-sub-collection inside each progress doc
+        final modulesSnap = await doc.reference.collection('modules').get();
+        for (final mod in modulesSnap.docs) {
+          await mod.reference.delete();
+        }
+        await doc.reference.delete();
+      }
+    } catch (_) {}
+
+    // Delete top-level user document
+    try {
+      await userRef.delete();
+    } catch (_) {}
   }
 
   Future<void> _deleteAccount() async {
@@ -67,25 +92,46 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      // Re-authenticate
+      // Re-authenticate before deletion
       if (_isGoogleUser) {
-        await user.reauthenticateWithProvider(GoogleAuthProvider());
+        // Use GoogleSignIn directly — works on all Firebase SDK versions
+        final googleSignIn = GoogleSignIn();
+        final googleUser = await googleSignIn.signIn();
+        if (googleUser == null) {
+          setState(() {
+            _error = 'Google sign-in was cancelled.';
+            _loading = false;
+          });
+          return;
+        }
+        final googleAuth = await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        await user.reauthenticateWithCredential(credential);
       } else {
+        final password = _passwordController.text.trim();
+        if (password.isEmpty) {
+          setState(() {
+            _error = 'Please enter your password to confirm.';
+            _loading = false;
+          });
+          return;
+        }
         final credential = EmailAuthProvider.credential(
           email: user.email ?? '',
-          password: _passwordController.text.trim(),
+          password: password,
         );
         await user.reauthenticateWithCredential(credential);
       }
 
       final uid = user.uid;
 
-      // Delete Firestore data first
-      try {
-        await FirebaseFirestore.instance.collection('users').doc(uid).delete();
-      } catch (_) {}
+      // Delete all Firestore data including sub-collections
+      await _deleteUserData(uid);
 
-      // Delete auth account
+      // Delete Firebase Auth account
       await user.delete();
 
       if (mounted) {
@@ -126,7 +172,6 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Back
               GestureDetector(
                 onTap: () => Navigator.pop(context),
                 child: Container(
@@ -159,11 +204,13 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
-                  color: AppColors.red.withOpacity(0.10),
+                  color: AppColors.red.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(18),
                 ),
-                child: const Icon(CupertinoIcons.exclamationmark_triangle_fill,
-                    color: AppColors.red, size: 28),
+                child: const Icon(
+                    CupertinoIcons.exclamationmark_triangle_fill,
+                    color: AppColors.red,
+                    size: 28),
               ),
 
               const SizedBox(height: 20),
@@ -179,19 +226,19 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
 
               Text(
                 'This will permanently delete your account and all associated data including your progress, badges, and quiz scores. This cannot be undone.',
-                style:
-                    TextStyle(fontSize: 15, color: theme.subtext, height: 1.5),
+                style: TextStyle(
+                    fontSize: 15, color: theme.subtext, height: 1.5),
               ),
 
               const SizedBox(height: 28),
 
-              // What gets deleted
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.red.withOpacity(0.06),
+                  color: AppColors.red.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.red.withOpacity(0.15)),
+                  border:
+                      Border.all(color: AppColors.red.withValues(alpha: 0.15)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,7 +291,8 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                     style: TextStyle(color: theme.text, fontSize: 15),
                     decoration: InputDecoration(
                       hintText: 'Password',
-                      hintStyle: TextStyle(color: theme.subtext, fontSize: 15),
+                      hintStyle:
+                          TextStyle(color: theme.subtext, fontSize: 15),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 15),
@@ -279,7 +327,9 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                       child: Text(
                           'You signed in with Google. You\'ll be asked to re-authenticate before deletion.',
                           style: TextStyle(
-                              fontSize: 13, color: theme.subtext, height: 1.4)),
+                              fontSize: 13,
+                              color: theme.subtext,
+                              height: 1.4)),
                     ),
                   ]),
                 ),
@@ -290,9 +340,10 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.red.withOpacity(0.08),
+                    color: AppColors.red.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.red.withOpacity(0.2)),
+                    border: Border.all(
+                        color: AppColors.red.withValues(alpha: 0.2)),
                   ),
                   child: Row(children: [
                     const Icon(CupertinoIcons.exclamationmark_circle,
@@ -307,7 +358,6 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // Delete button
               GestureDetector(
                 onTap: _loading ? null : _deleteAccount,
                 child: Container(
@@ -315,7 +365,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   decoration: BoxDecoration(
                     color: _loading
-                        ? AppColors.red.withOpacity(0.5)
+                        ? AppColors.red.withValues(alpha: 0.5)
                         : AppColors.red,
                     borderRadius: BorderRadius.circular(16),
                   ),

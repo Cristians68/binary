@@ -8,48 +8,70 @@ import 'app_theme.dart';
 class BadgesScreen extends StatelessWidget {
   const BadgesScreen({super.key});
 
+  // ✅ IDs match exactly what StreakService and ProgressService award
   static const List<Map<String, dynamic>> _allBadges = [
     {
-      'id': 'first_lesson',
-      'title': 'First Step',
-      'desc': 'Complete your first lesson',
-      'icon': CupertinoIcons.star_fill,
-      'color': 0xFFF59E0B,
+      'id': 'streak_7',
+      'title': '7-Day Streak',
+      'desc': 'Study 7 days in a row',
+      'icon': CupertinoIcons.flame_fill,
+      'color': 0xFFFF9500,
     },
     {
-      'id': 'streak_3',
-      'title': '3-Day Streak',
-      'desc': 'Study 3 days in a row',
+      'id': 'streak_30',
+      'title': '30-Day Streak',
+      'desc': 'Study 30 days in a row',
       'icon': CupertinoIcons.flame_fill,
       'color': 0xFFEF4444,
     },
     {
-      'id': 'streak_7',
-      'title': 'Week Warrior',
-      'desc': 'Study 7 days in a row',
+      'id': 'streak_100',
+      'title': '100-Day Streak',
+      'desc': 'Study 100 days in a row',
       'icon': CupertinoIcons.flame_fill,
-      'color': 0xFFFF6B00,
+      'color': 0xFF6366F1,
     },
     {
-      'id': 'perfect_quiz',
-      'title': 'Perfect Score',
-      'desc': 'Get 100% on any quiz',
+      'id': 'quiz_first',
+      'title': 'Quiz Starter',
+      'desc': 'Pass your first quiz',
       'icon': CupertinoIcons.checkmark_seal_fill,
       'color': 0xFF10B981,
     },
     {
-      'id': 'course_complete',
-      'title': 'Graduate',
-      'desc': 'Complete a full course',
-      'icon': CupertinoIcons.rosette,
-      'color': 0xFF6366F1,
+      'id': 'quiz_perfect',
+      'title': 'Perfectionist',
+      'desc': 'Score 100% on any quiz',
+      'icon': CupertinoIcons.star_fill,
+      'color': 0xFFF59E0B,
     },
     {
-      'id': 'quiz_5',
+      'id': 'quiz_10',
       'title': 'Quiz Master',
-      'desc': 'Complete 5 quizzes',
+      'desc': 'Pass 10 quizzes',
       'icon': CupertinoIcons.doc_checkmark_fill,
       'color': 0xFF3B82F6,
+    },
+    {
+      'id': 'course_first',
+      'title': 'Graduate',
+      'desc': 'Complete your first course',
+      'icon': CupertinoIcons.rosette,
+      'color': 0xFF8B5CF6,
+    },
+    {
+      'id': 'course_3',
+      'title': 'Triple Threat',
+      'desc': 'Complete 3 courses',
+      'icon': CupertinoIcons.rosette,
+      'color': 0xFF0071E3,
+    },
+    {
+      'id': 'course_all',
+      'title': 'Master',
+      'desc': 'Complete all courses',
+      'icon': CupertinoIcons.rosette,
+      'color': 0xFF1DB954,
     },
   ];
 
@@ -81,10 +103,18 @@ class BadgesScreen extends StatelessWidget {
                       builder: (context, snap) {
                         final data =
                             snap.data?.data() as Map<String, dynamic>? ?? {};
-                        final earned = List<String>.from(
-                          (data['badges'] as List<dynamic>?) ?? [],
-                        );
-                        return _buildGrid(earned, theme);
+
+                        // ✅ badges is stored as a MAP {badgeId: Timestamp}
+                        // not a List — read keys from the map
+                        final badgesRaw = data['badges'];
+                        Set<String> earnedIds = {};
+                        if (badgesRaw is Map) {
+                          earnedIds = badgesRaw.keys
+                              .map((k) => k.toString())
+                              .toSet();
+                        }
+
+                        return _buildGrid(earnedIds, theme);
                       },
                     ),
             ),
@@ -105,22 +135,19 @@ class BadgesScreen extends StatelessWidget {
               Navigator.pop(context);
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.amber.withOpacity(0.1),
+                color: AppColors.amber.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: AppColors.amber.withOpacity(0.2),
-                ),
+                    color: AppColors.amber.withValues(alpha: 0.20)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    size: 13,
-                    color: AppColors.amber,
-                  ),
+                  Icon(Icons.arrow_back_ios_new_rounded,
+                      size: 13, color: AppColors.amber),
                   const SizedBox(width: 5),
                   Text(
                     'Back',
@@ -144,12 +171,43 @@ class BadgesScreen extends StatelessWidget {
               letterSpacing: -0.8,
             ),
           ),
+          const Spacer(),
+          // Earned count badge
+          StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('users')
+                .doc(FirebaseAuth.instance.currentUser?.uid ?? '')
+                .snapshots(),
+            builder: (context, snap) {
+              final data =
+                  snap.data?.data() as Map<String, dynamic>? ?? {};
+              final badgesRaw = data['badges'];
+              int count = 0;
+              if (badgesRaw is Map) count = badgesRaw.length;
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.amber.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$count / ${_allBadges.length}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.amber,
+                  ),
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildGrid(List<String> earned, ThemeNotifier theme) {
+  Widget _buildGrid(Set<String> earnedIds, ThemeNotifier theme) {
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
       physics: const BouncingScrollPhysics(),
@@ -162,10 +220,14 @@ class BadgesScreen extends StatelessWidget {
       itemCount: _allBadges.length,
       itemBuilder: (context, index) {
         final badge = _allBadges[index];
-        final isEarned = earned.contains(badge['id']);
+        final isEarned = earnedIds.contains(badge['id'] as String);
         final color = Color(badge['color'] as int);
         return _BadgeCard(
-            badge: badge, color: color, isEarned: isEarned, theme: theme);
+          badge: badge,
+          color: color,
+          isEarned: isEarned,
+          theme: theme,
+        );
       },
     );
   }
@@ -189,10 +251,14 @@ class _BadgeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isEarned ? color.withOpacity(0.08) : theme.surface,
+        color: isEarned
+            ? color.withValues(alpha: 0.08)
+            : theme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isEarned ? color.withOpacity(0.25) : theme.border,
+          color: isEarned
+              ? color.withValues(alpha: 0.25)
+              : theme.border,
         ),
       ),
       child: Column(
@@ -203,8 +269,8 @@ class _BadgeCard extends StatelessWidget {
             height: 56,
             decoration: BoxDecoration(
               color: isEarned
-                  ? color.withOpacity(0.15)
-                  : theme.border.withOpacity(0.5),
+                  ? color.withValues(alpha: 0.15)
+                  : theme.border.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
@@ -228,22 +294,20 @@ class _BadgeCard extends StatelessWidget {
           Text(
             badge['desc'] as String,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 11,
-              color: theme.subtext,
-            ),
+            style: TextStyle(fontSize: 11, color: theme.subtext),
           ),
           const SizedBox(height: 10),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: isEarned
-                  ? color.withOpacity(0.15)
-                  : theme.border.withOpacity(0.5),
+                  ? color.withValues(alpha: 0.15)
+                  : theme.border.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              isEarned ? 'Earned' : 'Locked',
+              isEarned ? 'Earned ✓' : 'Locked',
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w600,

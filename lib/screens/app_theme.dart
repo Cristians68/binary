@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AppColors {
   AppColors._();
 
-  // ── Dark mode (Apple-like layered depth) ──
+  // ── Dark mode ──
   static const darkBg = Color(0xFF0B0B0F);
   static const darkSurface = Color(0xFF121217);
   static const darkCard = Color(0xFF1C1C22);
@@ -23,7 +23,7 @@ class AppColors {
   static const lightSubtext = Color(0xFF6E6E73);
   static const lightNavBg = Color(0xFFF5F5F7);
 
-  // ── Apple-style accent colors ──
+  // ── Accent colors ──
   static const primary = Color(0xFF0071E3);
   static const blue = Color(0xFF0077ED);
   static const green = Color(0xFF1DB954);
@@ -34,40 +34,30 @@ class AppColors {
 
 // ── Theme notifier ────────────────────────────────────────────────────────────
 class ThemeNotifier extends ChangeNotifier {
-  // Null means "not yet loaded from prefs"
-  bool? _isDark;
+  bool _isDark;
 
-  bool get isDark => _isDark ?? false; // ← default light mode
+  // ── Accept a pre-loaded value so the app starts in the right mode ──
+  // This eliminates the dark flash on the login/welcome screen
+  ThemeNotifier({bool initialIsDark = false}) : _isDark = initialIsDark;
 
-  /// True only after SharedPreferences has been read.
-  bool get isLoaded => _isDark != null;
-
-  ThemeNotifier() {
-    _loadFromPrefs();
-  }
-
-  /// Reads the persisted preference. Falls back to light mode if never set.
-  Future<void> _loadFromPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    _isDark = prefs.getBool('isDarkMode') ?? false; // ← default light mode
-    notifyListeners();
-  }
+  bool get isDark => _isDark;
+  bool get isLoaded => true; // always loaded since we pre-load in main()
 
   Future<void> toggle() async {
-    _isDark = !isDark;
+    _isDark = !_isDark;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isDarkMode', _isDark!);
+    await prefs.setBool('isDarkMode', _isDark);
     notifyListeners();
   }
 
   // ── Dynamic colour getters ──────────────────────────────────────────────────
-  Color get bg => isDark ? AppColors.darkBg : AppColors.lightBg;
-  Color get surface => isDark ? AppColors.darkSurface : AppColors.lightSurface;
-  Color get card => isDark ? AppColors.darkCard : AppColors.lightCard;
-  Color get border => isDark ? AppColors.darkBorder : AppColors.lightBorder;
-  Color get text => isDark ? AppColors.darkText : AppColors.lightText;
-  Color get subtext => isDark ? AppColors.darkSubtext : AppColors.lightSubtext;
-  Color get navBg => isDark ? AppColors.darkNavBg : AppColors.lightNavBg;
+  Color get bg => _isDark ? AppColors.darkBg : AppColors.lightBg;
+  Color get surface => _isDark ? AppColors.darkSurface : AppColors.lightSurface;
+  Color get card => _isDark ? AppColors.darkCard : AppColors.lightCard;
+  Color get border => _isDark ? AppColors.darkBorder : AppColors.lightBorder;
+  Color get text => _isDark ? AppColors.darkText : AppColors.lightText;
+  Color get subtext => _isDark ? AppColors.darkSubtext : AppColors.lightSubtext;
+  Color get navBg => _isDark ? AppColors.darkNavBg : AppColors.lightNavBg;
   Color get primary => AppColors.primary;
 }
 
@@ -80,9 +70,8 @@ class AppTheme extends InheritedNotifier<ThemeNotifier> {
   }) : super(notifier: notifier);
 
   static ThemeNotifier of(BuildContext context) {
-    final result = context
-        .dependOnInheritedWidgetOfExactType<AppTheme>()
-        ?.notifier;
+    final result =
+        context.dependOnInheritedWidgetOfExactType<AppTheme>()?.notifier;
     assert(result != null, 'No AppTheme found in context');
     return result!;
   }

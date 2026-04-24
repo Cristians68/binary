@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'lesson_screen.dart';
 import 'offline_service.dart';
 import 'app_theme.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CourseDetailScreen extends StatefulWidget {
   final String title;
@@ -154,13 +155,70 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
   }
 
   Future<void> _loadModules() async {
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('courses')
+  try {
+    // Load shared module definitions (order, title, subtitle)
+    final snapshot = await FirebaseFirestore.instance
+        .collection('courses')
+        .doc(_courseId)
+        .collection('modules')
+        .orderBy('order')
+        .get();
+
+    // Load THIS user's per-module progress
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    Map<String, String> userModuleStatus = {};
+    if (uid != null) {
+      final userModulesSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('progress')
           .doc(_courseId)
           .collection('modules')
-          .orderBy('order')
           .get();
+      userModuleStatus = {
+        for (final d in userModulesSnap.docs)
+          d.id: (d.data()['status'] as String? ?? 'locked')
+      };
+    }
+
+    final modules = snapshot.docs.asMap().entries.map((entry) {
+      final index = entry.key;
+      final doc = entry.value;
+      final data = doc.data();
+
+      String status;
+      if (userModuleStatus.containsKey(doc.id)) {
+        status = userModuleStatus[doc.id]!;
+      } else if (index == 0) {
+        status = 'active'; // first module always unlocked
+      } else {
+        status = 'locked';
+      }
+
+      return {
+        'id': doc.id,
+        'title': data['title'] ?? '',
+        'sub': data['subtitle'] ?? '',
+        'status': status,
+        'order': data['order'] ?? 0,
+      };
+    }).toList();
+
+    if (mounted) {
+      setState(() {
+        _modules = modules.isNotEmpty ? modules : _getHardcodedModules(widget.tag);
+        _loading = false;
+      });
+    }
+  } catch (e) {
+    if (mounted) {
+      setState(() {
+        _modules = _getHardcodedModules(widget.tag);
+        _loading = false;
+      });
+    }
+  }
+}
 
       final modules = snapshot.docs.map((doc) {
         final data = doc.data();
