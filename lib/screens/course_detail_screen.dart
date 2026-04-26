@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'lesson_screen.dart';
-import 'offline_service.dart';
-import 'app_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'lesson_screen.dart';
+import 'paywall_screen.dart';
+import 'offline_service.dart';
+import 'subscription_service.dart';
+import 'app_theme.dart';
 
 class CourseDetailScreen extends StatefulWidget {
   final String title;
@@ -38,6 +40,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
   bool _isDownloaded = false;
   bool _isDownloading = false;
   double _downloadProgress = 0;
+
+  // Whether this user has purchased access to this course (any plan that
+  // unlocks it). Drives whether modules 2+ are 'active' or 'locked'.
+  bool _hasPaidAccess = false;
 
   @override
   void initState() {
@@ -154,6 +160,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
 
   Future<void> _loadModules() async {
     try {
+      // Check whether user has paid access to this course (single, bundle, all)
+      _hasPaidAccess = await SubscriptionService.canAccessCourse(_courseId);
+
       // Load shared module definitions (order, title, subtitle)
       final snapshot = await FirebaseFirestore.instance
           .collection('courses')
@@ -184,14 +193,11 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
         final doc = entry.value;
         final data = doc.data();
 
-        String status;
-        if (userModuleStatus.containsKey(doc.id)) {
-          status = userModuleStatus[doc.id]!;
-        } else if (index == 0) {
-          status = 'active'; // first module always unlocked
-        } else {
-          status = 'locked';
-        }
+        final status = _resolveStatus(
+          moduleId: doc.id,
+          index: index,
+          userProgress: userModuleStatus,
+        );
 
         return {
           'id': doc.id,
@@ -204,17 +210,99 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
 
       if (mounted) {
         setState(() {
-          _modules = modules.isNotEmpty ? modules : _getHardcodedModules(widget.tag);
+          _modules = modules.isNotEmpty
+              ? modules
+              : _applyAccessGateToHardcoded(_getHardcodedModules(widget.tag));
           _loading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _modules = _getHardcodedModules(widget.tag);
+          _modules = _applyAccessGateToHardcoded(_getHardcodedModules(widget.tag));
           _loading = false;
         });
       }
+    }
+  }
+
+  /// Resolve a module's display status, taking into account:
+  /// - First module is always free (preview)
+  /// - Other modules require paid access
+  /// - User's own progress (done / active / locked)
+  String _resolveStatus({
+    required String moduleId,
+    required int index,
+    required Map<String, String> userProgress,
+  }) {
+    final isFirstModule = moduleId == 'module-01' || index == 0;
+
+    // Respect user's recorded status only when they CAN access the module.
+    // Prevents a returning user who completed module-02 in a previous purchase
+    // (now expired/refunded) from re-opening a paid module.
+    final recordedStatus = userProgress[moduleId];
+    final canAccess = isFirstModule || _hasPaidAccess;
+
+    if (recordedStatus == 'done' && canAccess) return 'done';
+    if (recordedStatus == 'active' && canAccess) return 'active';
+
+    if (canAccess) {
+      // No recorded status, but user has access — first module of fresh course
+      // shows as 'active', subsequent ones as 'locked' until prior is done.
+      return isFirstModule ? 'active' : (recordedStatus ?? 'locked');
+    }
+
+    // No paid access AND not the first module → locked behind paywall.
+    return 'locked';
+  }
+
+  /// For hardcoded fallback modules: respect first-module-free + paid access.
+  List<Map<String, dynamic>> _applyAccessGateToHardcoded(
+    List<Map<String, dynamic>> modules,
+  ) {
+    return modules.asMap().entries.map((entry) {
+      final index = entry.key;
+      final m = Map<String, dynamic>.from(entry.value);
+      final id = m['id'] as String;
+      final isFirstModule = id == 'module-01' || index == 0;
+
+      if (isFirstModule) {
+        m['status'] = 'active';
+      } else if (_hasPaidAccess) {
+        // Respect the original status if access is granted.
+        // (hardcoded modules default to 'locked' which becomes the
+        // standard "complete prior module first" gate.)
+      } else {
+        m['status'] = 'locked';
+      }
+      return m;
+    }).toList();
+  }
+
+  /// Open a paywall for this course. Returns true if the user purchased
+  /// (so we can refresh access).
+  Future<void> _openPaywall() async {
+    HapticFeedback.lightImpact();
+    final result = await Navigator.push<bool>(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, animation, __) => PaywallScreen(
+          courseId: _courseId,
+          courseTitle: widget.title,
+          courseColor: widget.color,
+        ),
+        transitionsBuilder: (_, animation, __, child) => FadeTransition(
+          opacity: animation,
+          child: child,
+        ),
+        transitionDuration: const Duration(milliseconds: 250),
+      ),
+    );
+
+    // If they purchased, refresh access so locked modules unlock immediately.
+    if (result == true && mounted) {
+      setState(() => _loading = true);
+      await _loadModules();
     }
   }
 
@@ -357,13 +445,15 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                                     horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
                                   color: _isDownloaded
-                                      ? AppColors.green.withOpacity(0.12)
-                                      : widget.color.withOpacity(0.10),
+                                      ? AppColors.green.withValues(alpha: 0.12)
+                                      : widget.color.withValues(alpha: 0.10),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
                                     color: _isDownloaded
-                                        ? AppColors.green.withOpacity(0.25)
-                                        : widget.color.withOpacity(0.20),
+                                        ? AppColors.green
+                                            .withValues(alpha: 0.25)
+                                        : widget.color
+                                            .withValues(alpha: 0.20),
                                   ),
                                 ),
                                 child: _isDownloading
@@ -430,6 +520,41 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                           fontWeight: FontWeight.w400,
                         ),
                       ),
+                      // Free preview banner — only show if user hasn't paid
+                      if (!_loading && !_hasPaidAccess) ...[
+                        const SizedBox(height: 18),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: widget.color.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: widget.color.withValues(alpha: 0.22),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                CupertinoIcons.gift_fill,
+                                size: 14,
+                                color: widget.color,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Module 1 is free — try it now',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: widget.color,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -531,6 +656,12 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
     final isDone = status == 'done';
     final isActive = status == 'active';
 
+    final moduleId = module['id'] as String;
+    final isFirstModule = moduleId == 'module-01' || index == 0;
+
+    // A locked non-first-module without paid access = paywall on tap.
+    final isLockedBehindPaywall = isLocked && !isFirstModule && !_hasPaidAccess;
+
     final statusColor = isLocked
         ? theme.subtext.withValues(alpha: 0.4)
         : isDone
@@ -572,33 +703,39 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
     }
 
     return GestureDetector(
-      onTap: isLocked
-          ? null
-          : () {
-              HapticFeedback.selectionClick();
-              Navigator.push(
-                context,
-                PageRouteBuilder(
-                  pageBuilder: (_, animation, __) => LessonScreen(
-                    moduleTitle: module['title'],
-                    courseTag: widget.tag,
-                    color: widget.color,
-                    moduleId: module['id'],
-                    courseId: _courseId,
-                  ),
-                  transitionsBuilder: (_, animation, __, child) =>
-                      SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(1, 0),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                        parent: animation, curve: Curves.easeOutCubic)),
-                    child: FadeTransition(opacity: animation, child: child),
-                  ),
-                  transitionDuration: const Duration(milliseconds: 400),
-                ),
-              );
-            },
+      onTap: () {
+        // 1) Locked because not yet purchased → paywall.
+        if (isLockedBehindPaywall) {
+          _openPaywall();
+          return;
+        }
+        // 2) Locked for progression reasons (prior module not done) → no-op.
+        if (isLocked) return;
+
+        // 3) Otherwise open the lesson.
+        HapticFeedback.selectionClick();
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, animation, __) => LessonScreen(
+              moduleTitle: module['title'],
+              courseTag: widget.tag,
+              color: widget.color,
+              moduleId: module['id'],
+              courseId: _courseId,
+            ),
+            transitionsBuilder: (_, animation, __, child) => SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                  parent: animation, curve: Curves.easeOutCubic)),
+              child: FadeTransition(opacity: animation, child: child),
+            ),
+            transitionDuration: const Duration(milliseconds: 400),
+          ),
+        );
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(18),
@@ -633,14 +770,42 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    module['title'],
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: isLocked ? theme.subtext : theme.text,
-                      letterSpacing: -0.3,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          module['title'],
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: isLocked ? theme.subtext : theme.text,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                      ),
+                      // Free preview badge on the first module
+                      if (isFirstModule && !_hasPaidAccess && !isDone) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: widget.color.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'FREE',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: widget.color,
+                              letterSpacing: 0.6,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 3),
                   Text(
@@ -676,14 +841,47 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                   color: widget.color,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Text(
-                  'Continue',
-                  style: TextStyle(
+                child: Text(
+                  isFirstModule && !_hasPaidAccess ? 'Try free' : 'Continue',
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                     letterSpacing: -0.2,
                   ),
+                ),
+              )
+            else if (isLockedBehindPaywall)
+              // Distinct affordance: unlock CTA leading to paywall
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: widget.color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: widget.color.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      CupertinoIcons.lock_open_fill,
+                      size: 11,
+                      color: widget.color,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      'Unlock',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: widget.color,
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                  ],
                 ),
               )
             else
@@ -851,7 +1049,7 @@ class _AnimatedModuleState extends State<_AnimatedModule>
     super.initState();
     _controller = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 450));
-    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
     _slide = Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     Future.delayed(widget.delay, () {

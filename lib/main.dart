@@ -18,7 +18,16 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await _ensureUserIdentity();
+
+  // RevenueCat must be configured before any purchase / entitlement check.
   await SubscriptionService.configure();
+
+  // Silently sync entitlements from RevenueCat → Firestore on launch.
+  // Fixes cross-device race conditions: if a purchase was made on Device A,
+  // Device B's Firestore catches up before the UI checks access.
+  // Does NOT mark trial as used — purely a passive sync.
+  await SubscriptionService.syncEntitlementsOnLaunch();
+
   await NotificationService.init();
 
   // ── Pre-load theme preference BEFORE runApp so there is zero flash ──

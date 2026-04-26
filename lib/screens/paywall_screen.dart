@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'subscription_service.dart';
 import 'app_theme.dart';
 
@@ -26,7 +27,7 @@ enum _Plan { single, bundle4, all }
 class _PaywallScreenState extends State<PaywallScreen> {
   List<Package> _packages = [];
   bool _loading = true;
-  bool _loadError = false; // NEW: surface load failures to the user
+  bool _loadError = false;
   bool _purchasing = false;
   _Plan _selected = _Plan.single;
 
@@ -43,8 +44,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
         (p) => p.storeProduct.identifier == id,
       );
     } catch (_) {
-      // Product ID not found — do NOT silently fall back to another product.
-      // Return null so the UI can show a clear error.
       return null;
     }
   }
@@ -66,7 +65,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
       setState(() {
         _packages = packages;
         _loading = false;
-        // If RC returned nothing, surface the error so user can retry.
         _loadError = packages.isEmpty;
       });
     }
@@ -76,7 +74,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
   Future<void> _purchase() async {
     if (_purchasing) return;
 
-    // Guard: packages not loaded.
     if (_packages.isEmpty) {
       _showError(
           'Products are still loading. Please wait a moment and try again.');
@@ -85,7 +82,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
     final package = _packageFor(_selected);
 
-    // Guard: specific product not found in RevenueCat offerings.
     if (package == null) {
       _showError(
         'This product is not available right now. '
@@ -101,20 +97,14 @@ class _PaywallScreenState extends State<PaywallScreen> {
       final success = await SubscriptionService.purchase(
         package,
         courseId: _selected == _Plan.single ? widget.courseId : null,
-        // bundle4: selectedCourseIds is null here because the user picks
-        // courses after purchase (or on the courses screen). The entitlement
-        // is what actually gates access. You can wire up a course-picker
-        // sheet here if you want to collect selection at purchase time.
         selectedCourseIds: null,
       );
 
       if (success && mounted) {
-        // Briefly show success haptic before popping.
         HapticFeedback.heavyImpact();
         Navigator.pop(context, true);
       }
     } catch (e) {
-      // purchase() throws a clean String for user-facing errors.
       if (mounted) _showError(e.toString());
     } finally {
       if (mounted) setState(() => _purchasing = false);
@@ -164,22 +154,32 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 
+  Future<void> _openUrl(String url) async {
+    HapticFeedback.selectionClick();
+    final uri = Uri.parse(url);
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Could not open $url: $e');
+    }
+  }
+
   String get _ctaLabel {
     if (_purchasing) return 'Processing…';
     switch (_selected) {
       case _Plan.single:
-        return 'Start 7-Day Free Trial';
+        return 'Unlock for \$14.99';
       case _Plan.bundle4:
-        return 'Buy Now · \$99.99';
+        return 'Unlock 4 Courses · \$99.99';
       case _Plan.all:
-        return 'Buy Now · \$149.99';
+        return 'Unlock Everything · \$149.99';
     }
   }
 
-  String get _trialNotice {
+  String get _planNotice {
     switch (_selected) {
       case _Plan.single:
-        return '7 days free, then \$14.99 one-time. Yours forever.';
+        return 'One-time payment of \$14.99. Lifetime access to this course.';
       case _Plan.bundle4:
         return 'One-time payment. Choose any 4 courses. Yours forever.';
       case _Plan.all:
@@ -201,7 +201,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   strokeWidth: 2,
                 ),
               )
-            // ── Load error state with retry button ───────────────────────
             : _loadError
                 ? Center(
                     child: Padding(
@@ -260,7 +259,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       ),
                     ),
                   )
-                // ── Normal paywall ────────────────────────────────────────
                 : Column(
                     children: [
                       Expanded(
@@ -298,7 +296,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                 width: 72,
                                 height: 72,
                                 decoration: BoxDecoration(
-                                  color: widget.courseColor.withOpacity(0.12),
+                                  color: widget.courseColor
+                                      .withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Icon(
@@ -380,13 +379,12 @@ class _PaywallScreenState extends State<PaywallScreen> {
                               _buildPlanTile(
                                 plan: _Plan.single,
                                 title: widget.courseTitle,
-                                subtitle: '1 course · 7-day free trial',
+                                subtitle: '1 course · One-time purchase',
                                 price: '\$14.99',
-                                badge: 'FREE TRIAL',
+                                badge: 'STARTER',
                                 badgeColor: AppColors.green,
                                 color: widget.courseColor,
                                 theme: theme,
-                                // Warn if not loaded from RC
                                 unavailable: _packageFor(_Plan.single) == null,
                               ),
                               const SizedBox(height: 10),
@@ -394,7 +392,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                               _buildPlanTile(
                                 plan: _Plan.bundle4,
                                 title: 'Any 4 Courses',
-                                subtitle: 'Pick any 4 courses · one-time',
+                                subtitle: 'Pick any 4 courses · One-time',
                                 price: '\$99.99',
                                 badge: 'SAVE 58%',
                                 badgeColor: AppColors.amber,
@@ -408,7 +406,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                 plan: _Plan.all,
                                 title: 'Everything',
                                 subtitle:
-                                    'All courses + future content · one-time',
+                                    'All courses + future content · One-time',
                                 price: '\$149.99',
                                 badge: 'BEST VALUE',
                                 badgeColor: AppColors.primary,
@@ -422,26 +420,26 @@ class _PaywallScreenState extends State<PaywallScreen> {
                               Container(
                                 padding: const EdgeInsets.all(14),
                                 decoration: BoxDecoration(
-                                  color: widget.courseColor.withOpacity(0.07),
+                                  color: widget.courseColor
+                                      .withValues(alpha: 0.07),
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                    color: widget.courseColor.withOpacity(0.18),
+                                    color: widget.courseColor
+                                        .withValues(alpha: 0.18),
                                   ),
                                 ),
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Icon(
-                                      _selected == _Plan.single
-                                          ? CupertinoIcons.gift_fill
-                                          : CupertinoIcons.checkmark_seal_fill,
+                                      CupertinoIcons.checkmark_seal_fill,
                                       size: 18,
                                       color: widget.courseColor,
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Text(
-                                        _trialNotice,
+                                        _planNotice,
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: theme.subtext,
@@ -460,7 +458,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
                       // ── CTA ────────────────────────────────────────────
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                         child: Column(
                           children: [
                             GestureDetector(
@@ -472,7 +470,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                     const EdgeInsets.symmetric(vertical: 17),
                                 decoration: BoxDecoration(
                                   color: _purchasing
-                                      ? widget.courseColor.withOpacity(0.5)
+                                      ? widget.courseColor
+                                          .withValues(alpha: 0.5)
                                       : widget.courseColor,
                                   borderRadius: BorderRadius.circular(16),
                                 ),
@@ -512,13 +511,60 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                 ),
                               ),
                             ),
+                            const SizedBox(height: 14),
+
+                            // ── Legal links (REQUIRED by App Review) ────
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                GestureDetector(
+                                  onTap: () => _openUrl(
+                                      'https://binaryapp.org/terms'),
+                                  child: Text(
+                                    'Terms of Service',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: theme.subtext,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor: theme.subtext
+                                          .withValues(alpha: 0.5),
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8),
+                                  child: Text(
+                                    '·',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: theme.subtext,
+                                    ),
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () => _openUrl(
+                                      'https://binaryapp.org/privacy'),
+                                  child: Text(
+                                    'Privacy Policy',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: theme.subtext,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor: theme.subtext
+                                          .withValues(alpha: 0.5),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                             const SizedBox(height: 8),
                             Text(
                               'Payment processed by Apple. All sales final.\nContact support for refund requests.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 10,
-                                color: theme.subtext.withOpacity(0.6),
+                                color: theme.subtext.withValues(alpha: 0.6),
                                 height: 1.5,
                               ),
                             ),
@@ -540,7 +586,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
     required Color badgeColor,
     required Color color,
     required ThemeNotifier theme,
-    required bool unavailable, // grayed out if RC didn't return this product
+    required bool unavailable,
   }) {
     final selected = _selected == plan;
     final effectiveColor = unavailable ? theme.subtext : color;
@@ -557,11 +603,14 @@ class _PaywallScreenState extends State<PaywallScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: selected
-              ? effectiveColor.withOpacity(theme.isDark ? 0.12 : 0.06)
+              ? effectiveColor
+                  .withValues(alpha: theme.isDark ? 0.12 : 0.06)
               : theme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? effectiveColor.withOpacity(0.5) : theme.border,
+            color: selected
+                ? effectiveColor.withValues(alpha: 0.5)
+                : theme.border,
             width: selected ? 2 : 1,
           ),
         ),
@@ -590,13 +639,16 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: unavailable ? theme.subtext : theme.text,
-                          letterSpacing: -0.3,
+                      Flexible(
+                        child: Text(
+                          title,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: unavailable ? theme.subtext : theme.text,
+                            letterSpacing: -0.3,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
