@@ -11,6 +11,7 @@ import 'badges_screen.dart';
 import 'offline_downloads_screen.dart';
 import 'delete_account_screen.dart';
 import 'legal_screen.dart';
+import 'restore_purchases_button.dart';
 import 'app_router.dart';
 import 'streak_service.dart';
 import 'app_theme.dart';
@@ -144,25 +145,14 @@ class _ProfileScreenState extends State<ProfileScreen>
     return name.isNotEmpty ? name[0].toUpperCase() : 'U';
   }
 
-  // ── Help Center — opens in-app browser ────────────────────────────────────
-   Future<void> _openHelpCenter() async {
+  // ── Help Center — opens support page in Safari ────────────────────────────
+  Future<void> _openHelpCenter() async {
     HapticFeedback.selectionClick();
-    final uri = Uri(
-      scheme: 'mailto',
-      path: 'support@binaryacademy.app',
-      queryParameters: {
-        'subject': 'Binary Academy Help',
-        'body': 'Hi Binary support team,\n\n[Describe your issue here]\n\nApp version: 1.0.0',
-      },
-    );
+    final uri = Uri.parse('https://binaryapp.org/support');
     try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      } else {
-        if (mounted) _showToast('Email support@binaryacademy.app for help.');
-      }
-    } catch (_) {
-      if (mounted) _showToast('Email support@binaryacademy.app for help.');
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      if (mounted) _showToast('Visit binaryapp.org/support for help.');
     }
   }
 
@@ -173,10 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (await inAppReview.isAvailable()) {
       await inAppReview.requestReview();
     } else {
-      // Fallback — open App Store page
-      await inAppReview.openStoreListing(
-        appStoreId: '6762030524',
-      );
+      await inAppReview.openStoreListing(appStoreId: '6762030524');
     }
   }
 
@@ -208,7 +195,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: AppColors.green.withOpacity(0.12),
+                      color: AppColors.green.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(CupertinoIcons.checkmark_circle_fill,
@@ -224,7 +211,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                   const SizedBox(height: 8),
                   Text('We read every message and use it to improve Binary.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: theme.subtext, height: 1.5)),
+                      style: TextStyle(
+                          fontSize: 14, color: theme.subtext, height: 1.5)),
                   const SizedBox(height: 28),
                   GestureDetector(
                     onTap: () => Navigator.pop(ctx),
@@ -254,26 +242,23 @@ class _ProfileScreenState extends State<ProfileScreen>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Handle
                 Center(
                   child: Container(
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                        color: theme.subtext.withOpacity(0.3),
+                        color: theme.subtext.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(2)),
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // Header
                 Row(
                   children: [
                     Container(
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: AppColors.amber.withOpacity(0.12),
+                        color: AppColors.amber.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(13),
                       ),
                       child: const Icon(CupertinoIcons.chat_bubble_text_fill,
@@ -290,15 +275,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 color: theme.text,
                                 letterSpacing: -0.4)),
                         Text('We\'d love to hear from you',
-                            style: TextStyle(fontSize: 13, color: theme.subtext)),
+                            style:
+                                TextStyle(fontSize: 13, color: theme.subtext)),
                       ],
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 24),
-
-                // Star rating
                 Text('How would you rate Binary?',
                     style: TextStyle(
                         fontSize: 14,
@@ -316,18 +299,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                       child: Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: Icon(
-                          filled ? CupertinoIcons.star_fill : CupertinoIcons.star,
-                          color: filled ? AppColors.amber : theme.subtext.withOpacity(0.4),
+                          filled
+                              ? CupertinoIcons.star_fill
+                              : CupertinoIcons.star,
+                          color: filled
+                              ? AppColors.amber
+                              : theme.subtext.withValues(alpha: 0.4),
                           size: 32,
                         ),
                       ),
                     );
                   }),
                 ),
-
                 const SizedBox(height: 20),
-
-                // Message field
                 Text('Your message',
                     style: TextStyle(
                         fontSize: 14,
@@ -348,16 +332,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                       hintText:
                           'Tell us what you love, what could be better, or anything else...',
                       hintStyle: TextStyle(
-                          color: theme.subtext.withOpacity(0.6), fontSize: 14),
+                          color: theme.subtext.withValues(alpha: 0.6),
+                          fontSize: 14),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.all(16),
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
-
-                // Submit button
                 GestureDetector(
                   onTap: loading
                       ? null
@@ -369,8 +351,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                           }
                           setModal(() => loading = true);
                           HapticFeedback.mediumImpact();
-
-                          // Save to Firestore
                           try {
                             final uid =
                                 FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -384,15 +364,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                               'appVersion': '1.0.0',
                             });
                           } catch (_) {}
-
-                          // If 4-5 stars also trigger native review prompt
                           if (selectedStars >= 4) {
                             final inAppReview = InAppReview.instance;
                             if (await inAppReview.isAvailable()) {
                               await inAppReview.requestReview();
                             }
                           }
-
                           setModal(() {
                             loading = false;
                             submitted = true;
@@ -404,7 +381,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     decoration: BoxDecoration(
                       color: loading
-                          ? AppColors.primary.withOpacity(0.5)
+                          ? AppColors.primary.withValues(alpha: 0.5)
                           : AppColors.primary,
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -468,7 +445,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                      color: theme.subtext.withOpacity(0.3),
+                      color: theme.subtext.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2)),
                 ),
               ),
@@ -487,7 +464,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               if (error != null) ...[
                 const SizedBox(height: 10),
                 Text(error!,
-                    style: const TextStyle(fontSize: 13, color: AppColors.red)),
+                    style:
+                        const TextStyle(fontSize: 13, color: AppColors.red)),
               ],
               const SizedBox(height: 20),
               GestureDetector(
@@ -554,7 +532,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                    color: theme.subtext.withOpacity(0.3),
+                    color: theme.subtext.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(2)),
               ),
               const SizedBox(height: 24),
@@ -564,7 +542,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.12),
+                        color: AppColors.primary.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(13)),
                     child: const Icon(CupertinoIcons.bell_fill,
                         color: AppColors.primary, size: 20),
@@ -580,8 +558,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 fontWeight: FontWeight.w600,
                                 color: theme.text)),
                         Text('Daily reminders & course updates',
-                            style:
-                                TextStyle(fontSize: 12, color: theme.subtext)),
+                            style: TextStyle(
+                                fontSize: 12, color: theme.subtext)),
                       ],
                     ),
                   ),
@@ -608,7 +586,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                     const SizedBox(height: 12),
                     _buildNotifRow(theme, '🎓', 'Course completion', true),
                     const SizedBox(height: 12),
-                    _buildNotifRow(theme, '📚', 'New content available', false),
+                    _buildNotifRow(
+                        theme, '📚', 'New content available', false),
                   ],
                 ),
               ),
@@ -652,8 +631,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
             color: enabled
-                ? AppColors.green.withOpacity(0.12)
-                : theme.border.withOpacity(0.5),
+                ? AppColors.green.withValues(alpha: 0.12)
+                : theme.border.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(enabled ? 'On' : 'Off',
@@ -682,7 +661,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                  color: theme.subtext.withOpacity(0.3),
+                  color: theme.subtext.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2)),
             ),
             const SizedBox(height: 24),
@@ -741,9 +720,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.18)),
+          border: Border.all(color: color.withValues(alpha: 0.18)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -790,7 +769,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                      color: theme.subtext.withOpacity(0.3),
+                      color: theme.subtext.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2)),
                 ),
               ),
@@ -805,7 +784,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               _buildModalTextField(
                   currentController, 'Current password', true, theme),
               const SizedBox(height: 12),
-              _buildModalTextField(newController, 'New password', true, theme),
+              _buildModalTextField(
+                  newController, 'New password', true, theme),
               if (error != null) ...[
                 const SizedBox(height: 12),
                 Text(error!,
@@ -868,7 +848,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       bool isPassword, ThemeNotifier theme) {
     return Container(
       decoration: BoxDecoration(
-        color: theme.border.withOpacity(0.05),
+        color: theme.border.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: theme.border),
       ),
@@ -903,7 +883,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                  color: theme.subtext.withOpacity(0.3),
+                  color: theme.subtext.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2)),
             ),
             const SizedBox(height: 24),
@@ -934,9 +914,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
-                  color: AppColors.red.withOpacity(0.1),
+                  color: AppColors.red.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.red.withOpacity(0.25)),
+                  border: Border.all(
+                      color: AppColors.red.withValues(alpha: 0.25)),
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -994,7 +975,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                  color: theme.subtext.withOpacity(0.3),
+                  color: theme.subtext.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2)),
             ),
             const SizedBox(height: 28),
@@ -1119,13 +1100,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                     onTap: _showAboutSheet, isLast: true),
               ]),
 
-              // ── Legal ─────────────────────────────────────────────────────
-              _buildSection('Legal', theme, [
+              // ── Legal & Purchases ─────────────────────────────────────────
+              _buildSection('Legal & Purchases', theme, [
                 _buildItem(CupertinoIcons.doc_text_fill,
                     'Privacy Policy & Terms', const Color(0xFF8B5CF6), theme,
                     onTap: () => Navigator.push(
-                        context, AppRouter.push(const LegalScreen())),
-                    isLast: true),
+                        context, AppRouter.push(const LegalScreen()))),
+                // Restore Purchases — REQUIRED by Apple App Review (3.1.1)
+                _buildRestorePurchasesItem(theme),
               ]),
 
               // ── Sign out ──────────────────────────────────────────────────
@@ -1138,10 +1120,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       decoration: BoxDecoration(
-                        color: AppColors.red.withOpacity(0.08),
+                        color: AppColors.red.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(18),
-                        border:
-                            Border.all(color: AppColors.red.withOpacity(0.2)),
+                        border: Border.all(
+                            color: AppColors.red.withValues(alpha: 0.2)),
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -1174,9 +1156,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                         'Delete account',
                         style: TextStyle(
                           fontSize: 13,
-                          color: theme.subtext.withOpacity(0.6),
+                          color: theme.subtext.withValues(alpha: 0.6),
                           decoration: TextDecoration.underline,
-                          decorationColor: theme.subtext.withOpacity(0.4),
+                          decorationColor:
+                              theme.subtext.withValues(alpha: 0.4),
                         ),
                       ),
                     ),
@@ -1190,10 +1173,22 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  /// Wraps the RestorePurchasesButton widget in a list-item style
+  /// container that matches the rest of the profile section tiles.
+  Widget _buildRestorePurchasesItem(ThemeNotifier theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: theme.border)),
+      ),
+      child: const RestorePurchasesButton(),
+    );
+  }
+
   Widget _badge(String label, Color color) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
+            color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(8)),
         child: Text(label,
             style: TextStyle(
@@ -1232,10 +1227,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.12),
+                  color: AppColors.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
-                  border:
-                      Border.all(color: AppColors.primary.withOpacity(0.2)),
+                  border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.2)),
                 ),
                 child: const Text('IT Learner · Level 1',
                     style: TextStyle(
@@ -1290,7 +1285,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ),
                     if (i < stats.length - 1)
-                      Container(width: 0.5, height: 30, color: theme.border),
+                      Container(
+                          width: 0.5, height: 30, color: theme.border),
                   ],
                 ),
               );
@@ -1340,7 +1336,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.12),
+                color: AppColors.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10)),
             child: Icon(
               theme.isDark
@@ -1369,7 +1365,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               decoration: BoxDecoration(
                 color: theme.isDark
                     ? AppColors.primary
-                    : Colors.grey.withOpacity(0.3),
+                    : Colors.grey.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(13),
               ),
               child: Stack(
@@ -1422,7 +1418,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
+                  color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10)),
               child: Icon(icon, size: 16, color: color),
             ),
@@ -1430,7 +1426,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             Expanded(
               child: Text(label,
                   style: TextStyle(
-                      fontSize: 14, color: theme.text, letterSpacing: -0.2)),
+                      fontSize: 14,
+                      color: theme.text,
+                      letterSpacing: -0.2)),
             ),
             if (trailing != null) ...[trailing, const SizedBox(width: 8)],
             Icon(CupertinoIcons.chevron_right,
