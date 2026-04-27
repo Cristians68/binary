@@ -170,9 +170,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
       case _Plan.single:
         return 'Unlock for \$14.99';
       case _Plan.bundle4:
-        return 'Unlock 4 Courses · \$99.99';
+        return 'Unlock 4 Courses · \$49.99';
       case _Plan.all:
-        return 'Unlock Everything · \$149.99';
+        return 'Unlock Everything · \$99.99';
     }
   }
 
@@ -181,9 +181,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
       case _Plan.single:
         return 'One-time payment of \$14.99. Lifetime access to this course.';
       case _Plan.bundle4:
-        return 'One-time payment. Choose any 4 courses. Yours forever.';
+        return 'One-time payment of \$49.99. Choose any 4 courses. Yours forever.';
       case _Plan.all:
-        return 'One-time payment. Every course + all future content. Yours forever.';
+        return 'One-time payment of \$99.99. Every course + all future content. Yours forever.';
     }
   }
 
@@ -393,8 +393,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                 plan: _Plan.bundle4,
                                 title: 'Any 4 Courses',
                                 subtitle: 'Pick any 4 courses · One-time',
-                                price: '\$99.99',
-                                badge: 'SAVE 58%',
+                                price: '\$49.99',
+                                badge: 'SAVE \$10',
                                 badgeColor: AppColors.amber,
                                 color: AppColors.amber,
                                 theme: theme,
@@ -407,7 +407,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                                 title: 'Everything',
                                 subtitle:
                                     'All courses + future content · One-time',
-                                price: '\$149.99',
+                                price: '\$99.99',
                                 badge: 'BEST VALUE',
                                 badgeColor: AppColors.primary,
                                 color: AppColors.primary,
