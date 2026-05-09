@@ -32,7 +32,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     _slide = Tween<Offset>(
       begin: const Offset(0, 0.06),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    ).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
   }
 
@@ -49,17 +50,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       PageRouteBuilder(
         pageBuilder: (_, animation, __) => screen,
         transitionsBuilder: (_, animation, __, child) => FadeTransition(
-          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+          opacity:
+              CurvedAnimation(parent: animation, curve: Curves.easeOut),
           child: SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0, 0.03),
               end: Offset.zero,
             ).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              ),
-            ),
+                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
             child: child,
           ),
         ),
@@ -74,7 +72,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       PageRouteBuilder(
         pageBuilder: (_, animation, __) => const MainNavigation(),
         transitionsBuilder: (_, animation, __, child) => FadeTransition(
-          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+          opacity:
+              CurvedAnimation(parent: animation, curve: Curves.easeOut),
           child: child,
         ),
         transitionDuration: const Duration(milliseconds: 500),
@@ -97,9 +96,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           content: const Text('Google sign-in failed. Please try again.'),
           backgroundColor: Colors.white.withOpacity(0.1),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     }
@@ -136,29 +134,16 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // LOGO
+  // ─────────────────────────────────────────────────────────────────────────
+
   Widget _buildLogo(ThemeNotifier theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 72,
-          height: 72,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Center(
-            child: Text(
-              '01',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                letterSpacing: 2,
-              ),
-            ),
-          ),
-        ),
+        // App icon — custom painted binary/circuit mark
+        const _AppIcon(size: 72),
         const SizedBox(height: 20),
         Text(
           'Binary.',
@@ -183,6 +168,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       ],
     );
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // FEATURES
+  // ─────────────────────────────────────────────────────────────────────────
 
   Widget _buildFeatures(ThemeNotifier theme) {
     final features = [
@@ -254,6 +243,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // BUTTONS
+  // ─────────────────────────────────────────────────────────────────────────
+
   Widget _buildButtons(ThemeNotifier theme) {
     return Column(
       children: [
@@ -296,10 +289,104 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// APP ICON
+// A custom-painted mark: bold "B" with two small binary dots (0 · 1) beneath,
+// all inside the same rounded-square shape. Clean, branded, techy.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _AppIcon extends StatelessWidget {
+  final double size;
+  const _AppIcon({this.size = 72});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(size * 0.265),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.35),
+            blurRadius: size * 0.28,
+            offset: Offset(0, size * 0.10),
+          ),
+        ],
+      ),
+      child: CustomPaint(
+        painter: _AppIconPainter(),
+      ),
+    );
+  }
+}
+
+class _AppIconPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    // ── Bold "B" using a TextPainter ──────────────────────────────────────
+    final tp = TextPainter(
+      text: const TextSpan(
+        text: 'B',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 38,
+          fontWeight: FontWeight.w800,
+          height: 1.0,
+          letterSpacing: -1.0,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    // Centre the B, shifted slightly upward to make room for dots
+    final bX = (w - tp.width) / 2 - 1;
+    final bY = (h - tp.height) / 2 - 5;
+    tp.paint(canvas, Offset(bX, bY));
+
+    // ── Binary dots "0  1" beneath the B ─────────────────────────────────
+    // "0" = small open circle, "1" = small filled circle
+    final dotY = h * 0.73;
+    final dotR = w * 0.055;
+    final spacing = w * 0.18;
+    final centerX = w / 2;
+
+    // "0" — left of centre (open ring)
+    final ringPaint = Paint()
+      ..color = Colors.white.withOpacity(0.75)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * 0.042;
+    canvas.drawCircle(Offset(centerX - spacing, dotY), dotR, ringPaint);
+
+    // separator dot (·)
+    paint.color = Colors.white.withOpacity(0.45);
+    canvas.drawCircle(Offset(centerX, dotY), dotR * 0.38, paint);
+
+    // "1" — right of centre (filled)
+    paint.color = Colors.white.withOpacity(0.75);
+    canvas.drawCircle(Offset(centerX + spacing, dotY), dotR, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ANIMATED FEATURE ROW
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _AnimatedFeature extends StatefulWidget {
   final Widget child;
   final Duration delay;
   const _AnimatedFeature({required this.child, required this.delay});
+
   @override
   State<_AnimatedFeature> createState() => _AnimatedFeatureState();
 }
@@ -321,7 +408,8 @@ class _AnimatedFeatureState extends State<_AnimatedFeature>
     _slide = Tween<Offset>(
       begin: const Offset(0, 0.05),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    ).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     Future.delayed(widget.delay, () {
       if (mounted) _controller.forward();
     });
@@ -340,12 +428,17 @@ class _AnimatedFeatureState extends State<_AnimatedFeature>
       );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PRESSABLE BUTTON
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _PressableButton extends StatefulWidget {
   final VoidCallback onTap;
   final Color color;
   final String label;
   final Color textColor;
   final BoxBorder? border;
+
   const _PressableButton({
     required this.onTap,
     required this.color,
@@ -353,6 +446,7 @@ class _PressableButton extends StatefulWidget {
     required this.textColor,
     this.border,
   });
+
   @override
   State<_PressableButton> createState() => _PressableButtonState();
 }
@@ -369,10 +463,8 @@ class _PressableButtonState extends State<_PressableButton>
       vsync: this,
       duration: const Duration(milliseconds: 100),
     );
-    _scale = Tween<double>(
-      begin: 1.0,
-      end: 0.96,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _scale = Tween<double>(begin: 1.0, end: 0.96).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -416,15 +508,21 @@ class _PressableButtonState extends State<_PressableButton>
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// GOOGLE BUTTON
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _GoogleButton extends StatefulWidget {
   final bool isLoading;
   final VoidCallback onTap;
   final ThemeNotifier theme;
+
   const _GoogleButton({
     required this.isLoading,
     required this.onTap,
     required this.theme,
   });
+
   @override
   State<_GoogleButton> createState() => _GoogleButtonState();
 }
@@ -441,10 +539,8 @@ class _GoogleButtonState extends State<_GoogleButton>
       vsync: this,
       duration: const Duration(milliseconds: 100),
     );
-    _scale = Tween<double>(
-      begin: 1.0,
-      end: 0.96,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _scale = Tween<double>(begin: 1.0, end: 0.96).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -507,9 +603,14 @@ class _GoogleButtonState extends State<_GoogleButton>
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// GOOGLE LOGO
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _GoogleLogo extends StatelessWidget {
   final double size;
   const _GoogleLogo({this.size = 24});
+
   @override
   Widget build(BuildContext context) => SizedBox(
         width: size,
@@ -532,11 +633,13 @@ class _GoogleLogoPainter extends CustomPainter {
     final cy = h / 2;
     final r = w / 2;
     final paint = Paint()..style = PaintingStyle.fill;
+
     paint.color = Colors.white;
     canvas.drawCircle(Offset(cx, cy), r, paint);
     canvas.clipPath(
       Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: r)),
     );
+
     final strokeW = w * 0.22;
     final innerR = r * 0.62;
     final arcRect = Rect.fromCircle(center: Offset(cx, cy), radius: innerR);
@@ -544,6 +647,7 @@ class _GoogleLogoPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeW
       ..strokeCap = StrokeCap.butt;
+
     arcPaint.color = _blue;
     canvas.drawArc(arcRect, -0.52, 1.74, false, arcPaint);
     arcPaint.color = _green;
@@ -552,6 +656,7 @@ class _GoogleLogoPainter extends CustomPainter {
     canvas.drawArc(arcRect, 2.27, 0.79, false, arcPaint);
     arcPaint.color = _red;
     canvas.drawArc(arcRect, 3.06, 1.14, false, arcPaint);
+
     paint.color = _blue;
     canvas.drawRect(
       Rect.fromLTWH(cx, cy - strokeW / 2, r * 0.88, strokeW),
