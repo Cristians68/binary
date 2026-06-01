@@ -802,10 +802,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                           final user = FirebaseAuth.instance.currentUser;
                           final cred = EmailAuthProvider.credential(
                             email: user!.email!,
-                            password: currentController.text.trim(),
+                            password: currentController.text,
                           );
                           await user.reauthenticateWithCredential(cred);
-                          await user.updatePassword(newController.text.trim());
+                          await user.updatePassword(newController.text);
                           if (ctx.mounted) Navigator.pop(ctx);
                         } on FirebaseAuthException catch (e) {
                           setModal(() {

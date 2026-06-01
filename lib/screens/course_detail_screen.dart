@@ -396,6 +396,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
               index: i,
               status: status,
               canAccess: canAccess,
+              hasPaidAccess: _hasPaidAccess,
               color: widget.color,
               theme: theme,
               onTap: () => _openModule(module, i),
@@ -485,21 +486,27 @@ class _FreeBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withValues(alpha: 0.20)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(CupertinoIcons.lock_open_fill, size: 13, color: color),
+          Icon(CupertinoIcons.gift_fill, size: 13, color: color),
           const SizedBox(width: 6),
-          Text(
-            'First module free — unlock all to continue',
-            style: TextStyle(
-                fontSize: 12, color: color, fontWeight: FontWeight.w500),
+          Flexible(
+            child: Text(
+              'Module 1 is free — try it now',
+              style: TextStyle(
+                fontSize: 12,
+                color: color,
+                fontWeight: FontWeight.w500,
+                letterSpacing: -0.1,
+              ),
+            ),
           ),
         ],
       ),
@@ -512,6 +519,7 @@ class _ModuleCard extends StatelessWidget {
   final int index;
   final String status;
   final bool canAccess;
+  final bool hasPaidAccess;
   final Color color;
   final ThemeNotifier theme;
   final VoidCallback onTap;
@@ -521,6 +529,7 @@ class _ModuleCard extends StatelessWidget {
     required this.index,
     required this.status,
     required this.canAccess,
+    required this.hasPaidAccess,
     required this.color,
     required this.theme,
     required this.onTap,
@@ -529,8 +538,12 @@ class _ModuleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = (module['title'] as String?) ?? 'Module ${index + 1}';
+    // Use Firestore subtitle (e.g. "6 flashcards · 6 questions") when available
+    final subtitle = (module['subtitle'] as String?);
     final isDone = status == 'done';
     final isLocked = !canAccess;
+    // Show FREE badge on the first module when user hasn't purchased
+    final showFreeBadge = index == 0 && !hasPaidAccess && !isDone;
 
     Color statusColor;
     IconData statusIcon;
@@ -556,10 +569,14 @@ class _ModuleCard extends StatelessWidget {
           border: Border.all(
             color: isDone
                 ? AppColors.green.withValues(alpha: 0.25)
-                : theme.border,
+                : isLocked
+                    ? theme.border
+                    : color.withValues(alpha: 0.25),
+            width: isLocked ? 1 : 1.5,
           ),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Number badge
             Container(
@@ -570,44 +587,130 @@ class _ModuleCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Center(
-                child: Text(
-                  '${index + 1}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: statusColor,
-                  ),
-                ),
+                child: isLocked
+                    ? Icon(CupertinoIcons.lock_fill,
+                        size: 14, color: statusColor)
+                    : Text(
+                        '${index + 1}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: statusColor,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(width: 14),
+            // Title + subtitle — takes all remaining width
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isLocked ? theme.subtext : theme.text,
-                      letterSpacing: -0.2,
-                    ),
+                  // Title row: title text + optional FREE badge
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: isLocked ? theme.subtext : theme.text,
+                            letterSpacing: -0.2,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                      if (showFreeBadge) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'FREE',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: color,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
-                    isDone
-                        ? 'Completed'
-                        : isLocked
-                            ? 'Locked — unlock to access'
-                            : 'Tap to start',
+                    subtitle != null && subtitle.isNotEmpty
+                        ? subtitle
+                        : isDone
+                            ? 'Completed'
+                            : isLocked
+                                ? 'Locked — unlock to access'
+                                : 'Tap to start',
                     style: TextStyle(fontSize: 12, color: statusColor),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Icon(statusIcon, size: 20, color: statusColor),
+            const SizedBox(width: 10),
+            // Right action area
+            if (showFreeBadge)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  'Try free',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    letterSpacing: -0.1,
+                  ),
+                ),
+              )
+            else if (isLocked)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: theme.isDark
+                      ? theme.surface
+                      : theme.border.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: theme.border),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(CupertinoIcons.lock_fill,
+                        size: 10, color: theme.subtext),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Unlock',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: theme.subtext,
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Icon(statusIcon, size: 20, color: statusColor),
           ],
         ),
       ),

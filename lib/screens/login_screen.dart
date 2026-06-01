@@ -48,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   void _login() async {
     final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
+    final password = _passwordController.text;
 
     if (email.isEmpty || password.isEmpty) {
       setState(() => _errorMessage = 'Please enter your email and password.');

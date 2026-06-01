@@ -556,17 +556,29 @@ class _QuizScreenState extends State<QuizScreen> {
                       color: widget.color,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Text(
-                      _currentQuestion < _questions.length - 1
-                          ? 'Next question →'
-                          : 'See results',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                        letterSpacing: -0.2,
-                      ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _currentQuestion < _questions.length - 1
+                              ? 'Next question'
+                              : 'See results',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Icon(
+                          _currentQuestion < _questions.length - 1
+                              ? Icons.arrow_forward_ios_rounded
+                              : Icons.emoji_events_rounded,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                      ],
                     ),
                   ),
                 ),

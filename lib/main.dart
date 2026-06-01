@@ -86,7 +86,7 @@ class _BinaryAppState extends State<BinaryApp> {
       builder: (context, _) {
         final isDark = _themeNotifier.isDark;
         return MaterialApp(
-          title: 'Binary',
+          title: 'B1nary Academy',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
             brightness: isDark ? Brightness.dark : Brightness.light,

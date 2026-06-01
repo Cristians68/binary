@@ -152,7 +152,7 @@ class _NavTab extends StatelessWidget {
         curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? _purple.withOpacity(0.12) : Colors.transparent,
+          color: active ? _purple.withValues(alpha: 0.12) : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
         ),
         child: Column(

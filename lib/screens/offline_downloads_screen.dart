@@ -199,10 +199,10 @@ class _OfflineDownloadsScreenState extends State<OfflineDownloadsScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: AppColors.green.withOpacity(0.10),
+                        color: AppColors.green.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                            color: AppColors.green.withOpacity(0.20)),
+                            color: AppColors.green.withValues(alpha: 0.20)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -241,9 +241,9 @@ class _OfflineDownloadsScreenState extends State<OfflineDownloadsScreen> {
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.green.withOpacity(0.08),
+                  color: AppColors.green.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.green.withOpacity(0.18)),
+                  border: Border.all(color: AppColors.green.withValues(alpha: 0.18)),
                 ),
                 child: Row(
                   children: [
@@ -292,12 +292,12 @@ class _OfflineDownloadsScreenState extends State<OfflineDownloadsScreen> {
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
                                 color: isDownloaded
-                                    ? AppColors.green.withOpacity(0.06)
+                                    ? AppColors.green.withValues(alpha: 0.06)
                                     : theme.surface,
                                 borderRadius: BorderRadius.circular(18),
                                 border: Border.all(
                                   color: isDownloaded
-                                      ? AppColors.green.withOpacity(0.2)
+                                      ? AppColors.green.withValues(alpha: 0.2)
                                       : theme.border,
                                 ),
                               ),
@@ -309,7 +309,7 @@ class _OfflineDownloadsScreenState extends State<OfflineDownloadsScreen> {
                                         width: 44,
                                         height: 44,
                                         decoration: BoxDecoration(
-                                          color: color.withOpacity(0.12),
+                                          color: color.withValues(alpha: 0.12),
                                           borderRadius:
                                               BorderRadius.circular(13),
                                         ),
@@ -372,12 +372,12 @@ class _OfflineDownloadsScreenState extends State<OfflineDownloadsScreen> {
                                                 horizontal: 10, vertical: 6),
                                             decoration: BoxDecoration(
                                               color: AppColors.red
-                                                  .withOpacity(0.08),
+                                                  .withValues(alpha: 0.08),
                                               borderRadius:
                                                   BorderRadius.circular(10),
                                               border: Border.all(
                                                   color: AppColors.red
-                                                      .withOpacity(0.2)),
+                                                      .withValues(alpha: 0.2)),
                                             ),
                                             child: const Text(
                                               'Remove',
@@ -397,12 +397,12 @@ class _OfflineDownloadsScreenState extends State<OfflineDownloadsScreen> {
                                                 horizontal: 10, vertical: 6),
                                             decoration: BoxDecoration(
                                               color: AppColors.green
-                                                  .withOpacity(0.12),
+                                                  .withValues(alpha: 0.12),
                                               borderRadius:
                                                   BorderRadius.circular(10),
                                               border: Border.all(
                                                   color: AppColors.green
-                                                      .withOpacity(0.2)),
+                                                      .withValues(alpha: 0.2)),
                                             ),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,

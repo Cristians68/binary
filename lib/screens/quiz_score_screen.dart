@@ -72,10 +72,10 @@ class QuizScoreScreen extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: AppColors.primary.withOpacity(0.2),
+                  color: AppColors.primary.withValues(alpha: 0.2),
                 ),
               ),
               child: Row(
@@ -124,7 +124,7 @@ class QuizScoreScreen extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Icon(
@@ -170,9 +170,9 @@ class QuizScoreScreen extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           margin: const EdgeInsets.only(bottom: 20),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.08),
+            color: AppColors.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
           ),
           child: Row(
             children: [
@@ -223,9 +223,9 @@ class QuizScoreScreen extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.06),
+              color: color.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: color.withOpacity(0.15)),
+              border: Border.all(color: color.withValues(alpha: 0.15)),
             ),
             child: Row(
               children: [
@@ -233,7 +233,7 @@ class QuizScoreScreen extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
+                    color: color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Center(

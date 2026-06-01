@@ -400,14 +400,21 @@ class _LessonScreenState extends State<LessonScreen> {
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(color: theme.border),
                           ),
-                          child: Text(
-                            '← Prev',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: theme.text,
-                              fontWeight: FontWeight.w500,
-                            ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.arrow_back_ios_new_rounded,
+                                  size: 13, color: theme.text),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Prev',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: theme.text,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -424,17 +431,29 @@ class _LessonScreenState extends State<LessonScreen> {
                           color: widget.color,
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: Text(
-                          _currentCard < _flashcards.length - 1
-                              ? 'Next →'
-                              : 'Start quiz →',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -0.2,
-                          ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _currentCard < _flashcards.length - 1
+                                  ? 'Next'
+                                  : 'Start Quiz',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Icon(
+                              _currentCard < _flashcards.length - 1
+                                  ? Icons.arrow_forward_ios_rounded
+                                  : Icons.quiz_rounded,
+                              size: 13,
+                              color: Colors.white,
+                            ),
+                          ],
                         ),
                       ),
                     ),

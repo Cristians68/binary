@@ -137,10 +137,10 @@ class _LockedScreen extends StatelessWidget {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: courseColor.withOpacity(0.10),
+                      color: courseColor.withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: courseColor.withOpacity(0.20),
+                        color: courseColor.withValues(alpha: 0.20),
                       ),
                     ),
                     child: Row(
@@ -173,7 +173,7 @@ class _LockedScreen extends StatelessWidget {
                 width: 88,
                 height: 88,
                 decoration: BoxDecoration(
-                  color: courseColor.withOpacity(0.12),
+                  color: courseColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: Icon(

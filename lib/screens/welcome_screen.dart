@@ -94,7 +94,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Google sign-in failed. Please try again.'),
-          backgroundColor: Colors.white.withOpacity(0.1),
+          backgroundColor: Colors.white.withValues(alpha: 0.1),
           behavior: SnackBarBehavior.floating,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -209,9 +209,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: f.$4.withOpacity(0.12),
+                    color: f.$4.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: f.$4.withOpacity(0.2)),
+                    border: Border.all(color: f.$4.withValues(alpha: 0.2)),
                   ),
                   child: Icon(f.$1, color: f.$4, size: 20),
                 ),
@@ -309,7 +309,7 @@ class _AppIcon extends StatelessWidget {
         borderRadius: BorderRadius.circular(size * 0.265),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.35),
+            color: AppColors.primary.withValues(alpha: 0.35),
             blurRadius: size * 0.28,
             offset: Offset(0, size * 0.10),
           ),
@@ -360,17 +360,17 @@ class _AppIconPainter extends CustomPainter {
 
     // "0" — left of centre (open ring)
     final ringPaint = Paint()
-      ..color = Colors.white.withOpacity(0.75)
+      ..color = Colors.white.withValues(alpha: 0.75)
       ..style = PaintingStyle.stroke
       ..strokeWidth = w * 0.042;
     canvas.drawCircle(Offset(centerX - spacing, dotY), dotR, ringPaint);
 
     // separator dot (·)
-    paint.color = Colors.white.withOpacity(0.45);
+    paint.color = Colors.white.withValues(alpha: 0.45);
     canvas.drawCircle(Offset(centerX, dotY), dotR * 0.38, paint);
 
     // "1" — right of centre (filled)
-    paint.color = Colors.white.withOpacity(0.75);
+    paint.color = Colors.white.withValues(alpha: 0.75);
     canvas.drawCircle(Offset(centerX + spacing, dotY), dotR, paint);
   }
 
