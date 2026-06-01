@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
@@ -106,6 +107,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);
+    final isWide = kIsWeb &&
+        MediaQuery.of(context).size.width >= 720;
+
     return Scaffold(
       backgroundColor: theme.bg,
       body: SafeArea(
@@ -113,23 +117,144 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           opacity: _fade,
           child: SlideTransition(
             position: _slide,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Spacer(flex: 2),
-                  _buildLogo(theme),
-                  const SizedBox(height: 48),
-                  _buildFeatures(theme),
-                  const Spacer(flex: 3),
-                  _buildButtons(theme),
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
+            child: isWide
+                ? _buildWideLayout(theme)
+                : _buildNarrowLayout(theme),
           ),
         ),
+      ),
+    );
+  }
+
+  // ── Desktop two-column landing layout ──────────────────────────────────────
+
+  Widget _buildWideLayout(ThemeNotifier theme) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1100),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 48),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Left — hero + buttons
+              Expanded(
+                flex: 5,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const _AppIcon(size: 64),
+                    const SizedBox(height: 28),
+                    Text(
+                      'Binary.',
+                      style: TextStyle(
+                        fontSize: 72,
+                        fontWeight: FontWeight.w700,
+                        color: theme.text,
+                        letterSpacing: -3.5,
+                        height: 1.0,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Master IT. Get certified.',
+                      style: TextStyle(
+                        fontSize: 22,
+                        color: theme.subtext,
+                        letterSpacing: -0.4,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    const SizedBox(height: 48),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 380),
+                      child: _buildButtons(theme),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 80),
+              // Right — feature list in a card
+              Expanded(
+                flex: 4,
+                child: Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: theme.surface,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: theme.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Everything you need to pass',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: theme.text,
+                          letterSpacing: -0.4,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      _buildFeatures(theme),
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.07),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.15)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(CupertinoIcons.checkmark_seal_fill,
+                                size: 16, color: AppColors.primary),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'ITIL V4 · CSM · CompTIA Security+ · Networking · Cloud',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Mobile single-column layout (unchanged) ─────────────────────────────────
+
+  Widget _buildNarrowLayout(ThemeNotifier theme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Spacer(flex: 2),
+          _buildLogo(theme),
+          const SizedBox(height: 48),
+          _buildFeatures(theme),
+          const Spacer(flex: 3),
+          _buildButtons(theme),
+          const SizedBox(height: 32),
+        ],
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
@@ -127,6 +128,12 @@ class _CoursesScreenState extends State<CoursesScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWide = kIsWeb && screenWidth >= 720;
+    // On desktop we show 2 columns; on very wide screens, 3
+    final crossAxisCount = isWide
+        ? (screenWidth >= 1200 ? 3 : 2)
+        : 1;
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -134,26 +141,38 @@ class _CoursesScreenState extends State<CoursesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Courses',
-                    style: TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w700,
-                      color: theme.text,
-                      letterSpacing: -1.0,
-                    ),
+            Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isWide ? 1100 : double.infinity,
+                ),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    isWide ? 32 : 20,
+                    isWide ? 28 : 20,
+                    isWide ? 32 : 20,
+                    8,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Enroll in courses to add them to your home screen.',
-                    style: TextStyle(fontSize: 13, color: theme.subtext),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Courses',
+                        style: TextStyle(
+                          fontSize: isWide ? 36 : 30,
+                          fontWeight: FontWeight.w700,
+                          color: theme.text,
+                          letterSpacing: -1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Enroll in courses to add them to your home screen.',
+                        style: TextStyle(fontSize: 13, color: theme.subtext),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
             Expanded(
@@ -162,46 +181,72 @@ class _CoursesScreenState extends State<CoursesScreen> {
                       child: CircularProgressIndicator(
                           color: AppColors.primary, strokeWidth: 2),
                     )
-                  : ListView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
-                      itemCount: _courses.length,
-                      itemBuilder: (context, i) {
-                        final course = _courses[i];
-                        final id = course['id'] as String;
-                        final color = Color(course['color'] ?? 0xFF6366F1);
-                        final isEnrolled = _enrolledIds.contains(id);
-
-                        return _AnimatedCourseCard(
-                          delay: Duration(milliseconds: 50 * i),
-                          child: _buildCourseCard(
-                            course: course,
-                            color: color,
-                            isEnrolled: isEnrolled,
-                            theme: theme,
-                            onEnroll: () => _toggleEnrollment(id),
-                            onTap: () {
-                              HapticFeedback.selectionClick();
-                              Navigator.push(
-                                context,
-                                AppRouter.push(CourseDetailScreen(
-                                  courseId: id,
-                                  title: course['title'] ?? '',
-                                  subtitle: course['subtitle'] ?? '',
-                                  progress:
-                                      (course['progress'] ?? 0.0).toDouble(),
-                                  color: color,
-                                  tag: course['tag'] ?? '',
-                                )),
-                              );
-                            },
-                          ),
-                        );
-                      },
+                  : Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: isWide ? 1100 : double.infinity,
+                        ),
+                        child: crossAxisCount == 1
+                            ? ListView.builder(
+                                physics: const BouncingScrollPhysics(),
+                                padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+                                itemCount: _courses.length,
+                                itemBuilder: (context, i) =>
+                                    _buildAnimatedCard(context, i, theme),
+                              )
+                            : GridView.builder(
+                                physics: const BouncingScrollPhysics(),
+                                padding: EdgeInsets.fromLTRB(
+                                    isWide ? 32 : 20, 16,
+                                    isWide ? 32 : 20, 40),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: crossAxisCount,
+                                  crossAxisSpacing: 16,
+                                  mainAxisSpacing: 16,
+                                  childAspectRatio: 1.65,
+                                ),
+                                itemCount: _courses.length,
+                                itemBuilder: (context, i) =>
+                                    _buildAnimatedCard(context, i, theme),
+                              ),
+                      ),
                     ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedCard(BuildContext context, int i, ThemeNotifier theme) {
+    final course = _courses[i];
+    final id = course['id'] as String;
+    final color = Color(course['color'] ?? 0xFF6366F1);
+    final isEnrolled = _enrolledIds.contains(id);
+
+    return _AnimatedCourseCard(
+      delay: Duration(milliseconds: 40 * i),
+      child: _buildCourseCard(
+        course: course,
+        color: color,
+        isEnrolled: isEnrolled,
+        theme: theme,
+        onEnroll: () => _toggleEnrollment(id),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          Navigator.push(
+            context,
+            AppRouter.push(CourseDetailScreen(
+              courseId: id,
+              title: course['title'] ?? '',
+              subtitle: course['subtitle'] ?? '',
+              progress: (course['progress'] ?? 0.0).toDouble(),
+              color: color,
+              tag: course['tag'] ?? '',
+            )),
+          );
+        },
       ),
     );
   }

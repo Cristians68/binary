@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
@@ -285,31 +286,56 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);
+    final isWide = kIsWeb &&
+        MediaQuery.of(context).size.width >= 720;
 
     return Scaffold(
       backgroundColor: theme.bg,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(theme),
-              const SizedBox(height: 20),
-              _buildStreakCard(theme),
-              const SizedBox(height: 20),
-              _buildDailyGoal(theme),
-              const SizedBox(height: 28),
-              _buildSectionTitle('My courses', theme),
-              const SizedBox(height: 12),
-              _buildEnrolledCourses(theme),
-              const SizedBox(height: 28),
-              _buildSectionTitle('Stats', theme),
-              const SizedBox(height: 12),
-              _buildStatsRow(theme),
-              const SizedBox(height: 20),
-            ],
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isWide ? 900 : double.infinity,
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(isWide ? 32 : 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(theme),
+                    SizedBox(height: isWide ? 28 : 20),
+                    // Streak + daily goal: side-by-side on desktop
+                    if (isWide)
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(child: _buildStreakCard(theme)),
+                            const SizedBox(width: 16),
+                            Expanded(child: _buildDailyGoal(theme)),
+                          ],
+                        ),
+                      )
+                    else ...[
+                      _buildStreakCard(theme),
+                      const SizedBox(height: 16),
+                      _buildDailyGoal(theme),
+                    ],
+                    SizedBox(height: isWide ? 36 : 28),
+                    _buildSectionTitle('My courses', theme),
+                    const SizedBox(height: 12),
+                    _buildEnrolledCourses(theme, isWide: isWide),
+                    SizedBox(height: isWide ? 36 : 28),
+                    _buildSectionTitle('Stats', theme),
+                    const SizedBox(height: 12),
+                    _buildStatsRow(theme),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -518,7 +544,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildEnrolledCourses(ThemeNotifier theme) {
+  Widget _buildEnrolledCourses(ThemeNotifier theme, {bool isWide = false}) {
     if (_loadingCourses) {
       return Center(
         child: Padding(
@@ -557,6 +583,23 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    // Desktop: 2-column grid
+    if (isWide && _enrolledCourses.length > 1) {
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 2.6,
+        ),
+        itemCount: _enrolledCourses.length,
+        itemBuilder: (_, i) => _buildCourseCard(_enrolledCourses[i], theme),
+      );
+    }
+
+    // Mobile: single column
     return Column(
       children: _enrolledCourses.map((c) {
         return Padding(
