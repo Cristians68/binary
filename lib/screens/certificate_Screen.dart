@@ -43,22 +43,19 @@ class _CertificateScreenState extends State<CertificateScreen>
     return 'Student';
   }
 
+  static const _months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+
   String get _completionDate {
     final now = DateTime.now();
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ];
-    return '${months[now.month - 1]} ${now.day}, ${now.year}';
+    return '${_months[now.month - 1]} ${now.day}, ${now.year}';
   }
 
   String get _completionMonthYear {
     final now = DateTime.now();
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ];
-    return '${months[now.month - 1]} ${now.year}';
+    return '${_months[now.month - 1]} ${now.year}';
   }
 
   int get _issueMonth => DateTime.now().month;
@@ -164,10 +161,10 @@ Prepare for your IT certifications at binaryacademy.app
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.10),
+                        color: color.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(20),
                         border:
-                            Border.all(color: color.withOpacity(0.20)),
+                            Border.all(color: color.withValues(alpha: 0.20)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -271,7 +268,7 @@ Prepare for your IT certifications at binaryacademy.app
                                       colors: [
                                         const Color(0xFF1a1a2e),
                                         const Color(0xFF16213e),
-                                        color.withOpacity(0.4),
+                                        color.withValues(alpha: 0.4),
                                       ],
                                     ),
                                   ),
@@ -314,7 +311,7 @@ Prepare for your IT certifications at binaryacademy.app
                                               Text('binaryacademy.app',
                                                   style: TextStyle(
                                                       color: Colors.white
-                                                          .withOpacity(0.4),
+                                                          .withValues(alpha: 0.4),
                                                       fontSize: 11)),
                                             ],
                                           ),
@@ -329,10 +326,10 @@ Prepare for your IT certifications at binaryacademy.app
                                             width: 52,
                                             height: 52,
                                             decoration: BoxDecoration(
-                                              color: color.withOpacity(0.2),
+                                              color: color.withValues(alpha: 0.2),
                                               border: Border.all(
                                                   color:
-                                                      color.withOpacity(0.5),
+                                                      color.withValues(alpha: 0.5),
                                                   width: 2),
                                               shape: BoxShape.circle,
                                             ),
@@ -352,7 +349,7 @@ Prepare for your IT certifications at binaryacademy.app
                                                     'CERTIFICATE OF COMPLETION',
                                                     style: TextStyle(
                                                         color: Colors.white
-                                                            .withOpacity(0.5),
+                                                            .withValues(alpha: 0.5),
                                                         fontSize: 9,
                                                         fontWeight:
                                                             FontWeight.w700,
@@ -406,12 +403,12 @@ Prepare for your IT certifications at binaryacademy.app
                                         width: double.infinity,
                                         padding: const EdgeInsets.all(14),
                                         decoration: BoxDecoration(
-                                          color: color.withOpacity(0.08),
+                                          color: color.withValues(alpha: 0.08),
                                           borderRadius:
                                               BorderRadius.circular(14),
                                           border: Border.all(
                                               color:
-                                                  color.withOpacity(0.2)),
+                                                  color.withValues(alpha: 0.2)),
                                         ),
                                         child: Column(
                                           crossAxisAlignment:
@@ -490,10 +487,10 @@ Prepare for your IT certifications at binaryacademy.app
                                                     vertical: 6),
                                             decoration: BoxDecoration(
                                               color: AppColors.green
-                                                  .withOpacity(0.1),
+                                                  .withValues(alpha: 0.1),
                                               border: Border.all(
                                                   color: AppColors.green
-                                                      .withOpacity(0.25)),
+                                                      .withValues(alpha: 0.25)),
                                               borderRadius:
                                                   BorderRadius.circular(8),
                                             ),

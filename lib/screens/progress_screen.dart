@@ -385,6 +385,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                 onTap: () => Navigator.push(
                   context,
                   AppRouter.push(CourseDetailScreen(
+                    courseId: courseId,
                     title: course['title'] ?? '',
                     subtitle: course['subtitle'] ?? '',
                     progress: progress,

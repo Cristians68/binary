@@ -298,7 +298,7 @@ class StreakService {
         'courseId': courseId,
         'moduleId': moduleId,
         'title': moduleTitle,
-        'completedAt': Timestamp.fromDate(DateTime.now()),
+        'completedAt': Timestamp.now(),
       };
 
       await _safeUpdate(doc, {
@@ -460,7 +460,7 @@ class StreakService {
     if (doc == null) return;
     debugPrint('Awarding badge: $badgeId');
     await _safeUpdate(doc, {
-      'badges.$badgeId': Timestamp.fromDate(DateTime.now()),
+      'badges.$badgeId': Timestamp.now(),
     });
   }
 

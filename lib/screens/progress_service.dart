@@ -26,7 +26,7 @@ class ProgressService {
     // 1. Mark this module as done for THIS user
     await userModuleRef.set({
       'status': 'done',
-      'completedAt': Timestamp.fromDate(DateTime.now()),
+      'completedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
     // 2. Count total modules from the shared courses collection (read-only)
@@ -49,7 +49,7 @@ class ProgressService {
       'progress': progress,
       'doneModules': doneModules,
       'totalModules': totalModules,
-      'lastUpdated': Timestamp.fromDate(DateTime.now()),
+      'lastUpdated': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
     // 5. Unlock the next module in the shared courses collection
@@ -72,8 +72,11 @@ class ProgressService {
       }
     }
 
-    // 6. Record completed lesson and quiz score in user doc
-    final now = Timestamp.fromDate(DateTime.now());
+    // 6. Record completed lesson and quiz score in user doc.
+    // serverTimestamp() inside arrayUnion is not supported by Firestore —
+    // use Timestamp.now() for array entries (client time is acceptable here
+    // since these are display timestamps, not security-critical audit fields).
+    final now = Timestamp.now();
 
     await userRef.set({
       'completedLessons': FieldValue.arrayUnion([
@@ -84,7 +87,7 @@ class ProgressService {
           'moduleTitle': moduleTitle,
           'score': score,
           'total': total,
-          'percent': ((score / total) * 100).toInt(),
+          'percent': total > 0 ? ((score / total) * 100).toInt() : 0,
           'completedAt': now,
         },
       ]),
@@ -98,7 +101,7 @@ class ProgressService {
           'moduleId': moduleId,
           'quizTitle': moduleTitle,
           'course': courseTag,
-          'score': ((score / total) * 100).toInt(),
+          'score': total > 0 ? ((score / total) * 100).toInt() : 0,
           'takenAt': now,
         },
       ]),
@@ -190,19 +193,19 @@ class ProgressService {
     // Mark complete in user's progress sub-collection
     await userProgressRef.set({
       'completed': true,
-      'completedAt': Timestamp.fromDate(DateTime.now()),
+      'completedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
     // Award badge in user doc
     final badgeKey = 'badges.complete_$courseId';
     try {
       await userRef.update({
-        badgeKey: Timestamp.fromDate(DateTime.now()),
+        badgeKey: FieldValue.serverTimestamp(),
         'completedCourses': FieldValue.arrayUnion([courseId]),
       });
     } catch (_) {
       await userRef.set({
-        'badges': {'complete_$courseId': Timestamp.fromDate(DateTime.now())},
+        'badges': {'complete_$courseId': Timestamp.now()},
         'completedCourses': FieldValue.arrayUnion([courseId]),
       }, SetOptions(merge: true));
     }
@@ -248,6 +251,7 @@ class ProgressService {
           'streak.lastLogin': Timestamp.fromDate(now),
         });
       } catch (_) {
+        // Document may not exist yet — use nested map (NOT dot-notation with set)
         await userRef.set({
           'streak': {
             'current': current,

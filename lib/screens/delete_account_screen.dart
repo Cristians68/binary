@@ -32,28 +32,25 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
     super.dispose();
   }
 
-  /// Deletes all sub-collections under users/{uid} before deleting the doc
+  /// Deletes all sub-collections under users/{uid} then the document itself.
+  /// Throws if any deletion fails so the caller can surface the error.
   Future<void> _deleteUserData(String uid) async {
     final userRef =
         FirebaseFirestore.instance.collection('users').doc(uid);
 
-    // Delete progress sub-collection
-    try {
-      final progressSnap = await userRef.collection('progress').get();
-      for (final doc in progressSnap.docs) {
-        // Delete modules sub-sub-collection inside each progress doc
-        final modulesSnap = await doc.reference.collection('modules').get();
-        for (final mod in modulesSnap.docs) {
-          await mod.reference.delete();
-        }
-        await doc.reference.delete();
+    // Delete progress/{courseId}/modules/* sub-sub-collection first
+    final progressSnap = await userRef.collection('progress').get();
+    for (final courseDoc in progressSnap.docs) {
+      final modulesSnap =
+          await courseDoc.reference.collection('modules').get();
+      for (final mod in modulesSnap.docs) {
+        await mod.reference.delete();
       }
-    } catch (_) {}
+      await courseDoc.reference.delete();
+    }
 
-    // Delete top-level user document
-    try {
-      await userRef.delete();
-    } catch (_) {}
+    // Delete the top-level user document (includes FCM token, name, goal, etc.)
+    await userRef.delete();
   }
 
   Future<void> _deleteAccount() async {
@@ -111,7 +108,8 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
         );
         await user.reauthenticateWithCredential(credential);
       } else {
-        final password = _passwordController.text.trim();
+        // Never trim passwords — spaces may be intentional
+        final password = _passwordController.text;
         if (password.isEmpty) {
           setState(() {
             _error = 'Please enter your password to confirm.';
@@ -123,6 +121,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
           email: user.email ?? '',
           password: password,
         );
+        _passwordController.clear();
         await user.reauthenticateWithCredential(credential);
       }
 

@@ -28,13 +28,17 @@ class _SignupScreenState extends State<SignupScreen>
   late Animation<double> _fade;
   late Animation<Offset> _slide;
 
-  final List<String> _goals = [
+  static const List<String> _goals = [
     'ITIL V4 Foundation',
     'CSM Certification',
     'Networking Basics',
     'CompTIA Security+',
     'Just exploring',
   ];
+
+  static final _emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+  static final _uppercaseRegex = RegExp(r'[A-Z]');
+  static final _digitRegex = RegExp(r'[0-9]');
 
   @override
   void initState() {
@@ -60,14 +64,36 @@ class _SignupScreenState extends State<SignupScreen>
   void _signup() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
+    // Never trim passwords — spaces may be intentional
+    final password = _passwordController.text;
+    final goal = _selectedGoal;
 
     if (name.isEmpty || email.isEmpty || password.isEmpty) {
       setState(() => _errorMessage = 'Please fill in all fields.');
       return;
     }
-    if (password.length < 6) {
-      setState(() => _errorMessage = 'Password must be at least 6 characters.');
+
+    if (!_emailRegex.hasMatch(email)) {
+      setState(() => _errorMessage = 'Please enter a valid email address.');
+      return;
+    }
+
+    if (password.length < 8) {
+      setState(() =>
+          _errorMessage = 'Password must be at least 8 characters.');
+      return;
+    }
+
+    if (!_uppercaseRegex.hasMatch(password) ||
+        !_digitRegex.hasMatch(password)) {
+      setState(() => _errorMessage =
+          'Password must contain at least one uppercase letter and one number.');
+      return;
+    }
+
+    // Ensure goal is from the known whitelist (guards against bypassed UI)
+    if (!_goals.contains(goal)) {
+      setState(() => _errorMessage = 'Please select a valid learning goal.');
       return;
     }
 
@@ -77,24 +103,26 @@ class _SignupScreenState extends State<SignupScreen>
     });
 
     try {
-      // Create the Firebase Auth account
       final credential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
 
-      // Set display name
       await credential.user?.updateDisplayName(name);
 
-      // Save user profile to Firestore
+      // Email is already stored in Firebase Auth — no need to duplicate it in
+      // Firestore. Storing it there would create a second copy of PII that must
+      // be kept in sync and deleted independently on account deletion.
       await FirebaseFirestore.instance
           .collection('users')
           .doc(credential.user!.uid)
           .set({
         'name': name,
-        'email': email,
-        'goal': _selectedGoal,
+        'goal': goal,
         'createdAt': FieldValue.serverTimestamp(),
         'enrolments': {},
       }, SetOptions(merge: true));
+
+      // Clear sensitive credential from memory immediately after use
+      _passwordController.clear();
 
       if (mounted) {
         Navigator.pushAndRemoveUntil(
@@ -104,14 +132,18 @@ class _SignupScreenState extends State<SignupScreen>
         );
       }
     } on FirebaseAuthException catch (e) {
+      _passwordController.clear();
       setState(() {
-        _errorMessage = e.code == 'email-already-in-use'
-            ? 'An account already exists with this email.'
-            : e.code == 'invalid-email'
-                ? 'Please enter a valid email address.'
-                : e.code == 'weak-password'
-                    ? 'Password is too weak. Use at least 6 characters.'
-                    : 'Something went wrong. Please try again.';
+        _errorMessage = switch (e.code) {
+          'email-already-in-use' =>
+            'An account already exists with this email.',
+          'invalid-email' => 'Please enter a valid email address.',
+          'weak-password' =>
+            'Password too weak — use 8+ characters with uppercase and a number.',
+          'operation-not-allowed' =>
+            'Email sign-up is unavailable. Contact support.',
+          _ => 'Something went wrong. Please try again.',
+        };
       });
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -162,12 +194,14 @@ class _SignupScreenState extends State<SignupScreen>
                   _buildLabel('Full name', theme),
                   const SizedBox(height: 8),
                   _buildTextField(_nameController, 'John Doe', false,
-                      CupertinoIcons.person, theme),
+                      CupertinoIcons.person, theme,
+                      keyboardType: TextInputType.name),
                   const SizedBox(height: 16),
                   _buildLabel('Email address', theme),
                   const SizedBox(height: 8),
                   _buildTextField(_emailController, 'you@example.com', false,
-                      CupertinoIcons.mail, theme),
+                      CupertinoIcons.mail, theme,
+                      keyboardType: TextInputType.emailAddress),
                   const SizedBox(height: 16),
                   _buildLabel('Password', theme),
                   const SizedBox(height: 8),
@@ -297,8 +331,14 @@ class _SignupScreenState extends State<SignupScreen>
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hint,
-      bool isPassword, IconData icon, ThemeNotifier theme) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String hint,
+    bool isPassword,
+    IconData icon,
+    ThemeNotifier theme, {
+    TextInputType keyboardType = TextInputType.text,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: theme.surface,
@@ -308,9 +348,7 @@ class _SignupScreenState extends State<SignupScreen>
       child: TextField(
         controller: controller,
         obscureText: isPassword ? _obscurePassword : false,
-        keyboardType: isPassword
-            ? TextInputType.visiblePassword
-            : TextInputType.emailAddress,
+        keyboardType: isPassword ? TextInputType.visiblePassword : keyboardType,
         style: TextStyle(
             color: theme.text, fontSize: 15, letterSpacing: -0.2),
         decoration: InputDecoration(

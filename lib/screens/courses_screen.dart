@@ -82,11 +82,13 @@ class _CoursesScreenState extends State<CoursesScreen> {
           .doc(uid)
           .update({'enrolments.$courseId': !isEnrolled});
     } catch (_) {
-      // Document may not exist yet — use set with merge
+      // Document may not exist yet — create it, then use dot-notation update.
+      // Note: set() does NOT expand dot-notation into nested paths; only
+      // update() does. Use mergeFields with FieldPath for nested-safe merge.
       try {
         await FirebaseFirestore.instance.collection('users').doc(uid).set(
-          {'enrolments.$courseId': !isEnrolled},
-          SetOptions(merge: true),
+          {'enrolments': {courseId: !isEnrolled}},
+          SetOptions(mergeFields: [FieldPath(['enrolments', courseId])]),
         );
       } catch (_) {
         // Revert optimistic update on failure
@@ -183,6 +185,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                               Navigator.push(
                                 context,
                                 AppRouter.push(CourseDetailScreen(
+                                  courseId: id,
                                   title: course['title'] ?? '',
                                   subtitle: course['subtitle'] ?? '',
                                   progress:

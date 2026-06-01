@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
@@ -40,11 +41,20 @@ class _HomeScreenState extends State<HomeScreen> {
   int _dailyPoints = 0;
   int _dailyTarget = 50;
 
+  StreamSubscription<Map<String, dynamic>>? _statsSub;
+
   @override
   void initState() {
     super.initState();
     _initStreak();
     _loadEnrolledCourses();
+    _statsSub = StreakService.statsStream().listen(_onStatsUpdate);
+  }
+
+  @override
+  void dispose() {
+    _statsSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _initStreak() async {
@@ -145,6 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       AppRouter.push(
         CourseDetailScreen(
+          courseId: (course['id'] as String?) ?? '',
           title: course['title'] ?? '',
           subtitle: course['subtitle'] ?? '',
           progress: (course['progress'] ?? 0.0).toDouble(),
@@ -277,40 +288,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: theme.bg,
-      body: StreamBuilder<Map<String, dynamic>>(
-        stream: StreakService.statsStream(),
-        builder: (context, snap) {
-          if (snap.hasData) {
-            WidgetsBinding.instance.addPostFrameCallback(
-              (_) => _onStatsUpdate(snap.data!),
-            );
-          }
-          return SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(theme),
-                  const SizedBox(height: 20),
-                  _buildStreakCard(theme),
-                  const SizedBox(height: 20),
-                  _buildDailyGoal(theme),
-                  const SizedBox(height: 28),
-                  _buildSectionTitle('My courses', theme),
-                  const SizedBox(height: 12),
-                  _buildEnrolledCourses(theme),
-                  const SizedBox(height: 28),
-                  _buildSectionTitle('Stats', theme),
-                  const SizedBox(height: 12),
-                  _buildStatsRow(theme),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-          );
-        },
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(theme),
+              const SizedBox(height: 20),
+              _buildStreakCard(theme),
+              const SizedBox(height: 20),
+              _buildDailyGoal(theme),
+              const SizedBox(height: 28),
+              _buildSectionTitle('My courses', theme),
+              const SizedBox(height: 12),
+              _buildEnrolledCourses(theme),
+              const SizedBox(height: 28),
+              _buildSectionTitle('Stats', theme),
+              const SizedBox(height: 12),
+              _buildStatsRow(theme),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
       ),
     );
   }

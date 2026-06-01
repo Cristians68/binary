@@ -1,15 +1,18 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'lesson_screen.dart';
-import 'paywall_screen.dart';
-import 'offline_service.dart';
 import 'subscription_service.dart';
+import 'progress_service.dart';
+import 'paywall_screen.dart';
+import 'app_router.dart';
 import 'app_theme.dart';
 
 class CourseDetailScreen extends StatefulWidget {
+  final String courseId;
   final String title;
   final String subtitle;
   final double progress;
@@ -18,6 +21,7 @@ class CourseDetailScreen extends StatefulWidget {
 
   const CourseDetailScreen({
     super.key,
+    required this.courseId,
     required this.title,
     required this.subtitle,
     required this.progress,
@@ -31,321 +35,160 @@ class CourseDetailScreen extends StatefulWidget {
 
 class _CourseDetailScreenState extends State<CourseDetailScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _headerController;
+  // ── Animations ──────────────────────────────────────────────────────────────
+  late AnimationController _animController;
   late Animation<double> _headerFade;
   late Animation<Offset> _headerSlide;
 
+  // ── State ────────────────────────────────────────────────────────────────────
   List<Map<String, dynamic>> _modules = [];
+  Map<String, String> _userModuleStatus = {};
   bool _loading = true;
-  bool _isDownloaded = false;
-  bool _isDownloading = false;
-  double _downloadProgress = 0;
   bool _hasPaidAccess = false;
 
   @override
   void initState() {
     super.initState();
-    _headerController = AnimationController(
+    _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 500),
     );
-    _headerFade = CurvedAnimation(
-      parent: _headerController,
-      curve: Curves.easeOut,
-    );
+    _headerFade =
+        CurvedAnimation(parent: _animController, curve: Curves.easeOut);
     _headerSlide =
-        Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(
-      CurvedAnimation(parent: _headerController, curve: Curves.easeOutCubic),
+        Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
     );
-    _headerController.forward();
-    _loadModules();
-    _checkDownloadStatus();
+    _animController.forward();
+    _load();
   }
 
   @override
   void dispose() {
-    _headerController.dispose();
+    _animController.dispose();
     super.dispose();
   }
 
-  String get _courseId {
-    switch (widget.tag) {
-      case 'ITIL V4':
-        return 'itil-v4';
-      case 'CSM':
-        return 'csm';
-      case 'Networking':
-        return 'networking';
-      default:
-        return widget.tag.toLowerCase().replaceAll(' ', '-');
-    }
-  }
-
-  Future<void> _checkDownloadStatus() async {
-    final downloaded = await OfflineService.isCourseDownloaded(_courseId);
-    if (mounted) setState(() => _isDownloaded = downloaded);
-  }
-
-  Future<void> _toggleDownload() async {
-    if (_isDownloading) return;
-    HapticFeedback.mediumImpact();
-
-    if (_isDownloaded) {
-      final confirmed = await showCupertinoDialog<bool>(
-        context: context,
-        builder: (_) => CupertinoAlertDialog(
-          title: const Text('Remove download?'),
-          content: Text(
-              'This will remove the offline content for ${widget.title}.'),
-          actions: [
-            CupertinoDialogAction(
-              isDestructiveAction: true,
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Remove'),
-            ),
-            CupertinoDialogAction(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-          ],
-        ),
-      );
-      if (confirmed != true) return;
-      await OfflineService.deleteCourse(
-        courseId: _courseId,
-        moduleIds: _modules.map((m) => m['id'] as String).toList(),
-      );
-      if (mounted) setState(() => _isDownloaded = false);
-      return;
-    }
-
-    setState(() {
-      _isDownloading = true;
-      _downloadProgress = 0;
-    });
-
-    await OfflineService.downloadCourse(
-      courseId: _courseId,
-      modules: _modules,
-      onProgress: (done, total) {
-        if (mounted) setState(() => _downloadProgress = done / total);
-      },
-    );
-
-    if (mounted) {
-      setState(() {
-        _isDownloading = false;
-        _isDownloaded = true;
-      });
-      HapticFeedback.heavyImpact();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${widget.title} downloaded for offline use.'),
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
+  // ── Data loading ─────────────────────────────────────────────────────────────
+  Future<void> _load() async {
+    await Future.wait([_loadModules(), _checkAccess()]);
+    if (mounted) setState(() => _loading = false);
   }
 
   Future<void> _loadModules() async {
     try {
-      _hasPaidAccess = await SubscriptionService.canAccessCourse(_courseId);
+      final uid = FirebaseAuth.instance.currentUser?.uid;
 
-      final snapshot = await FirebaseFirestore.instance
+      // Load shared module list from courses collection
+      final modulesSnap = await FirebaseFirestore.instance
           .collection('courses')
-          .doc(_courseId)
+          .doc(widget.courseId)
           .collection('modules')
           .orderBy('order')
           .get();
 
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      Map<String, String> userModuleStatus = {};
-      if (uid != null) {
-        final userModulesSnap = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .collection('progress')
-            .doc(_courseId)
-            .collection('modules')
-            .get();
-        userModuleStatus = {
-          for (final d in userModulesSnap.docs)
-            d.id: (d.data()['status'] as String? ?? 'locked')
-        };
-      }
+      final modules = modulesSnap.docs
+          .map((d) => {'id': d.id, ...d.data()})
+          .toList();
 
-      final modules = snapshot.docs.asMap().entries.map((entry) {
-        final index = entry.key;
-        final doc = entry.value;
-        final data = doc.data();
-        final status = _resolveStatus(
-          moduleId: doc.id,
-          index: index,
-          userProgress: userModuleStatus,
-        );
-        return {
-          'id': doc.id,
-          'title': data['title'] ?? '',
-          'sub': data['subtitle'] ?? '',
-          'status': status,
-          'order': data['order'] ?? 0,
-        };
-      }).toList();
+      // Load per-user module completion status
+      Map<String, String> userStatus = {};
+      if (uid != null) {
+        try {
+          final userModulesSnap = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .collection('progress')
+              .doc(widget.courseId)
+              .collection('modules')
+              .get();
+          for (final doc in userModulesSnap.docs) {
+            final data = doc.data();
+            userStatus[doc.id] = (data['status'] as String?) ?? 'locked';
+          }
+        } catch (_) {}
+      }
 
       if (mounted) {
         setState(() {
-          _modules = modules.isNotEmpty
-              ? modules
-              : _applyAccessGateToHardcoded(_getHardcodedModules(widget.tag));
-          _loading = false;
+          _modules = modules;
+          _userModuleStatus = userStatus;
         });
       }
     } catch (_) {
-      if (mounted) {
-        setState(() {
-          _modules =
-              _applyAccessGateToHardcoded(_getHardcodedModules(widget.tag));
-          _loading = false;
-        });
-      }
+      if (mounted) setState(() => _modules = []);
     }
   }
 
-  String _resolveStatus({
-    required String moduleId,
-    required int index,
-    required Map<String, String> userProgress,
-  }) {
-    final isFirstModule = moduleId == 'module-01' || index == 0;
-    final recordedStatus = userProgress[moduleId];
-    final canAccess = isFirstModule || _hasPaidAccess;
+  Future<void> _checkAccess() async {
+    try {
+      final hasAccess =
+          await SubscriptionService.canAccessCourse(widget.courseId);
+      if (mounted) setState(() => _hasPaidAccess = hasAccess);
+    } catch (_) {}
+  }
 
-    if (recordedStatus == 'done' && canAccess) return 'done';
-    if (recordedStatus == 'active' && canAccess) return 'active';
-
-    if (canAccess) {
-      return isFirstModule ? 'active' : (recordedStatus ?? 'locked');
+  // ── Module status helpers ─────────────────────────────────────────────────────
+  String _moduleStatus(Map<String, dynamic> module) {
+    final moduleId = module['id'] as String;
+    // If we have a user-specific status, use that
+    if (_userModuleStatus.containsKey(moduleId)) {
+      return _userModuleStatus[moduleId]!;
     }
-    return 'locked';
+    // Fall back to the shared module status
+    return (module['status'] as String?) ?? 'locked';
   }
 
-  List<Map<String, dynamic>> _applyAccessGateToHardcoded(
-      List<Map<String, dynamic>> modules) {
-    return modules.asMap().entries.map((entry) {
-      final index = entry.key;
-      final m = Map<String, dynamic>.from(entry.value);
-      final id = m['id'] as String;
-      final isFirstModule = id == 'module-01' || index == 0;
-      if (isFirstModule) {
-        m['status'] = 'active';
-      } else if (!_hasPaidAccess) {
-        m['status'] = 'locked';
-      }
-      return m;
-    }).toList();
+  bool _isFirstUnlocked(int index) {
+    // The first module is always accessible regardless of purchase
+    return index == 0;
   }
 
-  Future<void> _openPaywall() async {
-    HapticFeedback.lightImpact();
-    final result = await Navigator.push<bool>(
+  bool _canAccessModule(Map<String, dynamic> module, int index) {
+    if (_hasPaidAccess) return true;
+    if (_isFirstUnlocked(index)) return true;
+    final status = _moduleStatus(module);
+    return status == 'active' || status == 'done';
+  }
+
+  void _openModule(Map<String, dynamic> module, int index) {
+    if (!_canAccessModule(module, index) && !_hasPaidAccess) {
+      HapticFeedback.mediumImpact();
+      _showPaywall();
+      return;
+    }
+    HapticFeedback.selectionClick();
+    Navigator.push(
       context,
-      PageRouteBuilder(
-        pageBuilder: (_, animation, __) => PaywallScreen(
-          courseId: _courseId,
+      AppRouter.push(
+        LessonScreen(
+          moduleTitle: (module['title'] as String?) ?? '',
+          courseTag: widget.tag,
+          color: widget.color,
+          moduleId: module['id'] as String,
+          courseId: widget.courseId,
+        ),
+      ),
+    );
+  }
+
+  void _showPaywall() {
+    Navigator.push(
+      context,
+      AppRouter.push(
+        PaywallScreen(
+          courseId: widget.courseId,
           courseTitle: widget.title,
           courseColor: widget.color,
         ),
-        transitionsBuilder: (_, animation, __, child) =>
-            FadeTransition(opacity: animation, child: child),
-        transitionDuration: const Duration(milliseconds: 250),
       ),
-    );
-    if (result == true && mounted) {
-      setState(() => _loading = true);
-      await _loadModules();
-    }
+    ).then((_) {
+      // Re-check access after paywall is dismissed, in case a purchase occurred
+      if (mounted) _checkAccess();
+    });
   }
 
-  List<Map<String, dynamic>> _getHardcodedModules(String tag) {
-    if (tag == 'Binary Cyber Pro') {
-      return [
-        {'id': 'module-01', 'title': 'Cybersecurity Fundamentals', 'sub': 'CIA triad, threat landscape & core principles', 'status': 'active', 'order': 1},
-        {'id': 'module-02', 'title': 'Network Security', 'sub': 'Firewalls, IDS/IPS, VPNs & secure protocols', 'status': 'locked', 'order': 2},
-        {'id': 'module-03', 'title': 'Cryptography', 'sub': 'Encryption, hashing, PKI & digital signatures', 'status': 'locked', 'order': 3},
-        {'id': 'module-04', 'title': 'Ethical Hacking & Pen Testing', 'sub': 'Recon, exploitation, tools & methodology', 'status': 'locked', 'order': 4},
-        {'id': 'module-05', 'title': 'Malware & Threats', 'sub': 'Viruses, ransomware, trojans & attack vectors', 'status': 'locked', 'order': 5},
-        {'id': 'module-06', 'title': 'Web Application Security', 'sub': 'OWASP Top 10, SQLi, XSS & secure coding', 'status': 'locked', 'order': 6},
-        {'id': 'module-07', 'title': 'Identity & Access Management', 'sub': 'Authentication, MFA, OAuth & zero trust', 'status': 'locked', 'order': 7},
-        {'id': 'module-08', 'title': 'Incident Response & Compliance', 'sub': 'IR lifecycle, GDPR, SOC 2 & forensics basics', 'status': 'locked', 'order': 8},
-      ];
-    } else if (tag == 'ITIL V4') {
-      return [
-        {'id': 'module-01', 'title': 'Introduction to ITIL V4', 'sub': 'History, purpose & key concepts', 'status': 'active', 'order': 1},
-        {'id': 'module-02', 'title': 'Key Concepts of Service Management', 'sub': 'Value, outcomes, costs & service relationships', 'status': 'locked', 'order': 2},
-        {'id': 'module-03', 'title': 'The Four Dimensions Model', 'sub': 'People, technology, partners & processes', 'status': 'locked', 'order': 3},
-        {'id': 'module-04', 'title': 'The Service Value System', 'sub': 'SVS components & the value chain', 'status': 'locked', 'order': 4},
-        {'id': 'module-05', 'title': 'Guiding Principles', 'sub': 'The 7 principles of ITIL V4', 'status': 'locked', 'order': 5},
-        {'id': 'module-06', 'title': 'ITIL Practices Overview', 'sub': 'Incident, change, problem & service desk', 'status': 'locked', 'order': 6},
-        {'id': 'module-07', 'title': 'Continual Improvement', 'sub': 'CI model, measurement & the register', 'status': 'locked', 'order': 7},
-        {'id': 'module-08', 'title': 'Exam Preparation', 'sub': 'Practice questions, tips & exam strategy', 'status': 'locked', 'order': 8},
-      ];
-    } else if (tag == 'CSM') {
-      return [
-        {'id': 'module-01', 'title': 'Introduction to Agile & Scrum', 'sub': 'Agile values, principles & Scrum overview', 'status': 'active', 'order': 1},
-        {'id': 'module-02', 'title': 'The Scrum Framework', 'sub': 'Pillars, values & empiricism', 'status': 'locked', 'order': 2},
-        {'id': 'module-03', 'title': 'Scrum Roles', 'sub': 'Product Owner, Scrum Master & Dev Team', 'status': 'locked', 'order': 3},
-        {'id': 'module-04', 'title': 'Scrum Events', 'sub': 'Sprints, planning, reviews & retrospectives', 'status': 'locked', 'order': 4},
-        {'id': 'module-05', 'title': 'Scrum Artifacts', 'sub': 'Backlog, sprint backlog & increment', 'status': 'locked', 'order': 5},
-        {'id': 'module-06', 'title': 'Scaling Scrum & Advanced Topics', 'sub': 'SAFe, LeSS, Nexus & real-world application', 'status': 'locked', 'order': 6},
-        {'id': 'module-07', 'title': 'The Product Owner Role', 'sub': 'Backlog management, vision & stakeholders', 'status': 'locked', 'order': 7},
-        {'id': 'module-08', 'title': 'Exam Preparation', 'sub': 'Practice questions, anti-patterns & exam tips', 'status': 'locked', 'order': 8},
-      ];
-    } else if (tag == 'Networking' || tag == 'Binary Network Pro') {
-      return [
-        {'id': 'module-01', 'title': 'OSI Model & TCP/IP', 'sub': 'Layers, protocols & how data flows', 'status': 'active', 'order': 1},
-        {'id': 'module-02', 'title': 'IP Addressing & Subnetting', 'sub': 'IPv4, IPv6, CIDR & VLSM', 'status': 'locked', 'order': 2},
-        {'id': 'module-03', 'title': 'Switching & VLANs', 'sub': 'MAC tables, STP, trunking & port security', 'status': 'locked', 'order': 3},
-        {'id': 'module-04', 'title': 'Routing Protocols', 'sub': 'Static, OSPF, EIGRP, BGP & AD', 'status': 'locked', 'order': 4},
-        {'id': 'module-05', 'title': 'Network Services', 'sub': 'DNS, DHCP, NAT & NTP', 'status': 'locked', 'order': 5},
-        {'id': 'module-06', 'title': 'Network Security', 'sub': 'ACLs, firewalls, IDS/IPS & 802.1X', 'status': 'locked', 'order': 6},
-        {'id': 'module-07', 'title': 'Wireless Networking', 'sub': 'WiFi standards, WPA3, SSID & controllers', 'status': 'locked', 'order': 7},
-        {'id': 'module-08', 'title': 'Troubleshooting & Tools', 'sub': 'Ping, traceroute, Wireshark & SNMP', 'status': 'locked', 'order': 8},
-      ];
-    } else if (tag == 'Binary Cloud') {
-      return [
-        {'id': 'module-01', 'title': 'Cloud Computing Concepts', 'sub': 'Core characteristics, CapEx vs OpEx & NIST', 'status': 'active', 'order': 1},
-        {'id': 'module-02', 'title': 'Cloud Service Models', 'sub': 'IaaS, PaaS, SaaS & serverless explained', 'status': 'locked', 'order': 2},
-        {'id': 'module-03', 'title': 'Cloud Deployment Models', 'sub': 'Public, private, hybrid & multi-cloud', 'status': 'locked', 'order': 3},
-        {'id': 'module-04', 'title': 'Compute & Storage', 'sub': 'VMs, auto-scaling, object & block storage', 'status': 'locked', 'order': 4},
-        {'id': 'module-05', 'title': 'Cloud Security Basics', 'sub': 'Shared responsibility, IAM & encryption', 'status': 'locked', 'order': 5},
-        {'id': 'module-06', 'title': 'Cloud Networking', 'sub': 'VPCs, subnets, load balancers & availability zones', 'status': 'locked', 'order': 6},
-        {'id': 'module-07', 'title': 'Cloud Operations', 'sub': 'Monitoring, IaC, serverless & marketplaces', 'status': 'locked', 'order': 7},
-        {'id': 'module-08', 'title': 'Cloud Careers & Certifications', 'sub': 'AWS, Azure, GCP paths & entry-level roles', 'status': 'locked', 'order': 8},
-      ];
-    } else if (tag == 'Binary Cloud Pro') {
-      return [
-        {'id': 'module-01', 'title': 'Cloud Architecture Principles', 'sub': 'Well-Architected, HA, fault tolerance & IaC', 'status': 'active', 'order': 1},
-        {'id': 'module-02', 'title': 'Advanced Compute', 'sub': 'Containers, Kubernetes, serverless & instance pricing', 'status': 'locked', 'order': 2},
-        {'id': 'module-03', 'title': 'Cloud Storage & Databases', 'sub': 'S3 tiers, NoSQL, read replicas & DR strategies', 'status': 'locked', 'order': 3},
-        {'id': 'module-04', 'title': 'Advanced Cloud Security', 'sub': 'Zero trust, CSPM, secrets management & WAF', 'status': 'locked', 'order': 4},
-        {'id': 'module-05', 'title': 'DevOps & CI/CD', 'sub': 'Pipelines, blue/green, canary & GitOps', 'status': 'locked', 'order': 5},
-        {'id': 'module-06', 'title': 'Cost Optimisation', 'sub': 'Right-sizing, FinOps, tagging & savings plans', 'status': 'locked', 'order': 6},
-        {'id': 'module-07', 'title': 'Multi-Cloud & Migration', 'sub': 'The 6 Rs, service mesh & landing zones', 'status': 'locked', 'order': 7},
-        {'id': 'module-08', 'title': 'Cloud Careers & Certifications', 'sub': 'AWS roadmap, roles, SLAs & TCO', 'status': 'locked', 'order': 8},
-      ];
-    }
-    return [
-      {'id': 'module-01', 'title': 'Introduction', 'sub': 'Getting started', 'status': 'active', 'order': 1},
-    ];
-  }
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // BUILD
-  // ───────────────────────────────────────────────────────────────────────────
-
+  // ── Build ─────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);
@@ -356,7 +199,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
         physics: const BouncingScrollPhysics(),
         slivers: [
           _buildHeader(context, theme),
-          _buildProgressSection(theme),
           if (_loading)
             SliverFillRemaining(
               child: Center(
@@ -367,24 +209,19 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
               ),
             )
           else
-            _buildModuleList(context, _modules, theme),
-          const SliverToBoxAdapter(child: SizedBox(height: 48)),
+            _buildModuleList(theme),
         ],
       ),
     );
   }
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // HEADER
-  // ───────────────────────────────────────────────────────────────────────────
-
   Widget _buildHeader(BuildContext context, ThemeNotifier theme) {
     return SliverToBoxAdapter(
       child: Stack(
         children: [
-          // Gradient wash
+          // Gradient wash behind header
           Container(
-            height: 320,
+            height: 300,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -398,7 +235,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
               ),
             ),
           ),
-          // Content
+
           SafeArea(
             child: FadeTransition(
               opacity: _headerFade,
@@ -409,7 +246,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Back + Download row
+                      // Back row
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -421,7 +258,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                               Navigator.pop(context);
                             },
                           ),
-                          if (!_loading) _buildDownloadButton(),
                         ],
                       ),
 
@@ -453,15 +289,58 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                           fontSize: 15,
                           color: theme.subtext,
                           letterSpacing: -0.2,
-                          fontWeight: FontWeight.w400,
                         ),
                       ),
 
-                      // Free banner — shrink-wraps to its own content
-                      if (!_loading && !_hasPaidAccess) ...[
-                        const SizedBox(height: 20),
-                        _FreeBanner(color: widget.color),
+                      const SizedBox(height: 20),
+
+                      // Progress bar (only if the user has started)
+                      if (widget.progress > 0) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Progress',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: theme.subtext,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                            Text(
+                              '${(widget.progress * 100).toInt()}%',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: widget.color,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: widget.progress,
+                            backgroundColor: theme.border,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(widget.color),
+                            minHeight: 5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                       ],
+
+                      // Free trial banner — shown when user doesn't have paid access
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        child: (!_loading && !_hasPaidAccess)
+                            ? _FreeBanner(
+                                key: const ValueKey('banner'),
+                                color: widget.color,
+                              )
+                            : const SizedBox(key: ValueKey('empty'), height: 0),
+                      ),
                     ],
                   ),
                 ),
@@ -473,126 +352,31 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
     );
   }
 
-  Widget _buildDownloadButton() {
-    return GestureDetector(
-      onTap: _toggleDownload,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: BoxDecoration(
-          color: _isDownloaded
-              ? AppColors.green.withValues(alpha: 0.12)
-              : widget.color.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: _isDownloaded
-                ? AppColors.green.withValues(alpha: 0.28)
-                : widget.color.withValues(alpha: 0.22),
-          ),
-        ),
-        child: _isDownloading
-            ? SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(
-                  value: _downloadProgress > 0 ? _downloadProgress : null,
-                  color: widget.color,
-                  strokeWidth: 2,
-                ),
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _isDownloaded
-                        ? CupertinoIcons.checkmark_circle_fill
-                        : CupertinoIcons.arrow_down_circle_fill,
-                    size: 14,
-                    color: _isDownloaded ? AppColors.green : widget.color,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    _isDownloaded ? 'Downloaded' : 'Download',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: _isDownloaded ? AppColors.green : widget.color,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // PROGRESS BAR
-  // ───────────────────────────────────────────────────────────────────────────
-
-  Widget _buildProgressSection(ThemeNotifier theme) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildModuleList(ThemeNotifier theme) {
+    if (_modules.isEmpty) {
+      return SliverFillRemaining(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
+                Icon(CupertinoIcons.book_fill,
+                    size: 40, color: theme.subtext),
+                const SizedBox(height: 16),
                 Text(
-                  'Your progress',
+                  'Modules coming soon',
                   style: TextStyle(
-                    fontSize: 13,
-                    color: theme.subtext,
-                    letterSpacing: -0.1,
-                  ),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: theme.text),
                 ),
+                const SizedBox(height: 6),
                 Text(
-                  '${(widget.progress * 100).toInt()}% complete',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: widget.color,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  'Check back shortly.',
+                  style: TextStyle(fontSize: 13, color: theme.subtext),
                 ),
               ],
-            ),
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                value: widget.progress,
-                backgroundColor: theme.isDark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : AppColors.lightBorder,
-                valueColor: AlwaysStoppedAnimation<Color>(widget.color),
-                minHeight: 6,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // MODULE LIST
-  // ───────────────────────────────────────────────────────────────────────────
-
-  Widget _buildModuleList(
-    BuildContext context,
-    List<Map<String, dynamic>> modules,
-    ThemeNotifier theme,
-  ) {
-    if (modules.isEmpty) {
-      return SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Center(
-            child: Text(
-              'No modules found.',
-              style: TextStyle(fontSize: 14, color: theme.subtext),
             ),
           ),
         ),
@@ -600,355 +384,33 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
     }
 
     return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-          (context, index) => _AnimatedModule(
-            delay: Duration(milliseconds: 60 * index),
-            child: _buildModuleCard(context, modules[index], index, theme),
-          ),
-          childCount: modules.length,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModuleCard(
-    BuildContext context,
-    Map<String, dynamic> module,
-    int index,
-    ThemeNotifier theme,
-  ) {
-    final status = module['status'] as String;
-    final isLocked = status == 'locked';
-    final isDone = status == 'done';
-    final isActive = status == 'active';
-
-    final moduleId = module['id'] as String;
-    final isFirstModule = moduleId == 'module-01' || index == 0;
-    final isLockedBehindPaywall =
-        isLocked && !isFirstModule && !_hasPaidAccess;
-
-    final statusColor = isLocked
-        ? theme.subtext.withValues(alpha: 0.35)
-        : isDone
-            ? AppColors.green
-            : widget.color;
-
-    final cardColor = theme.isDark
-        ? (isActive
-            ? widget.color.withValues(alpha: 0.08)
-            : Colors.white.withValues(alpha: 0.03))
-        : (isActive
-            ? widget.color.withValues(alpha: 0.05)
-            : AppColors.lightCard);
-
-    final cardBorder = theme.isDark
-        ? Border.all(
-            color: isActive
-                ? widget.color.withValues(alpha: 0.28)
-                : Colors.white.withValues(alpha: 0.06),
-          )
-        : Border.all(
-            color: isActive
-                ? widget.color.withValues(alpha: 0.22)
-                : AppColors.lightBorder,
-          );
-
-    return GestureDetector(
-      onTap: () {
-        if (isLockedBehindPaywall) {
-          _openPaywall();
-          return;
-        }
-        if (isLocked) return;
-
-        HapticFeedback.selectionClick();
-        Navigator.push(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (_, animation, __) => LessonScreen(
-              moduleTitle: module['title'],
-              courseTag: widget.tag,
-              color: widget.color,
-              moduleId: module['id'],
-              courseId: _courseId,
-            ),
-            transitionsBuilder: (_, animation, __, child) => SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(1, 0),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                  parent: animation, curve: Curves.easeOutCubic)),
-              child: FadeTransition(opacity: animation, child: child),
-            ),
-            transitionDuration: const Duration(milliseconds: 400),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(18),
-          border: cardBorder,
-          boxShadow: theme.isDark
-              ? null
-              : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-        ),
-        child: Row(
-          children: [
-            // Number / icon badge
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: isDone
-                    ? Icon(Icons.check_rounded, size: 18, color: statusColor)
-                    : isLocked
-                        ? Icon(CupertinoIcons.lock_fill,
-                            size: 13, color: statusColor)
-                        : Text(
-                            '${index + 1}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: statusColor,
-                            ),
-                          ),
-              ),
-            ),
-
-            const SizedBox(width: 14),
-
-            // Title + subtitle
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          module['title'],
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: isLocked
-                                ? theme.subtext.withValues(alpha: 0.6)
-                                : theme.text,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                      ),
-                      if (isFirstModule && !_hasPaidAccess && !isDone) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: widget.color.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'FREE',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                              color: widget.color,
-                              letterSpacing: 0.6,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    module['sub'],
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.subtext,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(width: 10),
-
-            // Right-side CTA
-            _ModuleCta(
-              isDone: isDone,
-              isActive: isActive,
-              isLockedBehindPaywall: isLockedBehindPaywall,
-              isFirstModule: isFirstModule,
-              hasPaidAccess: _hasPaidAccess,
+          (context, i) {
+            final module = _modules[i];
+            final status = _moduleStatus(module);
+            final canAccess = _canAccessModule(module, i);
+            return _ModuleCard(
+              module: module,
+              index: i,
+              status: status,
+              canAccess: canAccess,
               color: widget.color,
               theme: theme,
-            ),
-          ],
+              onTap: () => _openModule(module, i),
+            );
+          },
+          childCount: _modules.length,
         ),
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FREE BANNER
-// Extracted as its own widget — Row with mainAxisSize.min means it
-// always shrink-wraps to its content regardless of parent Column width.
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Private widgets ──────────────────────────────────────────────────────────
 
-class _FreeBanner extends StatelessWidget {
-  final Color color;
-  const _FreeBanner({required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: color.withValues(alpha: 0.22)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min, // ← key: hugs content
-        children: [
-          Icon(CupertinoIcons.gift_fill, size: 14, color: color),
-          const SizedBox(width: 8),
-          Text(
-            'Module 1 is free — try it now',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: color,
-              letterSpacing: -0.2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MODULE CTA
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ModuleCta extends StatelessWidget {
-  final bool isDone;
-  final bool isActive;
-  final bool isLockedBehindPaywall;
-  final bool isFirstModule;
-  final bool hasPaidAccess;
-  final Color color;
-  final ThemeNotifier theme;
-
-  const _ModuleCta({
-    required this.isDone,
-    required this.isActive,
-    required this.isLockedBehindPaywall,
-    required this.isFirstModule,
-    required this.hasPaidAccess,
-    required this.color,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (isDone) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: AppColors.green.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          'Done',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: AppColors.green,
-          ),
-        ),
-      );
-    }
-
-    if (isActive) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Text(
-          isFirstModule && !hasPaidAccess ? 'Try free' : 'Continue',
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-            letterSpacing: -0.2,
-          ),
-        ),
-      );
-    }
-
-    if (isLockedBehindPaywall) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withValues(alpha: 0.22)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(CupertinoIcons.lock_open_fill, size: 11, color: color),
-            const SizedBox(width: 5),
-            Text(
-              'Unlock',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: color,
-                letterSpacing: -0.1,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Locked for progression — quiet icon only
-    return Icon(
-      CupertinoIcons.lock_fill,
-      size: 14,
-      color: theme.subtext.withValues(alpha: 0.35),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BACK BUTTON
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _BackButton extends StatefulWidget {
+class _BackButton extends StatelessWidget {
   final Color color;
   final ThemeNotifier theme;
   final VoidCallback onTap;
@@ -960,186 +422,195 @@ class _BackButton extends StatefulWidget {
   });
 
   @override
-  State<_BackButton> createState() => _BackButtonState();
-}
-
-class _BackButtonState extends State<_BackButton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 120));
-    _scale = Tween<double>(begin: 1.0, end: 0.88).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => _controller.forward(),
-      onTapUp: (_) {
-        _controller.reverse();
-        widget.onTap();
-      },
-      onTapCancel: () => _controller.reverse(),
-      child: ScaleTransition(
-        scale: _scale,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: widget.color
-                .withValues(alpha: widget.theme.isDark ? 0.10 : 0.08),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: widget.color
-                  .withValues(alpha: widget.theme.isDark ? 0.20 : 0.22),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.20)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.arrow_back_ios_new_rounded, size: 12, color: color),
+            const SizedBox(width: 4),
+            Text(
+              'Back',
+              style: TextStyle(
+                  fontSize: 13, color: color, fontWeight: FontWeight.w600),
             ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.arrow_back_ios_new_rounded,
-                  size: 13, color: widget.color),
-              const SizedBox(width: 5),
-              Text(
-                'Courses',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: widget.color,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.2,
-                ),
-              ),
-            ],
-          ),
+          ],
         ),
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TAG PILL
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _TagPill extends StatefulWidget {
+class _TagPill extends StatelessWidget {
   final String tag;
   final Color color;
 
   const _TagPill({required this.tag, required this.color});
 
   @override
-  State<_TagPill> createState() => _TagPillState();
-}
-
-class _TagPillState extends State<_TagPill>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fade;
-  late Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
-    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _scale = Tween<double>(begin: 0.85, end: 1.0).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
-    Future.delayed(const Duration(milliseconds: 150), () {
-      if (mounted) _controller.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fade,
-      child: ScaleTransition(
-        scale: _scale,
-        alignment: Alignment.centerLeft,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color: widget.color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: widget.color.withValues(alpha: 0.25)),
-          ),
-          child: Text(
-            widget.tag.toUpperCase(),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: widget.color,
-              letterSpacing: 1.0,
-            ),
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Text(
+        tag,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+          letterSpacing: 0.2,
         ),
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ANIMATED MODULE ROW
-// ─────────────────────────────────────────────────────────────────────────────
+class _FreeBanner extends StatelessWidget {
+  final Color color;
 
-class _AnimatedModule extends StatefulWidget {
-  final Widget child;
-  final Duration delay;
-
-  const _AnimatedModule({required this.child, this.delay = Duration.zero});
+  const _FreeBanner({super.key, required this.color});
 
   @override
-  State<_AnimatedModule> createState() => _AnimatedModuleState();
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.20)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(CupertinoIcons.lock_open_fill, size: 13, color: color),
+          const SizedBox(width: 6),
+          Text(
+            'First module free — unlock all to continue',
+            style: TextStyle(
+                fontSize: 12, color: color, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _AnimatedModuleState extends State<_AnimatedModule>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fade;
-  late Animation<Offset> _slide;
+class _ModuleCard extends StatelessWidget {
+  final Map<String, dynamic> module;
+  final int index;
+  final String status;
+  final bool canAccess;
+  final Color color;
+  final ThemeNotifier theme;
+  final VoidCallback onTap;
+
+  const _ModuleCard({
+    required this.module,
+    required this.index,
+    required this.status,
+    required this.canAccess,
+    required this.color,
+    required this.theme,
+    required this.onTap,
+  });
 
   @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 450));
-    _fade =
-        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
-    _slide = Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
-        .animate(CurvedAnimation(
-            parent: _controller, curve: Curves.easeOutCubic));
-    Future.delayed(widget.delay, () {
-      if (mounted) _controller.forward();
-    });
+  Widget build(BuildContext context) {
+    final title = (module['title'] as String?) ?? 'Module ${index + 1}';
+    final isDone = status == 'done';
+    final isLocked = !canAccess;
+
+    Color statusColor;
+    IconData statusIcon;
+    if (isDone) {
+      statusColor = AppColors.green;
+      statusIcon = CupertinoIcons.checkmark_circle_fill;
+    } else if (isLocked) {
+      statusColor = theme.subtext;
+      statusIcon = CupertinoIcons.lock_fill;
+    } else {
+      statusColor = color;
+      statusIcon = CupertinoIcons.play_circle_fill;
+    }
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDone
+                ? AppColors.green.withValues(alpha: 0.25)
+                : theme.border,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Number badge
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text(
+                  '${index + 1}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isLocked ? theme.subtext : theme.text,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    isDone
+                        ? 'Completed'
+                        : isLocked
+                            ? 'Locked — unlock to access'
+                            : 'Tap to start',
+                    style: TextStyle(fontSize: 12, color: statusColor),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(statusIcon, size: 20, color: statusColor),
+          ],
+        ),
+      ),
+    );
   }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => FadeTransition(
-        opacity: _fade,
-        child: SlideTransition(position: _slide, child: widget.child),
-      );
 }
