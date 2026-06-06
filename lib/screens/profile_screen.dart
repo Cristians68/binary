@@ -12,6 +12,7 @@ import 'offline_downloads_screen.dart';
 import 'delete_account_screen.dart';
 import 'legal_screen.dart';
 import 'restore_purchases_button.dart';
+import 'paywall_screen.dart';
 import 'app_router.dart';
 import 'streak_service.dart';
 import 'app_theme.dart';
@@ -1102,6 +1103,23 @@ class _ProfileScreenState extends State<ProfileScreen>
 
               // ── Legal & Purchases ─────────────────────────────────────────
               _buildSection('Legal & Purchases', theme, [
+                _buildItem(
+                    CupertinoIcons.rocket_fill,
+                    'Plans & Pricing',
+                    AppColors.primary,
+                    theme,
+                    onTap: () => Navigator.push(
+                          context,
+                          CupertinoPageRoute(
+                            builder: (_) => const PaywallScreen(
+                              courseId: 'itil-v4',
+                              courseTitle: 'Binary Academy',
+                              courseColor: AppColors.primary,
+                              defaultToAllPlans: true,
+                            ),
+                            fullscreenDialog: true,
+                          ),
+                        )),
                 _buildItem(CupertinoIcons.doc_text_fill,
                     'Privacy Policy & Terms', const Color(0xFF8B5CF6), theme,
                     onTap: () => Navigator.push(

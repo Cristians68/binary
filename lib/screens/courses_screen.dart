@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'course_detail_screen.dart';
+import 'paywall_screen.dart';
 import 'app_router.dart';
 import 'app_theme.dart';
 
@@ -19,6 +20,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
   List<Map<String, dynamic>> _courses = [];
   Set<String> _enrolledIds = {};
   bool _loading = true;
+  bool _hasFullAccess = false;
 
   @override
   void initState() {
@@ -35,6 +37,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
           .get();
 
       Set<String> enrolled = {};
+      bool fullAccess = false;
       if (uid != null) {
         final userSnap =
             await FirebaseFirestore.instance.collection('users').doc(uid).get();
@@ -44,6 +47,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
             .where((e) => e.value == true)
             .map((e) => e.key)
             .toSet();
+        final plan = (data['subscriptionPlan'] as String?) ?? 'none';
+        fullAccess = plan == 'all';
       }
 
       if (mounted) {
@@ -51,6 +56,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
           _courses =
               coursesSnap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
           _enrolledIds = enrolled;
+          _hasFullAccess = fullAccess;
           _loading = false;
         });
       }
@@ -175,6 +181,21 @@ class _CoursesScreenState extends State<CoursesScreen> {
                 ),
               ),
             ),
+            // Upgrade banner — visible whenever the user doesn't have
+            // an All Courses plan, so IAPs are easy to discover.
+            if (!_loading && !_hasFullAccess)
+              Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: isWide ? 1100 : double.infinity,
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                        isWide ? 32 : 20, 0, isWide ? 32 : 20, 8),
+                    child: _buildUpgradeBanner(theme),
+                  ),
+                ),
+              ),
             Expanded(
               child: _loading
                   ? Center(
@@ -212,6 +233,90 @@ class _CoursesScreenState extends State<CoursesScreen> {
                               ),
                       ),
                     ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUpgradeBanner(ThemeNotifier theme) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        Navigator.push(
+          context,
+          CupertinoPageRoute(
+            builder: (_) => const PaywallScreen(
+              courseId: 'itil-v4',
+              courseTitle: 'Binary Academy',
+              courseColor: AppColors.primary,
+              defaultToAllPlans: true,
+            ),
+            fullscreenDialog: true,
+          ),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(16),
+          border:
+              Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(CupertinoIcons.rocket_fill,
+                  color: AppColors.primary, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Unlock all courses',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: theme.text,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Single course, 4-bundle, or everything — from \$14.99',
+                    style: TextStyle(fontSize: 12, color: theme.subtext),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text(
+                'View Plans',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                  letterSpacing: -0.1,
+                ),
+              ),
             ),
           ],
         ),

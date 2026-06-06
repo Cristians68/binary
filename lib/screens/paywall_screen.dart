@@ -20,12 +20,17 @@ class PaywallScreen extends StatefulWidget {
   final String courseId;
   final String courseTitle;
   final Color  courseColor;
+  /// When true, the All Courses plan is pre-selected instead of Single.
+  /// Use this when opening the paywall from a generic "Plans & Pricing" entry
+  /// rather than from a specific locked course.
+  final bool defaultToAllPlans;
 
   const PaywallScreen({
     super.key,
     required this.courseId,
     required this.courseTitle,
     required this.courseColor,
+    this.defaultToAllPlans = false,
   });
 
   @override
@@ -39,7 +44,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
   bool          _loading     = true;
   bool          _loadError   = false;
   bool          _purchasing  = false;
-  _Plan         _selected    = _Plan.single;
+  late _Plan    _selected;
 
   // Bundle-4: the courses the user has selected (max 4).
   // Pre-seed with the course they came from so it is already ticked.
@@ -48,6 +53,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
   @override
   void initState() {
     super.initState();
+    _selected = widget.defaultToAllPlans ? _Plan.all : _Plan.single;
     _bundle4Selection = {widget.courseId};
     _loadPackages();
   }

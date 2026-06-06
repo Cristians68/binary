@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:math';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'notification_service.dart';
@@ -86,6 +90,69 @@ class AuthService {
     } catch (e, stack) {
       debugPrint('Google Sign-In ERROR: $e');
       debugPrint('Stack: $stack');
+      return null;
+    }
+  }
+
+  // ── Sign in with Apple ────────────────────────────────────────────────────
+
+  static String _generateNonce([int length = 32]) {
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(
+        length, (_) => charset[random.nextInt(charset.length)]).join();
+  }
+
+  static String _sha256ofString(String input) {
+    final bytes = utf8.encode(input);
+    return sha256.convert(bytes).toString();
+  }
+
+  static Future<UserCredential?> signInWithApple() async {
+    try {
+      final rawNonce = _generateNonce();
+      final nonce = _sha256ofString(rawNonce);
+
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        rawNonce: rawNonce,
+      );
+
+      final userCredential =
+          await _auth.signInWithCredential(oauthCredential);
+
+      // Apple only sends name on the very first sign-in; save it if present.
+      final given = appleCredential.givenName;
+      final family = appleCredential.familyName;
+      if (given != null || family != null) {
+        final fullName = [given, family]
+            .where((s) => s != null && s.isNotEmpty)
+            .join(' ');
+        if (fullName.isNotEmpty) {
+          await userCredential.user?.updateDisplayName(fullName);
+        }
+      }
+
+      await _onSignInSuccess();
+      return userCredential;
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        debugPrint('Apple Sign-In: cancelled by user');
+        return null;
+      }
+      debugPrint('Apple Sign-In AuthorizationException: ${e.code}');
+      return null;
+    } catch (e) {
+      debugPrint('Apple Sign-In ERROR: $e');
       return null;
     }
   }

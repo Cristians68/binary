@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'login_screen.dart';
 import 'signup_screen.dart';
 import 'auth_service.dart';
@@ -21,6 +22,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   late Animation<double> _fade;
   late Animation<Offset> _slide;
   bool _googleLoading = false;
+  bool _appleLoading = false;
 
   @override
   void initState() {
@@ -81,6 +83,27 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       ),
       (route) => false,
     );
+  }
+
+  Future<void> _handleApple() async {
+    HapticFeedback.selectionClick();
+    setState(() => _appleLoading = true);
+    final result = await AuthService.signInWithApple();
+    if (!mounted) return;
+    setState(() => _appleLoading = false);
+    if (result != null) {
+      _goToHome();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Apple sign-in failed. Please try again.'),
+          backgroundColor: Colors.white.withValues(alpha: 0.1),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
   }
 
   Future<void> _handleGoogle() async {
@@ -404,6 +427,20 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           ],
         ),
         const SizedBox(height: 20),
+        // Sign in with Apple — must appear at least as prominently as
+        // other third-party sign-in options (Apple guideline 4.8).
+        _appleLoading
+            ? _AppleLoadingButton(isDark: theme.isDark)
+            : SignInWithAppleButton(
+                onPressed: _handleApple,
+                style: theme.isDark
+                    ? SignInWithAppleButtonStyle.white
+                    : SignInWithAppleButtonStyle.black,
+                borderRadius:
+                    const BorderRadius.all(Radius.circular(18)),
+                height: 54,
+              ),
+        const SizedBox(height: 12),
         _GoogleButton(
           isLoading: _googleLoading,
           onTap: _handleGoogle,
@@ -626,6 +663,37 @@ class _PressableButtonState extends State<_PressableButton>
               color: widget.textColor,
               letterSpacing: -0.3,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// APPLE LOADING BUTTON  (shown while Apple sign-in is in progress)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _AppleLoadingButton extends StatelessWidget {
+  final bool isDark;
+  const _AppleLoadingButton({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 54,
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white : Colors.black,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Center(
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            color: isDark ? Colors.black : Colors.white,
+            strokeWidth: 2,
           ),
         ),
       ),
