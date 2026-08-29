@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'app_theme.dart';
 import 'app_router.dart';
@@ -30,27 +30,6 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
   void dispose() {
     _passwordController.dispose();
     super.dispose();
-  }
-
-  /// Deletes all sub-collections under users/{uid} then the document itself.
-  /// Throws if any deletion fails so the caller can surface the error.
-  Future<void> _deleteUserData(String uid) async {
-    final userRef =
-        FirebaseFirestore.instance.collection('users').doc(uid);
-
-    // Delete progress/{courseId}/modules/* sub-sub-collection first
-    final progressSnap = await userRef.collection('progress').get();
-    for (final courseDoc in progressSnap.docs) {
-      final modulesSnap =
-          await courseDoc.reference.collection('modules').get();
-      for (final mod in modulesSnap.docs) {
-        await mod.reference.delete();
-      }
-      await courseDoc.reference.delete();
-    }
-
-    // Delete the top-level user document (includes FCM token, name, goal, etc.)
-    await userRef.delete();
   }
 
   Future<void> _deleteAccount() async {
@@ -125,13 +104,18 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
         await user.reauthenticateWithCredential(credential);
       }
 
-      final uid = user.uid;
+      // Firestore denies client-side deletes on /users/{uid} (see
+      // firestore.rules), and doing this server-side keeps Firestore cleanup
+      // and Auth-record deletion atomic from the client's point of view — see
+      // functions/account.js for why. Reauthentication above proves this is
+      // really the account owner asking.
+      await FirebaseFunctions.instance
+          .httpsCallable('deleteAccount')
+          .call<void>();
 
-      // Delete all Firestore data including sub-collections
-      await _deleteUserData(uid);
-
-      // Delete Firebase Auth account
-      await user.delete();
+      // The Auth record is gone server-side now; drop the local session too
+      // so no stale cached user lingers on this device.
+      await FirebaseAuth.instance.signOut();
 
       if (mounted) {
         Navigator.pushAndRemoveUntil(

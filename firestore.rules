@@ -1,0 +1,156 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Binary Academy — Firestore security rules
+//
+// Threat model this addresses:
+//   1. A signed-in user granting themselves a paid entitlement by writing
+//      users/{uid}.subscriptionPlan = 'all'. Entitlement fields are now
+//      SERVER-ONLY (Admin SDK bypasses these rules; the client cannot touch
+//      them). See functions/index.js -> revenueCatWebhook / startTrial.
+//   2. A user resetting hasUsedTrial to farm unlimited free trials.
+//   3. A user writing to the shared course catalogue (content vandalism) or
+//      reading paid lesson bodies they have not purchased.
+//   4. Cross-user reads/writes of progress, streaks, and profile data.
+// ─────────────────────────────────────────────────────────────────────────────
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── helpers ─────────────────────────────────────────────────────────────
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Fields only the server (Admin SDK / Cloud Functions) may ever write.
+    // Admin SDK bypasses rules entirely, so listing them here blocks clients
+    // without blocking our own webhook.
+    function entitlementFields() {
+      return [
+        'subscriptionPlan',
+        'subscriptionUpdatedAt',
+        'subscribedCourseId',
+        'bundleCourseIds',
+        'trialCourseId',
+        'trialExpiry',
+        'trialStartedAt',
+        'hasUsedTrial',
+        'role',
+        'isAdmin'
+      ];
+    }
+
+    // True when the incoming write does not add, change, or remove any
+    // protected field. Uses diff() so unchanged fields resent by a merge
+    // write (SetOptions.merge) are not treated as tampering.
+    function entitlementsUnchanged() {
+      return !request.resource.data.diff(resource.data)
+                .affectedKeys()
+                .hasAny(entitlementFields());
+    }
+
+    // On create there is no prior doc to diff against, so simply require that
+    // none of the protected fields are present at all.
+    function noEntitlementsOnCreate() {
+      return !request.resource.data.keys().hasAny(entitlementFields());
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // ── user profile ────────────────────────────────────────────────────────
+    match /users/{uid} {
+      allow get, list: if isOwner(uid);
+
+      allow create: if isOwner(uid) && noEntitlementsOnCreate();
+      allow update: if isOwner(uid) && entitlementsUnchanged();
+
+      // Account deletion is handled by a Cloud Function so that subcollections
+      // and the Auth record are removed atomically. Clients may not delete.
+      allow delete: if false;
+
+      // Per-course progress: users/{uid}/progress/{courseId}/modules/{moduleId}
+      match /progress/{document=**} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // ── course catalogue (shared, read-only to clients) ─────────────────────
+    // Seeding runs through an Admin SDK script, never from the app. This is
+    // why lib/screens/seed_*.dart must not be shipped in a release build.
+    match /courses/{courseId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+
+      match /modules/{moduleId} {
+        allow read: if signedIn();
+        allow write: if isAdmin();
+
+        // Lesson bodies and quiz banks. Read is gated on entitlement so a
+        // determined client cannot simply query around the in-app paywall.
+        // module-01 / module-1 stay free as the course preview.
+        match /{content}/{docId} {
+          allow read: if signedIn() && (
+            moduleId in ['module-1', 'module-01']
+            || hasCourseAccess(courseId)
+          );
+          allow write: if isAdmin();
+        }
+      }
+    }
+
+    // Mirrors SubscriptionService.canAccessCourse, but enforced server-side.
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasCourseAccess(courseId) {
+      let u = userDoc();
+      let plan = u.get('subscriptionPlan', 'none');
+      return plan == 'all'
+        || (plan == 'bundle4' && courseId in u.get('bundleCourseIds', []))
+        || (plan == 'single'  && u.get('subscribedCourseId', '') == courseId)
+        || (u.get('trialCourseId', '') == courseId
+            && u.get('trialExpiry', request.time) > request.time);
+    }
+
+    // ── admin allowlist (membership grants catalogue write access) ──────────
+    // Documents are created out-of-band in the console. Nobody can self-enrol.
+    match /admins/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+    }
+
+    // ── user feedback ───────────────────────────────────────────────────────
+    // Write-only drop box: users submit, only staff read (via console/Admin).
+    match /feedback/{docId} {
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.message is string
+        && request.resource.data.message.size() <= 4000;
+      allow read, update, delete: if false;
+    }
+
+    // ── webhook replay ledger (server-only) ─────────────────────────────────
+    // One document per processed RevenueCat event id, written by the webhook via
+    // the Admin SDK (which bypasses these rules). Clients must never touch it: a
+    // client that could DELETE a row here could replay a stale grant event, and
+    // one that could CREATE rows could pre-seed ids to suppress real purchases.
+    // Locked to nothing at all; the catch-all below would cover it, but stating
+    // it explicitly keeps the intent readable next to the other collections.
+    match /processed_rc_events/{eventId} {
+      allow read, write: if false;
+    }
+
+    // ── default deny ────────────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,11 +1,47 @@
 const { onSchedule } = require("firebase-functions/v2/scheduler");
-const { onCall } = require("firebase-functions/v2/https");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
 
 const db = admin.firestore();
 const messaging = admin.messaging();
+
+// Server-authoritative entitlements (RevenueCat webhook, trial, pending purchase).
+const entitlements = require("./entitlements");
+
+exports.revenueCatWebhook = entitlements.revenueCatWebhook;
+exports.startTrial = entitlements.startTrial;
+exports.setPendingPurchase = entitlements.setPendingPurchase;
+exports.refreshEntitlement = entitlements.refreshEntitlement;
+
+// Account deletion (Firestore denies client-side deletes; see functions/account.js).
+const account = require("./account");
+exports.deleteAccount = account.deleteAccount;
+
+/**
+ * Users eligible for a reminder push.
+ *
+ * Previously this used `.where("notificationsEnabled", "!=", false)`, which in
+ * Firestore excludes documents where the field is ABSENT. Since the field is
+ * only written once a user visits notification settings, the vast majority of
+ * users were silently skipped and never received a single reminder.
+ *
+ * We now filter on fcmToken only (a token implies the user granted permission)
+ * and check the opt-out flag in application code, where "missing" correctly
+ * means "not opted out".
+ */
+async function reminderCandidates() {
+  const snap = await db
+    .collection("users")
+    .orderBy("fcmToken")
+    .get();
+
+  return snap.docs.filter((doc) => {
+    const data = doc.data();
+    return Boolean(data.fcmToken) && data.notificationsEnabled !== false;
+  });
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: send FCM to a single token
@@ -53,18 +89,13 @@ exports.streakReminder = onSchedule("0 18 * * *", async () => {
   today.setHours(0, 0, 0, 0);
   const todayTs = admin.firestore.Timestamp.fromDate(today);
 
-  const usersSnap = await db
-    .collection("users")
-    .where("fcmToken", "!=", null)
-    .where("notificationsEnabled", "!=", false)
-    .get();
+  const candidates = await reminderCandidates();
 
   const sends = [];
 
-  for (const doc of usersSnap.docs) {
+  for (const doc of candidates) {
     const data = doc.data();
     const token = data.fcmToken;
-    if (!token) continue;
 
     // Skip users who have already logged in today
     const lastLogin = data?.streak?.lastLogin;
@@ -89,18 +120,13 @@ exports.streakReminder = onSchedule("0 18 * * *", async () => {
 // Sends only to users who haven't hit their daily goal today
 // ─────────────────────────────────────────────────────────────────────────────
 exports.dailyGoalReminder = onSchedule("0 20 * * *", async () => {
-  const usersSnap = await db
-    .collection("users")
-    .where("fcmToken", "!=", null)
-    .where("notificationsEnabled", "!=", false)
-    .get();
+  const candidates = await reminderCandidates();
 
   const sends = [];
 
-  for (const doc of usersSnap.docs) {
+  for (const doc of candidates) {
     const data = doc.data();
     const token = data.fcmToken;
-    if (!token) continue;
 
     const goal = data.dailyGoal ?? {};
     const target = goal.target ?? 50;
@@ -126,17 +152,12 @@ exports.dailyGoalReminder = onSchedule("0 20 * * *", async () => {
 // NEW CONTENT AVAILABLE — runs every Monday at 09:00 UTC
 // ─────────────────────────────────────────────────────────────────────────────
 exports.newContentReminder = onSchedule("0 9 * * 1", async () => {
-  const usersSnap = await db
-    .collection("users")
-    .where("fcmToken", "!=", null)
-    .where("notificationsEnabled", "!=", false)
-    .get();
+  const candidates = await reminderCandidates();
 
   const sends = [];
 
-  for (const doc of usersSnap.docs) {
+  for (const doc of candidates) {
     const token = doc.data().fcmToken;
-    if (!token) continue;
     sends.push(
       sendToToken(
         token,
@@ -157,8 +178,14 @@ exports.newContentReminder = onSchedule("0 9 * * 1", async () => {
 // ─────────────────────────────────────────────────────────────────────────────
 exports.sendCourseCompleteNotification = onCall(async (request) => {
   const { courseTitle } = request.data;
+  // A bare Error surfaces to the client as an opaque INTERNAL; HttpsError
+  // gives the app a code it can actually branch on.
   const uid = request.auth?.uid;
-  if (!uid) throw new Error("Unauthenticated");
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in first.");
+
+  if (typeof courseTitle !== "string" || courseTitle.length > 200) {
+    throw new HttpsError("invalid-argument", "A valid courseTitle is required.");
+  }
 
   const userDoc = await db.collection("users").doc(uid).get();
   const token = userDoc.data()?.fcmToken;

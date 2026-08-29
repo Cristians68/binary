@@ -44,7 +44,39 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Firebase config - sensitive
+# Firebase client config.
+#
+# NOTE, so this is not mistaken for a leak later: google-services.json,
+# GoogleService-Info.plist and lib/firebase_options.dart all contain an `AIza...`
+# key, and all three are PUBLIC BY DESIGN. A Firebase client key is an identifier,
+# not a credential -- Google ships it in every compiled app binary, where anyone can
+# read it. What actually protects the data is firestore.rules plus API-key
+# restrictions in the Google Cloud console. The first two are ignored here only to
+# keep per-developer configs out of the repo; the fact that they are already tracked
+# is not a security problem.
 google-services.json
 GoogleService-Info.plist
+
+# Real secrets, in every spelling. A bare `*.env` does NOT match `.env`, `.env.txt`
+# or `.env.local` -- and a duplicated credential file with a slightly different
+# extension is one `git add .` away from being published permanently.
 *.env
+.env
+.env.*
+*.env.txt
+*.env.bak
+serviceAccount*.json
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+key.properties
+
+# Dependencies. node_modules WAS committed to this repo's history once (which is
+# why a history secret-scan surfaces PEM blocks from node_modules/jose's own
+# documentation -- false positives, but a lot of noise). It is untracked now, yet
+# was never ignored, so any `git add .` would silently re-add tens of thousands of
+# files. Ignore it explicitly.
+node_modules/
+functions/node_modules/

@@ -1,18 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_jailbreak_detection/flutter_jailbreak_detection.dart';
 import 'package:flutter/services.dart';
 
 class SecurityService {
   /// Call this in main.dart before runApp()
-  /// Returns true if device is safe, false if compromised
+  /// Returns true if device is safe, false if compromised.
+  ///
+  /// Deliberately conservative: we ONLY block on a confirmed jailbreak, and
+  /// only in release builds. We do NOT block on "developer mode" — that toggle
+  /// is enabled on developer/test devices (including App Review devices and
+  /// simulators) and produced false positives that could lock out legitimate
+  /// users and Apple's reviewers. On any error or in debug/profile builds we
+  /// fail open so the app is never bricked by the check.
   static Future<bool> isDeviceSafe() async {
+    // Never run the gate outside release builds (debug, profile, simulators,
+    // CI, and Apple review test environments stay unblocked).
+    if (!kReleaseMode) return true;
     try {
       final bool isJailbroken = await FlutterJailbreakDetection.jailbroken;
-      final bool isDeveloperMode = await FlutterJailbreakDetection.developerMode;
-      return !isJailbroken && !isDeveloperMode;
+      return !isJailbroken;
     } on PlatformException {
       // If we can't check, assume safe (avoids blocking legitimate users)
+      return true;
+    } catch (_) {
+      // Any unexpected failure should also fail open.
       return true;
     }
   }
