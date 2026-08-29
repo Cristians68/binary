@@ -49,10 +49,10 @@
   <p>Binary offers one-time in-app purchases for course access:</p>
   <ul>
     <li><strong>Single Course</strong> — $14.99 (includes a 7-day free trial)</li>
-    <li><strong>Any 4 Courses</strong> — $99.99 one-time</li>
-    <li><strong>All Courses</strong> — $149.99 one-time</li>
+    <li><strong>Any 4 Courses</strong> — $49.99 one-time</li>
+    <li><strong>All Courses</strong> — $99.99 one-time</li>
   </ul>
-  <p>All purchases are processed by Apple through the App Store. All sales are final unless required by applicable law. The 7-day free trial for single course access will automatically convert to a paid purchase unless cancelled before the trial ends.</p>
+  <p>Exact prices are shown on the purchase screen and may vary by region and currency; the amount shown at checkout is the amount charged. All purchases are processed by Apple through the App Store. All sales are final unless required by applicable law. The 7-day free trial for single course access will automatically convert to a paid purchase unless cancelled before the trial ends.</p>
   <p>To cancel a free trial, go to Settings → Apple ID → Subscriptions on your iPhone.</p>
 
   <h2>4. Content Licence</h2>

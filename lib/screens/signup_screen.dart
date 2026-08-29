@@ -21,18 +21,21 @@ class _SignupScreenState extends State<SignupScreen>
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
-  String _selectedGoal = 'ITIL V4 Foundation';
+  String _selectedGoal = 'IT Service Management';
   String? _errorMessage;
 
   late AnimationController _controller;
   late Animation<double> _fade;
   late Animation<Offset> _slide;
 
+  // Learning goals are described as skills, not certification brands.
+  // See lib/course_catalog.dart for why.
   static const List<String> _goals = [
-    'ITIL V4 Foundation',
-    'CSM Certification',
-    'Networking Basics',
-    'CompTIA Security+',
+    'IT Service Management',
+    'Agile & Scrum',
+    'Networking',
+    'Cybersecurity',
+    'Cloud',
     'Just exploring',
   ];
 

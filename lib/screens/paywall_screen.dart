@@ -5,15 +5,13 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'subscription_service.dart';
 import 'app_theme.dart';
+import '../course_catalog.dart';
 
 // ── All available courses the user can pick from in a bundle-4 plan ──────────
-const List<Map<String, String>> _kAllCourses = [
-  {'id': 'itil-v4',           'title': 'ITIL V4 Foundation'},
-  {'id': 'csm',               'title': 'CSM Fundamentals'},
-  {'id': 'binary-network-pro','title': 'Binary Network Pro'},
-  {'id': 'binary-cyber-pro',  'title': 'Binary Cyber Pro'},
-  {'id': 'binary-cloud',      'title': 'Binary Cloud'},
-  {'id': 'binary-cloud-pro',  'title': 'Binary Cloud Pro'},
+// Titles come from the shared catalogue so certification trademarks are never
+// used as product names. See lib/course_catalog.dart.
+final List<Map<String, String>> _kAllCourses = [
+  for (final c in kCourseCatalog) {'id': c.id, 'title': c.title},
 ];
 
 class PaywallScreen extends StatefulWidget {
@@ -69,6 +67,31 @@ class _PaywallScreenState extends State<PaywallScreen> {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Live, localized price from the store. [fallback] only covers the brief
+  /// window before RevenueCat's offerings load (or the rare case a product is
+  /// misconfigured in App Store Connect) — it must never be the price actually
+  /// charged, since App Store Connect pricing (and region-specific tiers) can
+  /// change without a code deploy, and a stale hardcoded number would then be
+  /// lying to the user about what they're about to pay.
+  String _priceFor(_Plan plan, {required String fallback}) =>
+      _packageFor(plan)?.storeProduct.priceString ?? fallback;
+
+  /// "SAVE X%" computed from live numeric prices rather than a hardcoded
+  /// dollar figure — a fixed "SAVE $10" is only true for one specific pair of
+  /// USD prices and silently becomes a false claim (an App Store Review 2.3.1
+  /// "inaccurate metadata" risk) the moment either price changes in App Store
+  /// Connect or the user is in a different pricing region/currency. Percentage
+  /// saved is currency-agnostic, so it stays correct everywhere.
+  String get _bundle4SavingsBadge {
+    final single  = _packageFor(_Plan.single)?.storeProduct.price;
+    final bundle4 = _packageFor(_Plan.bundle4)?.storeProduct.price;
+    if (single == null || bundle4 == null || single <= 0) return 'BUNDLE';
+    final fullPrice = single * 4;
+    if (bundle4 >= fullPrice) return 'BUNDLE';
+    final percentSaved = (((fullPrice - bundle4) / fullPrice) * 100).round();
+    return percentSaved > 0 ? 'SAVE $percentSaved%' : 'BUNDLE';
   }
 
   Future<void> _loadPackages() async {
@@ -191,22 +214,25 @@ class _PaywallScreenState extends State<PaywallScreen> {
   String get _ctaLabel {
     if (_purchasing) return 'Processing…';
     switch (_selected) {
-      case _Plan.single:  return 'Unlock for \$14.99';
-      case _Plan.bundle4: return _bundle4Selection.length == 4
-          ? 'Unlock 4 Courses · \$49.99'
-          : 'Select ${4 - _bundle4Selection.length} more course${4 - _bundle4Selection.length == 1 ? '' : 's'}';
-      case _Plan.all:     return 'Unlock Everything · \$99.99';
+      case _Plan.single:
+        return 'Unlock for ${_priceFor(_Plan.single, fallback: '\$14.99')}';
+      case _Plan.bundle4:
+        return _bundle4Selection.length == 4
+            ? 'Unlock 4 Courses · ${_priceFor(_Plan.bundle4, fallback: '\$49.99')}'
+            : 'Select ${4 - _bundle4Selection.length} more course${4 - _bundle4Selection.length == 1 ? '' : 's'}';
+      case _Plan.all:
+        return 'Unlock Everything · ${_priceFor(_Plan.all, fallback: '\$99.99')}';
     }
   }
 
   String get _planNotice {
     switch (_selected) {
       case _Plan.single:
-        return 'One-time payment of \$14.99. Lifetime access to this course.';
+        return 'One-time payment of ${_priceFor(_Plan.single, fallback: '\$14.99')}. Lifetime access to this course.';
       case _Plan.bundle4:
-        return 'One-time payment of \$49.99. Choose any 4 courses. Yours forever.';
+        return 'One-time payment of ${_priceFor(_Plan.bundle4, fallback: '\$49.99')}. Choose any 4 courses. Yours forever.';
       case _Plan.all:
-        return 'One-time payment of \$99.99. Every course + all future content. Yours forever.';
+        return 'One-time payment of ${_priceFor(_Plan.all, fallback: '\$99.99')}. Every course + all future content. Yours forever.';
     }
   }
 
@@ -364,7 +390,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
           plan: _Plan.single,
           title: widget.courseTitle,
           subtitle: '1 course · One-time purchase',
-          price: '\$14.99',
+          price: _priceFor(_Plan.single, fallback: '\$14.99'),
           badge: 'STARTER',
           badgeColor: AppColors.green,
           color: widget.courseColor,
@@ -376,8 +402,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
           plan: _Plan.bundle4,
           title: 'Any 4 Courses',
           subtitle: 'Pick any 4 courses · One-time',
-          price: '\$49.99',
-          badge: 'SAVE \$10',
+          price: _priceFor(_Plan.bundle4, fallback: '\$49.99'),
+          badge: _bundle4SavingsBadge,
           badgeColor: AppColors.amber,
           color: AppColors.amber,
           theme: theme,
@@ -388,7 +414,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
           plan: _Plan.all,
           title: 'Everything',
           subtitle: 'All courses + future content · One-time',
-          price: '\$99.99',
+          price: _priceFor(_Plan.all, fallback: '\$99.99'),
           badge: 'BEST VALUE',
           badgeColor: AppColors.primary,
           color: AppColors.primary,

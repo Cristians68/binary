@@ -239,7 +239,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                'ITIL V4 · CSM · CompTIA Security+ · Networking · Cloud',
+                                'Service Management · Agile & Scrum · Networking · Security · Cloud',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: AppColors.primary,
@@ -326,7 +326,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       (
         CupertinoIcons.doc_text_fill,
         'Structured courses',
-        'ITIL V4, CSM, Networking & more',
+        'Service management, Agile, Networking & more',
         AppColors.primary,
       ),
       (
@@ -364,24 +364,30 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   child: Icon(f.$1, color: f.$4, size: 20),
                 ),
                 const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      f.$2,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: theme.text,
-                        letterSpacing: -0.3,
+                // Expanded, not a bare Column: without a width constraint this
+                // Row overflows as soon as the subtitle is long — which also
+                // makes the screen fragile under large text sizes and
+                // translation.
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        f.$2,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: theme.text,
+                          letterSpacing: -0.3,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      f.$3,
-                      style: TextStyle(fontSize: 13, color: theme.subtext),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        f.$3,
+                        style: TextStyle(fontSize: 13, color: theme.subtext),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

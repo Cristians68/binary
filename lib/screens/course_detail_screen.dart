@@ -152,7 +152,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
   }
 
   void _openModule(Map<String, dynamic> module, int index) {
-    if (!_canAccessModule(module, index) && !_hasPaidAccess) {
+    if (!_canAccessModule(module, index)) {
       HapticFeedback.mediumImpact();
       _showPaywall();
       return;
