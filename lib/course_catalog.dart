@@ -77,7 +77,7 @@ const List<CourseInfo> kCourseCatalog = [
   ),
   CourseInfo(
     id: 'binary-network-pro',
-    tag: 'Network Pro',
+    tag: 'Binary Network Pro',
     title: 'Network Professional',
     blurb:
         'Networking end to end — OSI and TCP/IP, subnetting, routing and '
@@ -90,7 +90,7 @@ const List<CourseInfo> kCourseCatalog = [
   ),
   CourseInfo(
     id: 'binary-cyber-pro',
-    tag: 'Cyber Pro',
+    tag: 'Binary Cyber Pro',
     title: 'Cybersecurity Professional',
     blurb:
         'Defensive security fundamentals — threats, cryptography, access '
@@ -103,7 +103,7 @@ const List<CourseInfo> kCourseCatalog = [
   ),
   CourseInfo(
     id: 'binary-cloud',
-    tag: 'Cloud',
+    tag: 'Binary Cloud',
     title: 'Cloud Fundamentals',
     blurb:
         'Cloud computing from first principles — service and deployment '
@@ -111,7 +111,7 @@ const List<CourseInfo> kCourseCatalog = [
   ),
   CourseInfo(
     id: 'binary-cloud-pro',
-    tag: 'Cloud Pro',
+    tag: 'Binary Cloud Pro',
     title: 'Cloud Architecture',
     blurb:
         'Designing for the cloud — availability, scaling, networking, '
