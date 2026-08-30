@@ -14,6 +14,7 @@ import 'lessons_screen.dart';
 import 'quiz_score_screen.dart';
 import 'streak_service.dart';
 import 'app_theme.dart';
+import '../course_catalog.dart';
 
 // Safely cast a Firestore value to Map<String, dynamic>.
 // On web, nested maps can arrive as Map<Object, Object>.
@@ -157,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
       AppRouter.push(
         CourseDetailScreen(
           courseId: (course['id'] as String?) ?? '',
-          title: course['title'] ?? '',
+          title: displayTitle((course['id'] as String?) ?? ''),
           subtitle: course['subtitle'] ?? '',
           progress: (course['progress'] ?? 0.0).toDouble(),
           color: Color(course['color'] ?? 0xFF6366F1),
@@ -654,7 +655,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(course['title'] ?? '',
+                  Text(displayTitle(course['id'] as String? ?? ''),
                       style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,

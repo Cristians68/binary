@@ -8,6 +8,7 @@ import 'course_detail_screen.dart';
 import 'paywall_screen.dart';
 import 'app_router.dart';
 import 'app_theme.dart';
+import '../course_catalog.dart';
 
 class CoursesScreen extends StatefulWidget {
   const CoursesScreen({super.key});
@@ -344,7 +345,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
             context,
             AppRouter.push(CourseDetailScreen(
               courseId: id,
-              title: course['title'] ?? '',
+              title: displayTitle(id),
               subtitle: course['subtitle'] ?? '',
               progress: (course['progress'] ?? 0.0).toDouble(),
               color: color,
@@ -413,7 +414,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        course['title'] ?? '',
+                        displayTitle(course['id'] as String? ?? ''),
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -421,9 +422,6 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           letterSpacing: -0.3,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(course['tag'] ?? '',
-                          style: TextStyle(fontSize: 12, color: color)),
                     ],
                   ),
                 ),

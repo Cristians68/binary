@@ -422,7 +422,7 @@ Prepare for your IT certifications at binaryacademy.app
                                                     letterSpacing: -0.3)),
                                             const SizedBox(height: 2),
                                             Text(
-                                                '${widget.courseTag} · Binary Academy',
+                                                'Issued by Binary Academy',
                                                 style: TextStyle(
                                                     fontSize: 12,
                                                     color: color,

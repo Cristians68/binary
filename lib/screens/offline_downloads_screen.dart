@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'offline_service.dart';
 import 'app_theme.dart';
+import '../course_catalog.dart';
 
 class OfflineDownloadsScreen extends StatefulWidget {
   const OfflineDownloadsScreen({super.key});
@@ -103,7 +104,7 @@ class _OfflineDownloadsScreenState extends State<OfflineDownloadsScreen> {
         _downloadedIds.add(courseId);
       });
       HapticFeedback.heavyImpact();
-      _showSnack('${course['title']} downloaded for offline use.');
+      _showSnack('${displayTitle(courseId)} downloaded for offline use.');
     }
   }
 
@@ -115,7 +116,7 @@ class _OfflineDownloadsScreenState extends State<OfflineDownloadsScreen> {
       builder: (_) => CupertinoAlertDialog(
         title: const Text('Remove download?'),
         content: Text(
-          'This will remove the offline content for ${course['title']}.',
+          'This will remove the offline content for ${displayTitle(courseId)}.',
         ),
         actions: [
           CupertinoDialogAction(
@@ -325,7 +326,7 @@ class _OfflineDownloadsScreenState extends State<OfflineDownloadsScreen> {
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              course['title'] ?? '',
+                                              displayTitle(courseId),
                                               style: TextStyle(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w600,

@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'streak_service.dart';
 import 'app_theme.dart';
+import '../course_catalog.dart';
 
 class LessonsScreen extends StatefulWidget {
   const LessonsScreen({super.key});
@@ -275,7 +276,7 @@ class _LessonsScreenState extends State<LessonsScreen> {
                                           ),
                                           const SizedBox(height: 3),
                                           Text(
-                                            tag,
+                                            displayTitle(tag),
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: theme.subtext,

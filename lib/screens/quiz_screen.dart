@@ -7,6 +7,7 @@ import 'app_theme.dart';
 import 'progress_service.dart';
 import 'notification_service.dart';
 import 'certificate_screen.dart';
+import '../course_catalog.dart';
 
 class QuizScreen extends StatefulWidget {
   final String moduleTitle;
@@ -223,7 +224,7 @@ class _QuizScreenState extends State<QuizScreen> {
                       navigator.push(
                         PageRouteBuilder(
                           pageBuilder: (_, animation, __) => CertificateScreen(
-                            courseTitle: widget.courseTag,
+                            courseTitle: displayTitle(widget.courseTag),
                             courseTag: widget.courseTag,
                             color: widget.color,
                             courseId: widget.courseId,
@@ -418,7 +419,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   ),
                 ),
                 child: Text(
-                  '${widget.courseTag} · ${widget.moduleTitle}',
+                  '${displayTitle(widget.courseTag)} · ${widget.moduleTitle}',
                   style: TextStyle(
                     fontSize: 11,
                     color: widget.color,

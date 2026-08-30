@@ -263,11 +263,6 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
 
                       const SizedBox(height: 28),
 
-                      // Tag pill
-                      _TagPill(tag: widget.tag, color: widget.color),
-
-                      const SizedBox(height: 14),
-
                       // Title
                       Text(
                         widget.title,
@@ -444,34 +439,6 @@ class _BackButton extends StatelessWidget {
                   fontSize: 13, color: color, fontWeight: FontWeight.w600),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TagPill extends StatelessWidget {
-  final String tag;
-  final Color color;
-
-  const _TagPill({required this.tag, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
-      child: Text(
-        tag,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: color,
-          letterSpacing: 0.2,
         ),
       ),
     );

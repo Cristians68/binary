@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'quiz_screen.dart';
 import 'app_router.dart';
 import 'app_theme.dart';
+import '../course_catalog.dart';
 
 class LessonScreen extends StatefulWidget {
   final String moduleTitle;
@@ -216,7 +217,7 @@ class _LessonScreenState extends State<LessonScreen> {
                   ),
                 ),
                 child: Text(
-                  '${widget.courseTag} · ${widget.moduleTitle}',
+                  '${displayTitle(widget.courseTag)} · ${widget.moduleTitle}',
                   style: TextStyle(
                     fontSize: 11,
                     color: widget.color,

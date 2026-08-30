@@ -76,7 +76,7 @@ const List<CourseInfo> kCourseCatalog = [
         'not accredited, affiliated with, or endorsed by them.',
   ),
   CourseInfo(
-    id: 'binary-network-pro',
+    id: 'binary-network-professional',
     tag: 'Binary Network Pro',
     title: 'Network Professional',
     blurb:
@@ -89,7 +89,7 @@ const List<CourseInfo> kCourseCatalog = [
         'and is not accredited, affiliated with, or endorsed by them.',
   ),
   CourseInfo(
-    id: 'binary-cyber-pro',
+    id: 'binary-cybersecurity-professional',
     tag: 'Binary Cyber Pro',
     title: 'Cybersecurity Professional',
     blurb:
@@ -102,7 +102,7 @@ const List<CourseInfo> kCourseCatalog = [
         'and is not accredited, affiliated with, or endorsed by them.',
   ),
   CourseInfo(
-    id: 'binary-cloud',
+    id: 'binary-cloud-fundamentals',
     tag: 'Binary Cloud',
     title: 'Cloud Fundamentals',
     blurb:
@@ -110,7 +110,7 @@ const List<CourseInfo> kCourseCatalog = [
         'models, virtualisation, storage, and cost.',
   ),
   CourseInfo(
-    id: 'binary-cloud-pro',
+    id: 'binary-cloud-professional',
     tag: 'Binary Cloud Pro',
     title: 'Cloud Architecture',
     blurb:

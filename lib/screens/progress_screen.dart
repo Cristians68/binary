@@ -6,6 +6,7 @@ import 'course_detail_screen.dart';
 import 'streak_service.dart';
 import 'app_router.dart';
 import 'app_theme.dart';
+import '../course_catalog.dart';
 
 class ProgressScreen extends StatefulWidget {
   const ProgressScreen({super.key});
@@ -386,7 +387,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                   context,
                   AppRouter.push(CourseDetailScreen(
                     courseId: courseId,
-                    title: course['title'] ?? '',
+                    title: displayTitle(courseId),
                     subtitle: course['subtitle'] ?? '',
                     progress: progress,
                     color: color,
@@ -419,7 +420,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              course['title'] ?? '',
+                              displayTitle(courseId),
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -638,7 +639,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          item['courseTag'] as String? ?? '',
+                          displayTitle(item['courseTag'] as String? ?? ''),
                           style: TextStyle(
                               fontSize: 12, color: theme.subtext),
                         ),

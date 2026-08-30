@@ -7,7 +7,7 @@ import 'paywall_screen.dart';
 /// Usage:
 ///   SubscriptionGate.enter(
 ///     context,
-///     courseId: 'binary-network-pro',
+///     courseId: 'binary-network-professional',
 ///     courseTitle: 'Network Professional',
 ///     courseColor: Colors.blue,
 ///     onGranted: () => Navigator.push(context, AppRouter.push(CourseDetailScreen(...))),
