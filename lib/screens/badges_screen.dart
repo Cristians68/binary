@@ -83,7 +83,7 @@ class BadgesScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.bg,
       body: SafeArea(
-        child: Column(
+        child: WebContentBounds(maxWidth: 720, child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(context, theme),
@@ -119,7 +119,7 @@ class BadgesScreen extends StatelessWidget {
                     ),
             ),
           ],
-        ),
+        )),
       ),
     );
   }
