@@ -156,140 +156,159 @@ class _SignupScreenState extends State<SignupScreen>
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);
-    final isDark = theme.isDark;
 
     return Scaffold(
       backgroundColor: theme.bg,
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fade,
-          child: SlideTransition(
-            position: _slide,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 20),
-                  _buildBackButton(context, theme),
-                  const SizedBox(height: 48),
-                  Text(
-                    'Create\naccount.',
-                    style: TextStyle(
-                      fontSize: 44,
-                      fontWeight: FontWeight.w700,
-                      color: theme.text,
-                      letterSpacing: -1.8,
-                      height: 1.05,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Start your IT learning journey today.',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: theme.subtext,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  const SizedBox(height: 48),
-                  _buildLabel('Full name', theme),
-                  const SizedBox(height: 8),
-                  _buildTextField(_nameController, 'John Doe', false,
-                      CupertinoIcons.person, theme,
-                      keyboardType: TextInputType.name),
-                  const SizedBox(height: 16),
-                  _buildLabel('Email address', theme),
-                  const SizedBox(height: 8),
-                  _buildTextField(_emailController, 'you@example.com', false,
-                      CupertinoIcons.mail, theme,
-                      keyboardType: TextInputType.emailAddress),
-                  const SizedBox(height: 16),
-                  _buildLabel('Password', theme),
-                  const SizedBox(height: 8),
-                  _buildTextField(_passwordController, '••••••••', true,
-                      CupertinoIcons.lock, theme),
-                  const SizedBox(height: 28),
-                  _buildLabel('What is your main learning goal?', theme),
-                  const SizedBox(height: 12),
-                  _buildGoalSelector(theme),
-                  if (_errorMessage != null) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.red.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                            color: AppColors.red.withValues(alpha: 0.2)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(CupertinoIcons.exclamationmark_circle,
-                              color: AppColors.red, size: 16),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(_errorMessage!,
-                                style: const TextStyle(
-                                    fontSize: 13, color: AppColors.red)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 36),
-                  _PressableButton(
-                    onTap: _isLoading ? null : _signup,
-                    color: AppColors.primary,
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2),
-                          )
-                        : const Text(
-                            'Create my account',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                  ),
-                  const SizedBox(height: 20),
-                  Center(
-                    child: GestureDetector(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        Navigator.pop(context);
-                      },
-                      child: RichText(
-                        text: TextSpan(
-                          text: 'Already have an account? ',
-                          style: TextStyle(
-                              fontSize: 14, color: theme.subtext),
-                          children: const [
-                            TextSpan(
-                              text: 'Sign in',
-                              style: TextStyle(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+      body: Stack(
+        children: [
+          // ── Same ambient treatment as login_screen.dart, so the auth
+          // flow reads as one cohesive family rather than mismatched
+          // screens ────────────────────────────────────────────────────
+          Positioned(
+            top: -120,
+            right: -100,
+            child:
+                GlowOrb(color: AppColors.primary, size: 320, opacity: 0.10),
+          ),
+          Positioned(
+            bottom: -140,
+            left: -120,
+            child: GlowOrb(color: AppColors.green, size: 300, opacity: 0.08),
+          ),
+          SafeArea(
+            child: FadeTransition(
+              opacity: _fade,
+              child: SlideTransition(
+                position: _slide,
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 20),
+                      _buildBackButton(context, theme),
+                      const SizedBox(height: 28),
+                      const AppIcon(size: 48),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Create\naccount.',
+                        style: TextStyle(
+                          fontSize: 44,
+                          fontWeight: FontWeight.w700,
+                          color: theme.text,
+                          letterSpacing: -1.8,
+                          height: 1.05,
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Start your IT learning journey today.',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: theme.subtext,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 48),
+                      _buildLabel('Full name', theme),
+                      const SizedBox(height: 8),
+                      _buildTextField(_nameController, 'John Doe', false,
+                          CupertinoIcons.person, theme,
+                          keyboardType: TextInputType.name),
+                      const SizedBox(height: 16),
+                      _buildLabel('Email address', theme),
+                      const SizedBox(height: 8),
+                      _buildTextField(_emailController, 'you@example.com',
+                          false, CupertinoIcons.mail, theme,
+                          keyboardType: TextInputType.emailAddress),
+                      const SizedBox(height: 16),
+                      _buildLabel('Password', theme),
+                      const SizedBox(height: 8),
+                      _buildTextField(_passwordController, '••••••••', true,
+                          CupertinoIcons.lock, theme),
+                      const SizedBox(height: 28),
+                      _buildLabel('What is your main learning goal?', theme),
+                      const SizedBox(height: 12),
+                      _buildGoalSelector(theme),
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.red.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                                color: AppColors.red.withValues(alpha: 0.2)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(CupertinoIcons.exclamationmark_circle,
+                                  color: AppColors.red, size: 16),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(_errorMessage!,
+                                    style: const TextStyle(
+                                        fontSize: 13, color: AppColors.red)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 36),
+                      _PressableButton(
+                        onTap: _isLoading ? null : _signup,
+                        color: AppColors.primary,
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Text(
+                                'Create my account',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                      ),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: GestureDetector(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            Navigator.pop(context);
+                          },
+                          child: RichText(
+                            text: TextSpan(
+                              text: 'Already have an account? ',
+                              style: TextStyle(
+                                  fontSize: 14, color: theme.subtext),
+                              children: const [
+                                TextSpan(
+                                  text: 'Sign in',
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                    ],
                   ),
-                  const SizedBox(height: 40),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

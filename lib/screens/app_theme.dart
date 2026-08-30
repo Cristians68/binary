@@ -1,6 +1,115 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// ── Shared brand mark ──────────────────────────────────────────────────────
+// A custom-painted "B" with two small binary dots (0 · 1) beneath, inside a
+// rounded-square shape. Used anywhere the app needs to reassert its identity
+// (welcome, login, signup) rather than each screen keeping its own copy.
+class AppIcon extends StatelessWidget {
+  final double size;
+  const AppIcon({super.key, this.size = 72});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(size * 0.265),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.35),
+            blurRadius: size * 0.28,
+            offset: Offset(0, size * 0.10),
+          ),
+        ],
+      ),
+      child: CustomPaint(painter: _AppIconPainter()),
+    );
+  }
+}
+
+class _AppIconPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    final tp = TextPainter(
+      text: const TextSpan(
+        text: 'B',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 38,
+          fontWeight: FontWeight.w800,
+          height: 1.0,
+          letterSpacing: -1.0,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final bX = (w - tp.width) / 2 - 1;
+    final bY = (h - tp.height) / 2 - 5;
+    tp.paint(canvas, Offset(bX, bY));
+
+    final dotY = h * 0.73;
+    final dotR = w * 0.055;
+    final spacing = w * 0.18;
+    final centerX = w / 2;
+
+    final ringPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.75)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * 0.042;
+    canvas.drawCircle(Offset(centerX - spacing, dotY), dotR, ringPaint);
+
+    paint.color = Colors.white.withValues(alpha: 0.45);
+    canvas.drawCircle(Offset(centerX, dotY), dotR * 0.38, paint);
+
+    paint.color = Colors.white.withValues(alpha: 0.75);
+    canvas.drawCircle(Offset(centerX + spacing, dotY), dotR, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// A soft, out-of-focus circle of colour used to add ambient depth behind a
+/// form without competing with it — purely decorative, `IgnorePointer` so it
+/// never intercepts taps meant for the content above it.
+class GlowOrb extends StatelessWidget {
+  final Color color;
+  final double size;
+  final double opacity;
+
+  const GlowOrb(
+      {super.key, required this.color, required this.size, required this.opacity});
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [
+              color.withValues(alpha: opacity),
+              color.withValues(alpha: 0),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Theme colours ─────────────────────────────────────────────────────────────
 class AppColors {
   AppColors._();

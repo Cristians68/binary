@@ -167,7 +167,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const _AppIcon(size: 64),
+                    const AppIcon(size: 64),
                     const SizedBox(height: 28),
                     Text(
                       'Binary.',
@@ -291,7 +291,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // App icon — custom painted binary/circuit mark
-        const _AppIcon(size: 72),
+        const AppIcon(size: 72),
         const SizedBox(height: 20),
         Text(
           'Binary.',
@@ -455,95 +455,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       ],
     );
   }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// APP ICON
-// A custom-painted mark: bold "B" with two small binary dots (0 · 1) beneath,
-// all inside the same rounded-square shape. Clean, branded, techy.
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _AppIcon extends StatelessWidget {
-  final double size;
-  const _AppIcon({this.size = 72});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(size * 0.265),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.35),
-            blurRadius: size * 0.28,
-            offset: Offset(0, size * 0.10),
-          ),
-        ],
-      ),
-      child: CustomPaint(
-        painter: _AppIconPainter(),
-      ),
-    );
-  }
-}
-
-class _AppIconPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final paint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-
-    // ── Bold "B" using a TextPainter ──────────────────────────────────────
-    final tp = TextPainter(
-      text: const TextSpan(
-        text: 'B',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 38,
-          fontWeight: FontWeight.w800,
-          height: 1.0,
-          letterSpacing: -1.0,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-
-    // Centre the B, shifted slightly upward to make room for dots
-    final bX = (w - tp.width) / 2 - 1;
-    final bY = (h - tp.height) / 2 - 5;
-    tp.paint(canvas, Offset(bX, bY));
-
-    // ── Binary dots "0  1" beneath the B ─────────────────────────────────
-    // "0" = small open circle, "1" = small filled circle
-    final dotY = h * 0.73;
-    final dotR = w * 0.055;
-    final spacing = w * 0.18;
-    final centerX = w / 2;
-
-    // "0" — left of centre (open ring)
-    final ringPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.75)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.042;
-    canvas.drawCircle(Offset(centerX - spacing, dotY), dotR, ringPaint);
-
-    // separator dot (·)
-    paint.color = Colors.white.withValues(alpha: 0.45);
-    canvas.drawCircle(Offset(centerX, dotY), dotR * 0.38, paint);
-
-    // "1" — right of centre (filled)
-    paint.color = Colors.white.withValues(alpha: 0.75);
-    canvas.drawCircle(Offset(centerX + spacing, dotY), dotR, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

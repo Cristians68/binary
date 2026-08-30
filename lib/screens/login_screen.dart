@@ -151,158 +151,194 @@ class _LoginScreenState extends State<LoginScreen>
 
     return Scaffold(
       backgroundColor: theme.bg,
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fade,
-          child: SlideTransition(
-            position: _slide,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 20),
-                  _buildBackButton(context, theme),
-                  const SizedBox(height: 48),
-                  Text(
-                    'Welcome\nback.',
-                    style: TextStyle(
-                      fontSize: 44,
-                      fontWeight: FontWeight.w700,
-                      color: theme.text,
-                      letterSpacing: -1.8,
-                      height: 1.05,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Sign in to continue learning.',
-                    style: TextStyle(
-                        fontSize: 16,
-                        color: theme.subtext,
-                        letterSpacing: -0.3),
-                  ),
-                  const SizedBox(height: 48),
-                  _buildLabel('Email address', theme),
-                  const SizedBox(height: 8),
-                  _buildTextField(_emailController, 'you@example.com', false,
-                      CupertinoIcons.mail, theme),
-                  const SizedBox(height: 16),
-                  _buildLabel('Password', theme),
-                  const SizedBox(height: 8),
-                  _buildTextField(_passwordController, '••••••••', true,
-                      CupertinoIcons.lock, theme),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+      body: Stack(
+        children: [
+          // ── Soft ambient colour, echoing the brand mark, so the screen
+          // doesn't read as a bare form on a blank sheet ──────────────────
+          Positioned(
+            top: -120,
+            right: -100,
+            child:
+                GlowOrb(color: AppColors.primary, size: 320, opacity: 0.10),
+          ),
+          Positioned(
+            bottom: -140,
+            left: -120,
+            child:
+                GlowOrb(color: AppColors.indigo, size: 300, opacity: 0.08),
+          ),
+          SafeArea(
+            child: FadeTransition(
+              opacity: _fade,
+              child: SlideTransition(
+                position: _slide,
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      InkWell(
-                        onTap: _resetLoading ? null : _forgotPassword,
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 10),
-                          child: _resetLoading
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(
-                                      color: AppColors.primary,
-                                      strokeWidth: 2),
-                                )
-                              : const Text(
-                                  'Forgot password?',
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.w500,
-                                      letterSpacing: -0.1),
-                                ),
+                      const SizedBox(height: 20),
+                      _buildBackButton(context, theme),
+                      const SizedBox(height: 32),
+                      const AppIcon(size: 52),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Welcome\nback.',
+                        style: TextStyle(
+                          fontSize: 44,
+                          fontWeight: FontWeight.w700,
+                          color: theme.text,
+                          letterSpacing: -1.8,
+                          height: 1.05,
                         ),
                       ),
-                    ],
-                  ),
-                  if (_errorMessage != null) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.red.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                            color: AppColors.red.withValues(alpha: 0.2)),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Sign in to continue learning.',
+                        style: TextStyle(
+                            fontSize: 16,
+                            color: theme.subtext,
+                            letterSpacing: -0.3),
                       ),
-                      child: Row(
+                      const SizedBox(height: 48),
+                      _buildLabel('Email address', theme),
+                      const SizedBox(height: 8),
+                      _buildTextField(_emailController, 'you@example.com',
+                          false, CupertinoIcons.mail, theme),
+                      const SizedBox(height: 16),
+                      _buildLabel('Password', theme),
+                      const SizedBox(height: 8),
+                      _buildTextField(_passwordController, '••••••••', true,
+                          CupertinoIcons.lock, theme),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          const Icon(CupertinoIcons.exclamationmark_circle,
-                              color: AppColors.red, size: 16),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(_errorMessage!,
-                                style: const TextStyle(
-                                    fontSize: 13, color: AppColors.red)),
+                          InkWell(
+                            onTap: _resetLoading ? null : _forgotPassword,
+                            borderRadius: BorderRadius.circular(8),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 10),
+                              child: _resetLoading
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                          color: AppColors.primary,
+                                          strokeWidth: 2),
+                                    )
+                                  : const Text(
+                                      'Forgot password?',
+                                      style: TextStyle(
+                                          fontSize: 13,
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.w500,
+                                          letterSpacing: -0.1),
+                                    ),
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                  const SizedBox(height: 28),
-                  _PressableButton(
-                    onTap: _isLoading ? null : _login,
-                    color: AppColors.primary,
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2),
-                          )
-                        : const Text(
-                            'Sign in',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                              letterSpacing: -0.3,
-                            ),
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.red.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                                color: AppColors.red.withValues(alpha: 0.2)),
                           ),
-                  ),
-                  const SizedBox(height: 20),
-                  Center(
-                    child: InkWell(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        Navigator.pop(context);
-                      },
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 10),
-                        child: RichText(
-                          text: TextSpan(
-                            text: "Don't have an account? ",
-                            style: TextStyle(
-                                fontSize: 14, color: theme.subtext),
-                            children: const [
-                              TextSpan(
-                                text: 'Sign up',
-                                style: TextStyle(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w600),
+                          child: Row(
+                            children: [
+                              const Icon(CupertinoIcons.exclamationmark_circle,
+                                  color: AppColors.red, size: 16),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(_errorMessage!,
+                                    style: const TextStyle(
+                                        fontSize: 13, color: AppColors.red)),
                               ),
                             ],
                           ),
                         ),
+                      ],
+                      const SizedBox(height: 28),
+                      _PressableButton(
+                        onTap: _isLoading ? null : _login,
+                        color: AppColors.primary,
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Text(
+                                'Sign in',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: InkWell(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            Navigator.pop(context);
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 10),
+                            child: RichText(
+                              text: TextSpan(
+                                text: "Don't have an account? ",
+                                style: TextStyle(
+                                    fontSize: 14, color: theme.subtext),
+                                children: const [
+                                  TextSpan(
+                                    text: 'Sign up',
+                                    style: TextStyle(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(CupertinoIcons.lock_shield,
+                                size: 13, color: theme.subtext),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Your progress is saved securely to your account',
+                              style: TextStyle(
+                                  fontSize: 12, color: theme.subtext),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                    ],
                   ),
-                  const SizedBox(height: 40),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
