@@ -6,7 +6,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'lesson_screen.dart';
 import 'subscription_service.dart';
-import 'progress_service.dart';
 import 'paywall_screen.dart';
 import 'app_router.dart';
 import 'app_theme.dart';

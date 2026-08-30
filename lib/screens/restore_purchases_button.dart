@@ -53,7 +53,6 @@ class _RestorePurchasesButtonState extends State<RestorePurchasesButton> {
   }
 
   void _showResult({required bool success, required String message}) {
-    final theme = AppTheme.of(context);
     showCupertinoDialog(
       context: context,
       builder: (_) => CupertinoAlertDialog(
