@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:confetti/confetti.dart';
 import 'app_theme.dart';
 import 'progress_service.dart';
 import 'notification_service.dart';
@@ -36,11 +37,20 @@ class _QuizScreenState extends State<QuizScreen> {
   int _score = 0;
   bool _loading = true;
   List<Map<String, dynamic>> _questions = [];
+  late final ConfettiController _confettiController;
 
   @override
   void initState() {
     super.initState();
+    _confettiController =
+        ConfettiController(duration: const Duration(seconds: 2));
     _loadQuestions();
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
   }
 
   List<Map<String, dynamic>> _shuffleQuestions(
@@ -152,13 +162,19 @@ class _QuizScreenState extends State<QuizScreen> {
       });
     }
 
+    if (passed) _confettiController.play();
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => Dialog(
         backgroundColor: theme.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          alignment: Alignment.topCenter,
+          children: [
+            Padding(
           padding: const EdgeInsets.all(28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -300,6 +316,27 @@ class _QuizScreenState extends State<QuizScreen> {
               ),
             ],
           ),
+            ),
+            if (passed)
+              IgnorePointer(
+                child: ConfettiWidget(
+                  confettiController: _confettiController,
+                  blastDirection: pi / 2,
+                  blastDirectionality: BlastDirectionality.explosive,
+                  numberOfParticles: 24,
+                  maxBlastForce: 18,
+                  minBlastForce: 8,
+                  gravity: 0.25,
+                  shouldLoop: false,
+                  colors: [
+                    AppColors.green,
+                    AppColors.primary,
+                    AppColors.amber,
+                    widget.color,
+                  ],
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -337,7 +374,7 @@ class _QuizScreenState extends State<QuizScreen> {
     return Scaffold(
       backgroundColor: theme.bg,
       body: SafeArea(
-        child: Padding(
+        child: WebContentBounds(maxWidth: 720, child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,7 +622,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 ),
             ],
           ),
-        ),
+        )),
       ),
     );
   }
