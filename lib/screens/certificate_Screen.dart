@@ -145,7 +145,7 @@ Prepare for your IT certifications at binaryacademy.app
     return Scaffold(
       backgroundColor: theme.bg,
       body: SafeArea(
-        child: Column(
+        child: WebContentBounds(maxWidth: 720, child: Column(
           children: [
             // ── Header ────────────────────────────────────────────────────
             Padding(
@@ -633,7 +633,7 @@ Prepare for your IT certifications at binaryacademy.app
               ),
             ),
           ],
-        ),
+        )),
       ),
     );
   }

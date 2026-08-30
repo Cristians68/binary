@@ -183,7 +183,7 @@ class _OfflineDownloadsScreenState extends State<OfflineDownloadsScreen> {
     return Scaffold(
       backgroundColor: theme.bg,
       body: SafeArea(
-        child: Column(
+        child: WebContentBounds(maxWidth: 720, child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
@@ -450,7 +450,7 @@ class _OfflineDownloadsScreenState extends State<OfflineDownloadsScreen> {
                         ),
             ),
           ],
-        ),
+        )),
       ),
     );
   }

@@ -149,7 +149,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
     return Scaffold(
       backgroundColor: theme.bg,
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: WebContentBounds(maxWidth: 640, child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -393,7 +393,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
               const SizedBox(height: 40),
             ],
           ),
-        ),
+        )),
       ),
     );
   }

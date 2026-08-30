@@ -72,7 +72,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Scaffold(
       backgroundColor: theme.bg,
       body: SafeArea(
-        child: Column(
+        child: WebContentBounds(maxWidth: 720, child: Column(
           children: [
             // ── Skip button ───────────────────────────────────────────────
             Align(
@@ -159,7 +159,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
           ],
-        ),
+        )),
       ),
     );
   }
