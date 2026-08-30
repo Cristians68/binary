@@ -1,14 +1,18 @@
 /**
- * Fresh content: Cybersecurity Professional course (id: "binary-cyber-pro").
- * Same assumptions and safety guard as create-network-pro.js — see that
- * file's header. See expand-itil-v4.js for how to authenticate and run.
+ * DO NOT RUN THIS SCRIPT AS-IS. See create-network-pro.js's header for the
+ * full explanation — same situation here: the real course id is
+ * "binary-cybersecurity-professional" (not "binary-cyber-pro"), a live check
+ * on 2026-08-29 found it already has 20 modules of real content, and this
+ * script's module ids ("module-1".."module-7") were guessed, not verified
+ * against the real structure. Do not run until that's checked against
+ * Firestore directly.
  */
 
 const admin = require("firebase-admin");
 admin.initializeApp({ credential: admin.credential.applicationDefault() });
 
 const db = admin.firestore();
-const COURSE_ID = "binary-cyber-pro";
+const COURSE_ID = "binary-cybersecurity-professional";
 
 async function addFlashcards(moduleId, cards) {
   const col = db.collection("courses").doc(COURSE_ID).collection("modules").doc(moduleId).collection("flashcards");

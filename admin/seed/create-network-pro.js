@@ -1,30 +1,32 @@
 /**
- * Fresh content: Network Professional course (id: "binary-network-pro").
+ * DO NOT RUN THIS SCRIPT AS-IS. Read this whole comment first.
  *
- * Unlike expand-itil-v4.js / expand-csm.js, this course has no confirmed
- * existing content anywhere in this repo — the only prior seed file
- * (lib/screens/seed_content.dart's _seedNetworking) wrote to a DIFFERENT
- * Firestore id ("networking"), which does not match the live catalogue's
- * "binary-network-pro" (see lib/course_catalog.dart). So this script assumes
- * the course is empty, per the decision to write fresh content rather than
- * guess at unknown live state.
+ * This was originally written assuming the "binary-network-pro" course was
+ * empty (the id it was written against didn't even exist). A live check on
+ * 2026-08-29 (via the actual signed-in app, not this script) found the real
+ * course id is "binary-network-professional" and it ALREADY HAS CONTENT —
+ * the Courses screen shows 20 modules with a real title and description.
+ * The "this course is empty" premise this script was built on is false.
  *
- * SAFETY: because live state is genuinely unknown, each module write checks
- * for an existing 'title' first and SKIPS instead of overwriting if one is
- * already there — it will never clobber a module that turns out to already
- * exist. Flashcards/quiz always use card-1..12 / q-1..12; if those doc ids
- * are already occupied by different content, re-running this will silently
- * overwrite them, so check the module skip-logs before assuming it's safe
- * to run on a course you're not sure is empty.
+ * COURSE_ID below has been corrected to the real id so this file is no
+ * longer flatly wrong, but that does NOT make it safe to run. Module ids
+ * here are guessed ("module-1".."module-7") and may not match the real
+ * course's actual 20-module structure — running this could write module
+ * docs with duplicate ids and mismatched content into a real, live course.
  *
- * See expand-itil-v4.js for how to authenticate and run.
+ * Before running: pull the real module-{1..20} documents for
+ * "binary-network-professional" from Firestore (console or a read-only
+ * script) and compare against what's below. Only proceed once you know
+ * exactly which module ids are free and which already hold real content.
+ *
+ * See expand-itil-v4.js for how to authenticate and run, once verified safe.
  */
 
 const admin = require("firebase-admin");
 admin.initializeApp({ credential: admin.credential.applicationDefault() });
 
 const db = admin.firestore();
-const COURSE_ID = "binary-network-pro";
+const COURSE_ID = "binary-network-professional";
 
 async function addFlashcards(moduleId, cards) {
   const col = db.collection("courses").doc(COURSE_ID).collection("modules").doc(moduleId).collection("flashcards");

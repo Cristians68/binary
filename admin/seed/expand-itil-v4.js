@@ -6,6 +6,12 @@
  * course from ~84 to ~168 flashcard+quiz items, and updates each module's
  * display subtitle to match the new counts.
  *
+ * CHECK BEFORE RUNNING: a live check on 2026-08-29 found this course
+ * actually has 8 modules, not 7 — this script only touches module-1
+ * through module-7 and will silently leave module 8 unexpanded. Confirm
+ * the real module count/ids in Firestore before running, and add an
+ * eighth block here if warranted.
+ *
  * WHY THIS LIVES HERE, NOT IN lib/
  * ---------------------------------
  * docs/SECURITY.md flags lib/screens/seed_*.dart as content that should never

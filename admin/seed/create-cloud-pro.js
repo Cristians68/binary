@@ -1,7 +1,11 @@
 /**
- * Fresh content: Cloud Architecture course (id: "binary-cloud-pro").
- * Same assumptions and safety guard as create-network-pro.js — see that
- * file's header. See expand-itil-v4.js for how to authenticate and run.
+ * DO NOT RUN THIS SCRIPT AS-IS. See create-network-pro.js's header for the
+ * full explanation — same situation here: the real course id is
+ * "binary-cloud-professional" (not "binary-cloud-pro"), a live check on
+ * 2026-08-29 found it already has 20 modules of real content, and this
+ * script's module ids ("module-1".."module-7") were guessed, not verified
+ * against the real structure. Do not run until that's checked against
+ * Firestore directly.
  *
  * Note on trademarks: this course discusses architecture "well-architected"
  * principles as general, cross-provider industry practice (operational
@@ -14,7 +18,7 @@ const admin = require("firebase-admin");
 admin.initializeApp({ credential: admin.credential.applicationDefault() });
 
 const db = admin.firestore();
-const COURSE_ID = "binary-cloud-pro";
+const COURSE_ID = "binary-cloud-professional";
 
 async function addFlashcards(moduleId, cards) {
   const col = db.collection("courses").doc(COURSE_ID).collection("modules").doc(moduleId).collection("flashcards");

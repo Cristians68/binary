@@ -3,6 +3,10 @@
  * Same pattern as expand-itil-v4.js — see that file's header for how to run
  * this. Adds 6 more flashcards + 6 more quiz questions to each of the 7
  * modules (cards/questions 7-12), roughly doubling the course.
+ *
+ * CHECK BEFORE RUNNING: a live check on 2026-08-29 found this course
+ * actually has 8 modules, not 7 — same gap as expand-itil-v4.js. Confirm
+ * the real module count/ids in Firestore before running.
  */
 
 const admin = require("firebase-admin");
