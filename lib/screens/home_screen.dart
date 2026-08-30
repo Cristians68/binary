@@ -13,6 +13,8 @@ import 'badges_screen.dart';
 import 'lessons_screen.dart';
 import 'quiz_score_screen.dart';
 import 'streak_service.dart';
+import 'review_service.dart';
+import 'review_screen.dart';
 import 'app_theme.dart';
 import '../course_catalog.dart';
 
@@ -43,6 +45,9 @@ class _HomeScreenState extends State<HomeScreen> {
   int _dailyPoints = 0;
   int _dailyTarget = 50;
 
+  int _reviewDue = 0;
+  String? _reviewNextLabel;
+
   StreamSubscription<Map<String, dynamic>>? _statsSub;
 
   @override
@@ -50,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _initStreak();
     _loadEnrolledCourses();
+    _loadReviewQueue();
     _statsSub = StreakService.statsStream().listen(_onStatsUpdate);
   }
 
@@ -325,6 +331,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildDailyGoal(theme),
                     ],
                     SizedBox(height: isWide ? 36 : 28),
+                    _buildReviewCard(theme),
                     _buildSectionTitle('My courses', theme),
                     const SizedBox(height: 12),
                     _buildEnrolledCourses(theme, isWide: isWide),
@@ -337,6 +344,94 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Refreshed on every return to the tab, since a quiz taken elsewhere in the
+  /// app changes the queue without this screen rebuilding on its own.
+  Future<void> _loadReviewQueue() async {
+    final due = await ReviewService.dueCount();
+    final label = await ReviewService.nextDueLabel();
+    if (!mounted) return;
+    setState(() {
+      _reviewDue = due;
+      _reviewNextLabel = label;
+    });
+  }
+
+  /// The review entry point. Hidden entirely until the user has actually
+  /// missed something, so a new account is not shown an empty feature.
+  Widget _buildReviewCard(ThemeNotifier theme) {
+    if (_reviewNextLabel == null) return const SizedBox.shrink();
+
+    final ready = _reviewDue > 0;
+    final accent = ready ? AppColors.indigo : theme.subtext;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 28),
+      child: CupertinoButton(
+        padding: EdgeInsets.zero,
+        onPressed: ready
+            ? () async {
+                await Navigator.of(context).push(
+                  AppRouter.fade(const ReviewScreen()),
+                );
+                _loadReviewQueue();
+              }
+            : null,
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: theme.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: ready ? AppColors.indigo.withValues(alpha: 0.5) : theme.border,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(CupertinoIcons.arrow_2_circlepath,
+                    color: accent, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ready
+                          ? '$_reviewDue question${_reviewDue == 1 ? "" : "s"} to review'
+                          : 'All caught up',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: theme.text,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      ready
+                          ? 'Questions you missed, back on schedule'
+                          : _reviewNextLabel!,
+                      style: TextStyle(fontSize: 13, color: theme.subtext),
+                    ),
+                  ],
+                ),
+              ),
+              if (ready)
+                Icon(CupertinoIcons.chevron_right,
+                    color: theme.subtext, size: 18),
+            ],
           ),
         ),
       ),

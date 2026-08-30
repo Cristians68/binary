@@ -6,6 +6,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'app_theme.dart';
 import 'app_router.dart';
+import 'review_service.dart';
 import 'welcome_screen.dart';
 
 class DeleteAccountScreen extends StatefulWidget {
@@ -116,6 +117,12 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
       // The Auth record is gone server-side now; drop the local session too
       // so no stale cached user lingers on this device.
       await FirebaseAuth.instance.signOut();
+
+      // The spaced-repetition queue lives in SharedPreferences, not Firestore,
+      // so the server-side delete above does not touch it. Without this the
+      // next person to sign in on this device inherits the previous user's
+      // missed questions.
+      await ReviewService.clear();
 
       if (mounted) {
         Navigator.pushAndRemoveUntil(

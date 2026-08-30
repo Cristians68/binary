@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:confetti/confetti.dart';
 import 'app_theme.dart';
 import 'quiz_logic.dart';
+import 'review_service.dart';
 import 'progress_service.dart';
 import 'notification_service.dart';
 import 'certificate_screen.dart';
@@ -107,6 +108,18 @@ class _QuizScreenState extends State<QuizScreen> {
       _answered = true;
       if (correct) _score++;
     });
+
+    // File a missed question for spaced repetition. Deliberately not awaited:
+    // the answer feedback must appear immediately, and ReviewService swallows
+    // its own storage errors, so a failure here can never block the quiz.
+    if (!correct) {
+      ReviewService.recordMiss(
+        courseId: widget.courseId,
+        moduleId: widget.moduleId,
+        courseTag: widget.courseTag,
+        question: question,
+      );
+    }
   }
 
   void _nextQuestion() {
