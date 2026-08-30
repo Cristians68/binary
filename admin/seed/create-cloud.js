@@ -14,6 +14,12 @@ admin.initializeApp({ credential: admin.credential.applicationDefault() });
 const db = admin.firestore();
 const COURSE_ID = "binary-cloud-fundamentals";
 
+// Which modules this run actually wrote, and which it left alone. The
+// summary at the end reports these rather than assuming every module was
+// created — createModule() skips any module that already has a title.
+const written = [];
+const skipped = [];
+
 async function addFlashcards(moduleId, cards) {
   const col = db.collection("courses").doc(COURSE_ID).collection("modules").doc(moduleId).collection("flashcards");
   for (let i = 0; i < cards.length; i++) await col.doc(`card-${i + 1}`).set(cards[i]);
@@ -29,6 +35,7 @@ async function createModule(moduleId, title, order, status, flashcards, quiz) {
   const existing = await ref.get();
   if (existing.exists && existing.data().title) {
     console.log(`SKIPPED ${COURSE_ID}/${moduleId} — a module with title "${existing.data().title}" already exists there.`);
+    skipped.push(moduleId);
     return;
   }
   await ref.set({
@@ -40,6 +47,7 @@ async function createModule(moduleId, title, order, status, flashcards, quiz) {
   await addFlashcards(moduleId, flashcards);
   await addQuiz(moduleId, quiz);
   console.log(`${COURSE_ID}/${moduleId} ("${title}"): ${flashcards.length} flashcards, ${quiz.length} quiz questions`);
+  written.push(moduleId);
 }
 
 async function main() {
@@ -267,7 +275,14 @@ async function main() {
     ]
   );
 
-  console.log("Done — binary-cloud created fresh with 7 modules, ~168 flashcard+quiz items.");
+  console.log(
+    `
+Done. Course written to: ${COURSE_ID}
+` +
+      `  modules written: ${written.length}${written.length ? " (" + written.join(", ") + ")" : ""}
+` +
+      `  modules skipped (already had content): ${skipped.length}${skipped.length ? " (" + skipped.join(", ") + ")" : ""}`
+  );
 }
 
 main()
