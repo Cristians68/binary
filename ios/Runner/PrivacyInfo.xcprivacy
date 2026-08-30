@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  App-level privacy manifest for Binary Academy.
+
+	  Required by App Store Connect since 2024-05-01; a build without one is
+	  rejected at upload. This file covers the FIRST-PARTY app target only.
+	  Each CocoaPod ships its own PrivacyInfo.xcprivacy inside its bundle and
+	  Xcode aggregates them into the final privacy report at archive time — do
+	  not restate a pod's declarations here.
+
+	  Every entry below was derived by reading the code, not from a template.
+	  If you add a dependency or start collecting a new field, update BOTH this
+	  file and the App Store Connect "App Privacy" questionnaire; the two are
+	  cross-checked by review.
+	-->
+
+	<!--
+	  No tracking. The app has no advertising SDK, no attribution SDK, and no
+	  analytics SDK (verified: no firebase_analytics, no Crashlytics, no
+	  third-party ad network in pubspec.yaml). Nothing is linked with data from
+	  other companies' apps or sites, so ATT is not required and no tracking
+	  domains are declared.
+	-->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<!--
+		  Email address — held by Firebase Auth for email/password, Google, and
+		  Apple sign-in. Deliberately NOT duplicated into Firestore (see
+		  signup_screen.dart) so there is a single copy to delete.
+		-->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+
+		<!--
+		  Name — the display name captured at signup, stored on the Firebase Auth
+		  record and as `users/{uid}.name` for greeting the user in-app.
+		-->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeName</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+
+		<!--
+		  User ID — the Firebase Auth uid. It is the partition key for all
+		  progress, streak, and entitlement data; the app cannot function
+		  without it.
+		-->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeUserID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+
+		<!--
+		  Device ID — the FCM registration token written to `users/{uid}.fcmToken`
+		  by notification_service.dart. Used solely to address study-reminder
+		  push notifications to this install.
+		-->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeDeviceID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+
+		<!--
+		  Purchase history — subscription state from RevenueCat, mirrored to the
+		  server-authoritative entitlement document by the webhook in
+		  functions/entitlements.js. Gates access to paid courses.
+		-->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePurchaseHistory</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+
+		<!--
+		  Product interaction — lessons completed, quiz scores, streak days and
+		  badges. This is the user's own study record, shown back to them on the
+		  progress screen; it is not aggregated for analytics.
+		-->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
+
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<!--
+		  NSUserDefaults, via shared_preferences. Two settings keys
+		  ('isDarkMode', 'onboardingComplete') plus the entire offline flashcard
+		  cache, which OfflineService stores as JSON in prefs rather than on the
+		  filesystem. All of it is data this app itself wrote → CA92.1.
+		-->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+
+		<!--
+		  File timestamps, reached through path_provider (pulled in transitively
+		  by flutter_local_notifications and the Firebase plugins) and by the
+		  Flutter engine's own asset and cache handling. Only ever applied to
+		  files inside this app's container → C617.1.
+		-->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
+			</array>
+		</dict>
+
+		<!--
+		  System boot time, used to measure elapsed intervals — the timezone /
+		  flutter_local_notifications scheduling path and the Dart runtime's
+		  monotonic clock. Never persisted or transmitted → 35F9.1.
+		-->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategorySystemBootTime</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>35F9.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
