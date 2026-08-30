@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:confetti/confetti.dart';
 import 'app_theme.dart';
+import 'quiz_logic.dart';
 import 'progress_service.dart';
 import 'notification_service.dart';
 import 'certificate_screen.dart';
@@ -53,23 +54,6 @@ class _QuizScreenState extends State<QuizScreen> {
     super.dispose();
   }
 
-  List<Map<String, dynamic>> _shuffleQuestions(
-    List<Map<String, dynamic>> questions,
-  ) {
-    final rng = Random();
-    return questions.map((q) {
-      final answers = List<String>.from(q['answers'] as List);
-      final correctAnswer = answers[q['correct'] as int];
-      answers.shuffle(rng);
-      final newCorrectIndex = answers.indexOf(correctAnswer);
-      return {
-        'question': q['question'],
-        'answers': answers,
-        'correct': newCorrectIndex,
-        'explanation': q['explanation'] ?? '',
-      };
-    }).toList();
-  }
 
   Future<void> _loadQuestions() async {
     try {
@@ -97,14 +81,14 @@ class _QuizScreenState extends State<QuizScreen> {
           final raw = questions.isNotEmpty
               ? questions
               : _getHardcodedQuestions(widget.courseTag, widget.moduleId);
-          _questions = _shuffleQuestions(raw);
+          _questions = shuffleQuizQuestions(raw);
           _loading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _questions = _shuffleQuestions(
+          _questions = shuffleQuizQuestions(
             _getHardcodedQuestions(widget.courseTag, widget.moduleId),
           );
           _loading = false;
@@ -116,10 +100,12 @@ class _QuizScreenState extends State<QuizScreen> {
   void _selectAnswer(int index) {
     if (_answered) return;
     HapticFeedback.selectionClick();
+    final question = _questions[_currentQuestion];
+    final correct = index == question['correct'];
     setState(() {
       _selectedAnswer = index;
       _answered = true;
-      if (index == _questions[_currentQuestion]['correct']) _score++;
+      if (correct) _score++;
     });
   }
 
@@ -142,8 +128,8 @@ class _QuizScreenState extends State<QuizScreen> {
     final theme = AppTheme.of(context);
     // Capture navigator BEFORE any async work or dialog dismissal
     final navigator = Navigator.of(context);
-    final percent = (_score / _questions.length * 100).toInt();
-    final passed = _score >= (_questions.length * 0.6).ceil();
+    final percent = quizScorePercent(_score, _questions.length);
+    final passed = quizPassed(_score, _questions.length);
 
     if (passed) {
       ProgressService.completeModule(
@@ -290,7 +276,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     _selectedAnswer = null;
                     _answered = false;
                     _score = 0;
-                    _questions = _shuffleQuestions(
+                    _questions = shuffleQuizQuestions(
                       _getHardcodedQuestions(widget.courseTag, widget.moduleId),
                     );
                   });
