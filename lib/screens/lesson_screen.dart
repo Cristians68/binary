@@ -126,7 +126,7 @@ class _LessonScreenState extends State<LessonScreen> {
     return Scaffold(
       backgroundColor: theme.bg,
       body: SafeArea(
-        child: Column(
+        child: WebContentBounds(maxWidth: 720, child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Header ──────────────────────────────
@@ -463,7 +463,7 @@ class _LessonScreenState extends State<LessonScreen> {
               ),
             ),
           ],
-        ),
+        )),
       ),
     );
   }

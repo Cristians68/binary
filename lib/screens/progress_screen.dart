@@ -170,19 +170,22 @@ class _ProgressScreenState extends State<ProgressScreen>
         opacity: _fade,
         child: SlideTransition(
           position: _slide,
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              _buildHeader(theme),
-              _buildOverallProgress(theme),
-              _buildSectionLabel('Course breakdown', theme),
-              _buildCourseBreakdown(theme),
-              _buildSectionLabel('Badges earned', theme),
-              _buildBadges(theme),
-              _buildSectionLabel('Recent activity', theme),
-              _buildActivity(theme),
-              const SliverToBoxAdapter(child: SizedBox(height: 40)),
-            ],
+          child: WebContentBounds(
+            maxWidth: 720,
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                _buildHeader(theme),
+                _buildOverallProgress(theme),
+                _buildSectionLabel('Course breakdown', theme),
+                _buildCourseBreakdown(theme),
+                _buildSectionLabel('Badges earned', theme),
+                _buildBadges(theme),
+                _buildSectionLabel('Recent activity', theme),
+                _buildActivity(theme),
+                const SliverToBoxAdapter(child: SizedBox(height: 40)),
+              ],
+            ),
           ),
         ),
       ),

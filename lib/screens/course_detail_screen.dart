@@ -195,22 +195,25 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
 
     return Scaffold(
       backgroundColor: theme.bg,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          _buildHeader(context, theme),
-          if (_loading)
-            SliverFillRemaining(
-              child: Center(
-                child: CircularProgressIndicator(
-                  color: widget.color,
-                  strokeWidth: 2,
+      body: WebContentBounds(
+        maxWidth: 720,
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            _buildHeader(context, theme),
+            if (_loading)
+              SliverFillRemaining(
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: widget.color,
+                    strokeWidth: 2,
+                  ),
                 ),
-              ),
-            )
-          else
-            _buildModuleList(theme),
-        ],
+              )
+            else
+              _buildModuleList(theme),
+          ],
+        ),
       ),
     );
   }

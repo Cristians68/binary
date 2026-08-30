@@ -175,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen>
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 28),
-                  child: Column(
+                  child: WebContentBounds(child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 20),
@@ -333,7 +333,7 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                       const SizedBox(height: 40),
                     ],
-                  ),
+                  )),
                 ),
               ),
             ),

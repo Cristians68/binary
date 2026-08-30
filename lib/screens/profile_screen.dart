@@ -1041,7 +1041,9 @@ class _ProfileScreenState extends State<ProfileScreen>
         opacity: _fade,
         child: SlideTransition(
           position: _slide,
-          child: CustomScrollView(
+          child: WebContentBounds(
+            maxWidth: 720,
+            child: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
               _buildHeader(theme),
@@ -1185,6 +1187,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),

@@ -251,7 +251,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     color: widget.courseColor, strokeWidth: 2))
             : _loadError
                 ? _buildErrorState(theme)
-                : Column(
+                : WebContentBounds(maxWidth: 640, child: Column(
                     children: [
                       Expanded(
                         child: SingleChildScrollView(
@@ -282,7 +282,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       ),
                       _buildCta(theme),
                     ],
-                  ),
+                  )),
       ),
     );
   }
