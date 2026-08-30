@@ -97,17 +97,23 @@ Some of those may be self-granted. Before step 5, reconcile against RevenueCat:
 - **`admins/{uid}` is checked by the rules but no documents exist yet.** Create
   them by hand in the console for anyone who needs to write the catalogue.
   Nobody can self-enrol.
-- **The seeder files still ship in the client** (`lib/screens/seed_*.dart`,
-  ~230KB). Under the new rules their writes will be denied, but they should move
-  to an Admin SDK script outside the app.
-- **Account deletion** is blocked for clients in the rules (`allow delete: if false`)
-  because subcollections and the Auth record must be removed together. The
-  existing `delete_account_screen.dart` deletes client-side and will need a
-  Cloud Function before step 5.
 - **The RevenueCat public SDK key** (`appl_...`) is hardcoded in
   `subscription_service.dart`. This is **not** a vulnerability — that key class is
   designed to be embedded in clients and is safe to ship. It is only listed here
   so future audits do not re-flag it.
+
+## 5a. Gaps that have since been closed
+
+Listed so a reader does not treat them as outstanding, and does not redo them.
+
+- **The in-client seeders are gone.** `lib/screens/seed_*.dart` no longer
+  exists; content seeding moved to `admin/seed/` as Admin SDK scripts. Read
+  `docs/CONTENT.md` before running any of them — they write to production and
+  `create-network-pro.js` is quarantined.
+- **Account deletion is server-side.** `functions/account.js` exports
+  `deleteAccount`, and `delete_account_screen.dart` calls it rather than
+  deleting from the client. The rules can keep `allow delete: if false`. This
+  is no longer a blocker for step 5.
 
 ## 6. Verifying the fix
 
