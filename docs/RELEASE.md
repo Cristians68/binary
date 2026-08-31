@@ -82,11 +82,13 @@ refreshes profiles on every run.
 
 ### Notes on the pipeline
 
-- **`flutter analyze --no-fatal-infos`.** The tree has 10 info-level lints
-  (deprecated `share_plus` API, `certificate_Screen.dart` not snake_case, two
-  unnecessary imports, two `sum` parameter names, two non-final private
-  fields). Gating on them would fail every build today. The flag still fails
-  the build on any **warning or error**. Drop it once the infos are cleaned up.
+- **`flutter analyze` is strict.** The tree is clean at **zero** issues, so
+  any new lint fails the build instead of accumulating. The ten info-level
+  lints it used to carry are fixed. One of them was not cosmetic: the file was
+  named `certificate_Screen.dart` while `quiz_screen.dart` imported
+  `'certificate_screen.dart'`. Windows and macOS have case-insensitive
+  filesystems so it compiled locally, but the `verify` workflow runs on
+  **Linux**, where that import would not have resolved at all.
 - **`xcode: latest`.** Pin this to a specific version once a build is green, so
   a future Xcode major release cannot silently break a build months from now.
   Pinning to a version Codemagic has retired fails instantly — only pin what

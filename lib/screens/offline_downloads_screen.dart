@@ -16,8 +16,8 @@ class OfflineDownloadsScreen extends StatefulWidget {
 class _OfflineDownloadsScreenState extends State<OfflineDownloadsScreen> {
   List<Map<String, dynamic>> _courses = [];
   Set<String> _downloadedIds = {};
-  Map<String, double> _downloadProgress = {};
-  Map<String, bool> _downloading = {};
+  final Map<String, double> _downloadProgress = {};
+  final Map<String, bool> _downloading = {};
   bool _loading = true;
 
   @override

@@ -566,7 +566,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                   CupertinoSwitch(
                     value: _notificationsEnabled,
-                    activeColor: AppColors.primary,
+                    activeTrackColor: AppColors.primary,
                     onChanged: (v) {
                       setModal(() {});
                       _toggleNotifications(v);

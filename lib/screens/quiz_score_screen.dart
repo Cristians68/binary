@@ -157,7 +157,7 @@ class QuizScoreScreen extends StatelessWidget {
 
     final avg = scores.fold<double>(
           0,
-          (sum, s) => sum + ((s['score'] as num?) ?? 0).toDouble(),
+          (acc, s) => acc + ((s['score'] as num?) ?? 0).toDouble(),
         ) /
         scores.length;
 

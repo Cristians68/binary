@@ -102,6 +102,16 @@ void main() {
       expect(text, contains('flutter analyze'));
       expect(text, contains('flutter test'));
     });
+
+    test('the analyzer gate is strict', () {
+      // The tree is clean at zero issues. --no-fatal-infos was a temporary
+      // concession while ten info-level lints existed; reintroducing it would
+      // let new lints accumulate silently again.
+      for (final id in ['verify', 'ios-testflight']) {
+        expect(scriptText(id), isNot(contains('--no-fatal-infos')),
+            reason: '$id must fail on new lints');
+      }
+    });
   });
 
   test('the signed bundle id matches the Xcode project', () {

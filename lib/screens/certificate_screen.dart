@@ -134,7 +134,12 @@ Prepare for your IT certifications at binaryacademy.app
 
 #BinaryAcademy #${widget.courseTag.replaceAll(' ', '')} #ITCertification #Learning''';
 
-    await Share.share(text, subject: 'I completed ${widget.courseTitle}!');
+    await SharePlus.instance.share(
+      ShareParams(
+        text: text,
+        subject: 'I completed ${widget.courseTitle}!',
+      ),
+    );
   }
 
   @override

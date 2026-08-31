@@ -49,13 +49,9 @@ workflows:
       - name: Get packages
         script: flutter pub get
       - name: Analyze
-        # --no-fatal-infos on purpose: the tree currently has 10 info-level
-        # lints (deprecated share_plus API, a non-snake_case filename, unused
-        # imports). They are real but cosmetic, and gating on them would fail
-        # every build today. This still fails the build on any WARNING or
-        # ERROR, which is the part that matters. Drop the flag once the infos
-        # are cleaned up — see docs/RELEASE.md.
-        script: flutter analyze --no-fatal-infos
+        # Strict on purpose. The tree is clean at zero issues, so any new lint
+        # — including info level — fails the build rather than accumulating.
+        script: flutter analyze
       - name: Test
         script: flutter test --reporter expanded
 
@@ -95,7 +91,7 @@ workflows:
       # A release that fails its own tests should never reach a tester's phone.
       - name: Analyze and test
         script: |
-          flutter analyze --no-fatal-infos
+          flutter analyze
           flutter test
 
       - name: Install pods

@@ -135,7 +135,7 @@ class _ProgressScreenState extends State<ProgressScreen>
     if (_courses.isEmpty) return 0.0;
     final total = _courses.fold<double>(
       0,
-      (sum, c) => sum + (_userProgress[c['id'] as String] ?? 0.0),
+      (acc, c) => acc + (_userProgress[c['id'] as String] ?? 0.0),
     );
     return total / _courses.length;
   }
