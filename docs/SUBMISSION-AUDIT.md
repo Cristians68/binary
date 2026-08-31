@@ -35,6 +35,43 @@ Fix one of these, and correct the notes either way:
   the rules. It makes the note true and permanently removes the "we could not
   sign in" class of rejection.
 
+## TWO NEW BLOCKERS FOUND IN THE FIREBASE CONSOLE (2026-08-31)
+
+Both are invisible from App Store Connect and both are fatal on their own.
+
+### 1. Sign in with Apple is NOT enabled in Firebase Authentication
+
+Authentication -> Sign-in method lists **Email/Password, Google and Anonymous**
+as enabled. The provider picker confirms it: those three carry checkmarks,
+**Apple does not**.
+
+So `OAuthProvider('apple.com')` + `signInWithCredential` will fail at runtime
+with `operation-not-allowed`. Enabling the capability on the App ID (done) and
+regenerating the profile is **not enough** — the button will appear and then
+fail. That is Guideline 4.8 rejected a second time.
+
+Fix: Firebase console -> Authentication -> Sign-in method -> Add new provider ->
+Apple -> Enable. For native iOS only, no Services ID or key is required; those
+are only needed for web and Android sign-in.
+
+### 2. The Firebase project is on the Spark (free) plan
+
+Cloud Functions cannot be deployed on Spark. Every function in `functions/` --
+`revenueCatWebhook`, `startTrial`, `setPendingPurchase`, `refreshEntitlement`,
+`deleteAccount`, and the three scheduled reminders -- is therefore
+**undeployable today**. `firebase deploy --only functions` will refuse.
+
+This matters far more than it looks. `SubscriptionService._syncToFirestore` was
+deliberately removed, so the client no longer writes entitlements at all; only
+the webhook does. **In the current build, a completed purchase grants nothing.**
+A reviewer who buys an in-app purchase in the sandbox would pay and stay locked
+out, which is a guaranteed rejection under 2.1.
+
+Fix: upgrade to Blaze (pay-as-you-go, with a free monthly allowance that this
+app's volume sits well inside), then follow the deploy order in
+`docs/RELEASE.md` Part 2. **Do not submit until the webhook is live and a test
+event has returned 200.**
+
 ## Blockers — must be fixed before resubmitting
 
 | # | Issue | Guideline | Who |
@@ -43,7 +80,9 @@ Fix one of these, and correct the notes either way:
 | 2 | Reviewer notes claim no sign-in is needed; there is no guest mode | 2.1 | Me, once you decide the approach |
 | 3 | All three IAPs are Drafts, never submitted; each is missing its review screenshot | 2.1(b) | Screenshot from you, upload + Add for Review by me |
 | 4 | Screenshots show **"ITIL V4 Foundation"** — a course title the app no longer uses | 2.3.3 | New screenshots needed |
-| 5 | Description and keywords use certification marks as product names | 5.2.1 | Me — draft below |
+| 5 | Description and keywords use certification marks as product names | 5.2.1 | **DONE — rewritten and saved 2026-08-31** |
+| 6 | Sign in with Apple not enabled in Firebase Auth | 4.8 | You — one toggle in the Firebase console |
+| 7 | Spark plan blocks Cloud Functions, so purchases grant nothing | 2.1 | You — upgrade to Blaze, then deploy |
 
 ### On 4 and 5 — the trademark scrub never reached the storefront
 
@@ -106,6 +145,37 @@ iPhone-only — which also drops the iPad screenshot requirement.
 
 **App Accessibility** is untouched ("Get Started"). These labels are **opt-in**
 and are not a submission requirement, but they display on the product page.
+
+## What I changed in App Store Connect (2026-08-31)
+
+All three saved and re-read after a full page reload to confirm they persisted.
+
+* **Description** — rewritten (1,540 chars). No longer opens with "Master ITIL
+  V4, Cloud, Cybersecurity, Scrum". Leads with the skills, lists the courses
+  under their real in-app names, and closes with a trademark attribution and a
+  clear non-affiliation statement.
+* **Keywords** — now
+  `it certification,exam prep,flashcards,quiz,cloud,cybersecurity,networking,service management,agile`
+  (98 of 100 chars). The bare marks `itil`, `aws` and `scrum` are gone.
+* **App Review notes** — rewritten (1,962 chars). The previous notes claimed
+  the app worked without signing in, which was false. They now lead with
+  "Continue as guest", give two exact routes to the paywall, list all three
+  product IDs, and state the trademark position. They also acknowledge the
+  earlier incorrect note.
+
+**These notes describe the build with guest mode, not build 47.** They are only
+accurate once a build containing the guest option is uploaded.
+
+## Still outstanding, and only you can do them
+
+* A working **demo account** (I do not handle passwords). Guest mode makes this
+  a backup rather than the only way in, but the credentials on file should
+  either work or be removed.
+* **Screenshots** — the current ones show "ITIL V4 Foundation" and must be
+  replaced from a build that matches the shipping app.
+* **IAP review screenshots**, then "Add for Review" on all three products.
+* **Digital Services Act trader status**, if you want the EU back.
+* The **new age-rating social media questions** in App Information.
 
 ## Verified healthy — no action needed
 
