@@ -40,7 +40,16 @@ enum _Plan { single, bundle4, all }
 class _PaywallScreenState extends State<PaywallScreen> {
   List<Package> _packages    = [];
   bool          _loading     = true;
-  bool          _loadError   = false;
+  /// True when RevenueCat returned no purchasable packages.
+  ///
+  /// This used to blank the entire paywall (`_loadError ? _buildErrorState()`),
+  /// which is almost certainly why App Review reported under Guideline 2.1(b)
+  /// that they "cannot locate the In-App Purchases". `getPackages()` swallows
+  /// every RevenueCat error and returns `[]`, so one hiccup — or a sandbox
+  /// account with no offerings attached — replaced every plan, price and
+  /// purchase button with a "Could not load products" screen. The plans are
+  /// now always rendered; only the purchase action is disabled.
+  bool          _productsUnavailable = false;
   bool          _purchasing  = false;
   late _Plan    _selected;
 
@@ -95,13 +104,13 @@ class _PaywallScreenState extends State<PaywallScreen> {
   }
 
   Future<void> _loadPackages() async {
-    setState(() { _loading = true; _loadError = false; });
+    setState(() { _loading = true; _productsUnavailable = false; });
     final packages = await SubscriptionService.getPackages();
     if (mounted) {
       setState(() {
-        _packages  = packages;
-        _loading   = false;
-        _loadError = packages.isEmpty;
+        _packages            = packages;
+        _loading             = false;
+        _productsUnavailable = packages.isEmpty;
       });
     }
   }
@@ -112,7 +121,13 @@ class _PaywallScreenState extends State<PaywallScreen> {
     if (_purchasing) return;
 
     if (_packages.isEmpty) {
-      _showError('Products are still loading. Please wait a moment and try again.');
+      // Previously "Products are still loading" — untrue once the load has
+      // finished and failed, which left the user waiting for something that
+      // was never going to arrive.
+      _showError(
+        'The App Store did not return any products. Check your connection and '
+        'tap Retry. If you have already purchased, use Restore purchases.',
+      );
       return;
     }
 
@@ -249,40 +264,42 @@ class _PaywallScreenState extends State<PaywallScreen> {
             ? Center(
                 child: CircularProgressIndicator(
                     color: widget.courseColor, strokeWidth: 2))
-            : _loadError
-                ? _buildErrorState(theme)
-                : WebContentBounds(maxWidth: 640, child: Column(
-                    children: [
-                      Expanded(
-                        child: SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildCloseButton(theme),
-                              const SizedBox(height: 24),
-                              _buildHeroSection(theme),
-                              const SizedBox(height: 28),
-                              _buildFeatureList(theme),
-                              const SizedBox(height: 28),
-                              _buildPlanSection(theme),
-                              // Bundle-4 course picker — only shown when
-                              // the bundle4 plan is selected.
-                              if (_selected == _Plan.bundle4) ...[
-                                const SizedBox(height: 20),
-                                _buildBundle4Picker(theme),
-                              ],
-                              const SizedBox(height: 20),
-                              _buildNoticeBox(theme),
-                              const SizedBox(height: 32),
-                            ],
-                          ),
-                        ),
+            : WebContentBounds(maxWidth: 640, child: Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildCloseButton(theme),
+                          const SizedBox(height: 24),
+                          _buildHeroSection(theme),
+                          const SizedBox(height: 28),
+                          _buildFeatureList(theme),
+                          const SizedBox(height: 28),
+                          if (_productsUnavailable) ...[
+                            _buildUnavailableBanner(theme),
+                            const SizedBox(height: 20),
+                          ],
+                          _buildPlanSection(theme),
+                          // Bundle-4 course picker — only shown when
+                          // the bundle4 plan is selected.
+                          if (_selected == _Plan.bundle4) ...[
+                            const SizedBox(height: 20),
+                            _buildBundle4Picker(theme),
+                          ],
+                          const SizedBox(height: 20),
+                          _buildNoticeBox(theme),
+                          const SizedBox(height: 32),
+                        ],
                       ),
-                      _buildCta(theme),
-                    ],
-                  )),
+                    ),
+                  ),
+                  _buildCta(theme),
+                ],
+              )),
       ),
     );
   }
@@ -588,10 +605,12 @@ class _PaywallScreenState extends State<PaywallScreen> {
   }
 
   Widget _buildCta(ThemeNotifier theme) {
-    // CTA is disabled when bundle-4 is selected but fewer than 4 chosen.
+    // CTA is disabled when bundle-4 is selected but fewer than 4 chosen, or
+    // when the store returned no packages to buy.
     final bundle4Incomplete =
         _selected == _Plan.bundle4 && _bundle4Selection.length < 4;
-    final ctaColor = bundle4Incomplete
+    final ctaDisabled = bundle4Incomplete || _productsUnavailable;
+    final ctaColor = ctaDisabled
         ? widget.courseColor.withValues(alpha: 0.4)
         : widget.courseColor;
 
@@ -600,7 +619,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
       child: Column(
         children: [
           GestureDetector(
-            onTap: (_purchasing || bundle4Incomplete) ? null : _purchase,
+            onTap: (_purchasing || ctaDisabled) ? null : _purchase,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               width: double.infinity,
@@ -621,7 +640,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       ),
                     )
                   : Text(
-                      _ctaLabel,
+                      _productsUnavailable
+                          ? 'Purchases unavailable'
+                          : _ctaLabel,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 16,
@@ -690,46 +711,63 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
   // ── Error state ───────────────────────────────────────────────────────────
 
-  Widget _buildErrorState(ThemeNotifier theme) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(CupertinoIcons.wifi_exclamationmark,
-                size: 48, color: theme.subtext),
-            const SizedBox(height: 20),
-            Text('Could not load products',
-                style: TextStyle(
-                    fontSize: 18,
+  /// Shown in place of nothing — the plans stay on screen behind it.
+  ///
+  /// The point is that a reviewer, or a user on a flaky connection, can still
+  /// SEE what is for sale. Only the purchase action is unavailable.
+  Widget _buildUnavailableBanner(ThemeNotifier theme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(CupertinoIcons.wifi_exclamationmark,
+              size: 20, color: theme.subtext),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Purchases are unavailable right now',
+                  style: TextStyle(
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: theme.text,
-                    letterSpacing: -0.4)),
-            const SizedBox(height: 8),
-            Text('Check your internet connection\nand try again.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 14, color: theme.subtext, height: 1.5)),
-            const SizedBox(height: 24),
-            GestureDetector(
-              onTap: _loadPackages,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 28, vertical: 14),
-                decoration: BoxDecoration(
-                  color: widget.courseColor,
-                  borderRadius: BorderRadius.circular(14),
+                    letterSpacing: -0.2,
+                  ),
                 ),
-                child: const Text('Retry',
+                const SizedBox(height: 4),
+                Text(
+                  'The plans below are what is offered. Prices shown may not '
+                  'be final until the store loads.',
+                  style: TextStyle(
+                      fontSize: 12.5, color: theme.subtext, height: 1.45),
+                ),
+                const SizedBox(height: 10),
+                GestureDetector(
+                  onTap: _loadPackages,
+                  child: Text(
+                    'Retry',
                     style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15)),
-              ),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: widget.courseColor,
+                      decoration: TextDecoration.underline,
+                      decorationColor: widget.courseColor,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
