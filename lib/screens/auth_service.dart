@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'notification_service.dart';
 import 'subscription_service.dart';
+import 'user_document.dart';
 
 class AuthService {
   static final _auth = FirebaseAuth.instance;
@@ -158,6 +159,16 @@ class AuthService {
   }
 
   static Future<void> _onSignInSuccess() async {
+    // FIRST: make sure users/{uid} exists. Only email/password signup created
+    // it, so a Google or Apple user used to reach the home screen with no
+    // document, and everything that writes to it had to survive that.
+    try {
+      await ensureUserDocument(
+        displayName: _auth.currentUser?.displayName,
+      );
+    } catch (e) {
+      debugPrint('ensureUserDocument error: $e');
+    }
     try {
       await SubscriptionService.identifyUser();
     } catch (e) {
