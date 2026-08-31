@@ -111,9 +111,44 @@ must be addressed before it will be accepted.
 | **4.8** Login Services | No Sign In with Apple | Code — **already written** (commit `7434109`), never successfully built |
 | **2.3.2** Accurate Metadata | The promoted In-App Purchase's promotional image is just a screenshot from the app, with text too small to read | **Asset work** — needs a purpose-made image |
 | **2.1** Information Needed | Apple **could not sign in** with the demo account stored in App Store Connect (`chaoticfuji@gmail.com`) | **Account work** — verify or replace the demo credentials |
-| **2.1(b)** Information Needed | Reviewers **could not locate the In-App Purchases** in the app | Needs a written reply with steps, and a sandbox check |
+| **2.1(b)** Information Needed | Reviewers **could not locate the In-App Purchases** in the app | **Root cause found** — the IAPs were never submitted; plus the paywall bug, now fixed |
 
-Two notes on 2.1(b):
+### 2.1(b) — root cause found (2026-08-31)
+
+**All three In-App Purchases are still Drafts, status "Prepare for
+Submission". They have never been submitted for review.** App Store Connect
+says it plainly on each one:
+
+> Your first non-consumable in-app purchase must be submitted with a new app
+> version.
+
+| Reference name | Product ID | Apple ID | Status |
+|---|---|---|---|
+| Single Course Access | `binary_course_single` | 6763423925 | Prepare for Submission |
+| 4 Course Bundle | `binary_bundle_4` | 6763424858 | Prepare for Submission |
+| All Courses Bundle | `binary_bundle_all` | — | Prepare for Submission |
+
+The product IDs match `kProductSingle` / `kProductBundle4` /
+`kProductBundleAll` in `subscription_service.dart` exactly, and each has US
+pricing, all-countries availability, and an English (U.S.) localization. What
+they are missing is the **Review Information → Screenshot**, which is blank on
+every one, and then the **"Add for Review"** button, which attaches them to the
+next version submission.
+
+So 2.1(b) has two independent causes, and both are now understood:
+
+1. The IAPs were never attached to a submission, so there was nothing for the
+   reviewer to approve.
+2. The paywall blanked itself whenever offerings failed to load — **fixed**,
+   see the paywall commit.
+
+**On 2.3.2:** the promotional `Image (Optional)` field is **empty on all three
+products today**, so there is currently no promotional image to be rejected.
+That finding appears to have been resolved by removal. Leave it empty unless
+you actually want App Store Promotion for these purchases; if you do, the image
+must be 1024×1024 and must **not** be a screenshot of the app.
+
+Two further notes:
 
 - The **Paid Apps Agreement is Active** (Apr 25 2026 – Apr 11 2027), bank
   account and W-9 both active — so the usual "IAPs don't work because the
