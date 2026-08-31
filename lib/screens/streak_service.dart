@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+
+import 'service_backend.dart';
 
 // ─────────────────────────────────────────────
 // Safe map cast — works on iOS, Android & Web
@@ -13,20 +14,25 @@ Map<String, dynamic> _safeMap(dynamic value) {
   return {};
 }
 
-/// update() with set(merge:true) fallback — safe on all platforms.
-/// Dot-notation keys (e.g. 'streak.current') ONLY work with update().
-/// set(merge:true) treats them as literal key names — never use set() for
-/// dot-notation writes.
+/// update() with a set(merge:true) fallback — safe on all platforms.
+///
+/// This used to hand the fallback the same dot-notation map it gave update(),
+/// which the comment right here warned against: set(merge:true) treats
+/// 'streak.current' as a field whose NAME contains a dot, not as a path into
+/// the streak map. Nothing ever reads that field back, so the first write to a
+/// not-yet-created user document produced a permanently stuck streak.
+///
+/// It is reachable: only email/password signup creates users/{uid}. Google and
+/// Apple sign-in do not, and the FCM token write that would otherwise create
+/// it is skipped on web and whenever the user declines the notification
+/// prompt. HomeScreen then calls checkAndUpdateStreak() on a missing document.
+///
+/// [safeUpdate] in service_backend.dart expands the keys before falling back.
 Future<void> _safeUpdate(
   DocumentReference<Map<String, dynamic>> doc,
   Map<String, Object?> data,
-) async {
-  try {
-    await doc.update(data);
-  } catch (_) {
-    await doc.set(data, SetOptions(merge: true));
-  }
-}
+) =>
+    safeUpdate(doc, data);
 
 // ─────────────────────────────────────────────
 // Models
@@ -172,10 +178,9 @@ const List<BadgeData> kAllBadges = [
 // ─────────────────────────────────────────────
 
 class StreakService {
-  static final _db = FirebaseFirestore.instance;
-  static final _auth = FirebaseAuth.instance;
+  static FirebaseFirestore get _db => ServiceBackend.db;
 
-  static String? get _uid => _auth.currentUser?.uid;
+  static String? get _uid => ServiceBackend.uid;
 
   static DocumentReference<Map<String, dynamic>>? get _userDoc {
     final uid = _uid;
@@ -185,7 +190,7 @@ class StreakService {
 
   // ── Real-time stream — used by HomeScreen StreamBuilder ───────────────────
   static Stream<Map<String, dynamic>> statsStream() {
-    final uid = _auth.currentUser?.uid;
+    final uid = _uid;
     if (uid == null) return const Stream.empty();
     return _db
         .collection('users')

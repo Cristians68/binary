@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
+import 'service_backend.dart';
 
 class ProgressService {
-  static FirebaseFirestore get _db => FirebaseFirestore.instance;
-  static String? get _uid => FirebaseAuth.instance.currentUser?.uid;
+  static FirebaseFirestore get _db => ServiceBackend.db;
+  static String? get _uid => ServiceBackend.uid;
 
   // ── Call when a user passes a quiz (score >= 60%) ─────────────────────────
   static Future<void> completeModule({

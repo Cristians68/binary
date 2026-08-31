@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'service_backend.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 // ── Product identifiers ──────────────────────────────────────────────────────
@@ -21,8 +22,8 @@ const String kRevenueCatApiKey = String.fromEnvironment(
 enum SubscriptionPlan { none, single, bundle4, all, trial }
 
 class SubscriptionService {
-  static FirebaseFirestore get _db  => FirebaseFirestore.instance;
-  static String?           get _uid => FirebaseAuth.instance.currentUser?.uid;
+  static FirebaseFirestore get _db  => ServiceBackend.db;
+  static String?           get _uid => ServiceBackend.uid;
 
   // ─────────────────────────────────────────────────────────────────────────
   // Lifecycle
