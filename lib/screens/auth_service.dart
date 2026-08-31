@@ -76,7 +76,7 @@ class AuthService {
         idToken: idToken,
       );
 
-      final userCredential = await _auth.signInWithCredential(credential);
+      final userCredential = await _signInOrLink(credential);
       debugPrint(
           'Google Sign-In: Firebase success uid=${userCredential.user?.uid}');
       await _onSignInSuccess();
@@ -94,6 +94,75 @@ class AuthService {
       return null;
     }
   }
+
+  /// Sign in with an OAuth credential, upgrading a guest session in place.
+  ///
+  /// If the current user is anonymous, linking keeps the SAME uid, so the
+  /// streak, progress and any purchase they made as a guest survive. Plain
+  /// signInWithCredential would mint a new uid and silently orphan all of it.
+  static Future<UserCredential> _signInOrLink(AuthCredential credential) async {
+    final current = _auth.currentUser;
+    if (current != null && current.isAnonymous) {
+      try {
+        return await current.linkWithCredential(credential);
+      } on FirebaseAuthException catch (e) {
+        if (e.code != 'credential-already-in-use' &&
+            e.code != 'email-already-in-use') {
+          rethrow;
+        }
+        // They already have a real account with this provider. Sign in to it;
+        // the guest session's progress is left behind rather than merged,
+        // because merging two histories is not something we can do safely.
+        debugPrint('Guest link failed (${e.code}) - signing in to the '
+            'existing account instead');
+      }
+    }
+    return _auth.signInWithCredential(credential);
+  }
+
+  // ── Continue as a guest ───────────────────────────────────────────────────
+
+  /// Sign in anonymously so the app can be used without an account.
+  ///
+  /// App Review rejected 1.0 under Guideline 2.1 partly because the demo
+  /// credentials failed and there was no other way in: WelcomeScreen offered
+  /// only sign up / log in / Apple / Google. Guideline 5.1.1(v) also says an
+  /// app should not force account creation when an account is not core to the
+  /// experience, and browsing courses is not.
+  ///
+  /// Anonymous auth is used rather than loosening firestore.rules. Every rule
+  /// gates on `signedIn()` (`request.auth != null`), which an anonymous user
+  /// satisfies, so a guest gets exactly what a signed-in free user gets: the
+  /// free first module of every course. Paid content is still gated by
+  /// `hasCourseAccess()`, and entitlement fields remain server-only.
+  ///
+  /// Returns null on failure. The most likely failure is `operation-not-allowed`,
+  /// which means Anonymous sign-in is not enabled in the Firebase console under
+  /// Authentication -> Sign-in method.
+  static Future<UserCredential?> signInAsGuest() async {
+    try {
+      final credential = await _auth.signInAnonymously();
+      debugPrint('Guest sign-in: uid=${credential.user?.uid}');
+      await _onSignInSuccess();
+      return credential;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'operation-not-allowed') {
+        debugPrint(
+          'Guest sign-in failed: Anonymous auth is DISABLED in the Firebase '
+          'console. Enable Authentication -> Sign-in method -> Anonymous.',
+        );
+      } else {
+        debugPrint('Guest sign-in failed: ${e.code} - ${e.message}');
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Guest sign-in ERROR: $e');
+      return null;
+    }
+  }
+
+  /// Whether the current session is a guest.
+  static bool get isGuest => _auth.currentUser?.isAnonymous ?? false;
 
   // ── Sign in with Apple ────────────────────────────────────────────────────
 
@@ -128,8 +197,7 @@ class AuthService {
         rawNonce: rawNonce,
       );
 
-      final userCredential =
-          await _auth.signInWithCredential(oauthCredential);
+      final userCredential = await _signInOrLink(oauthCredential);
 
       // Apple only sends name on the very first sign-in; save it if present.
       final given = appleCredential.givenName;

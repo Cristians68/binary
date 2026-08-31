@@ -106,8 +106,20 @@ class _SignupScreenState extends State<SignupScreen>
     });
 
     try {
-      final credential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
+      // Upgrade a guest in place rather than minting a new account. A guest
+      // who taps "Get started" has usually already built a streak and some
+      // progress; createUserWithEmailAndPassword would give them a fresh uid
+      // and silently orphan all of it.
+      final current = FirebaseAuth.instance.currentUser;
+      final UserCredential credential;
+      if (current != null && current.isAnonymous) {
+        credential = await current.linkWithCredential(
+          EmailAuthProvider.credential(email: email, password: password),
+        );
+      } else {
+        credential = await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(email: email, password: password);
+      }
 
       await credential.user?.updateDisplayName(name);
 
@@ -138,7 +150,7 @@ class _SignupScreenState extends State<SignupScreen>
       _passwordController.clear();
       setState(() {
         _errorMessage = switch (e.code) {
-          'email-already-in-use' =>
+          'email-already-in-use' || 'credential-already-in-use' =>
             'An account already exists with this email.',
           'invalid-email' => 'Please enter a valid email address.',
           'weak-password' =>

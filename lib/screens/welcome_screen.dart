@@ -23,6 +23,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   late Animation<Offset> _slide;
   bool _googleLoading = false;
   bool _appleLoading = false;
+  bool _guestLoading = false;
 
   @override
   void initState() {
@@ -83,6 +84,23 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       ),
       (route) => false,
     );
+  }
+
+  Future<void> _handleGuest() async {
+    HapticFeedback.selectionClick();
+    setState(() => _guestLoading = true);
+    final result = await AuthService.signInAsGuest();
+    if (!mounted) return;
+    setState(() => _guestLoading = false);
+    if (result != null) {
+      _goToHome();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not continue as guest. Please try again.'),
+        ),
+      );
+    }
   }
 
   Future<void> _handleApple() async {
@@ -417,6 +435,15 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           label: 'I already have an account',
           textColor: theme.text,
           border: Border.all(color: theme.border),
+        ),
+        const SizedBox(height: 12),
+        // Guideline 5.1.1(v): do not force account creation to browse. This is
+        // also the reviewer's way in if demo credentials ever fail again.
+        _PressableButton(
+          onTap: _guestLoading ? () {} : _handleGuest,
+          color: Colors.transparent,
+          label: _guestLoading ? 'Please wait...' : 'Continue as guest',
+          textColor: theme.subtext,
         ),
         const SizedBox(height: 24),
         Row(
