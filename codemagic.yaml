@@ -1,19 +1,140 @@
+# Binary Academy — Codemagic CI/CD
+#
+# This file is the source of truth for the iOS release pipeline.
+#
+# It replaces two things that were actively harmful:
+#   * The old `codemagic.yaml`, which ran `flutter build ios --no-codesign` and
+#     emitted an UNSIGNED Runner.app. That artifact can never reach TestFlight,
+#     so anyone reading the repo got a false picture of how releases happen.
+#     The real pipeline lived only in the Codemagic web UI.
+#   * Manual code signing. A hand-uploaded .mobileprovision goes stale between
+#     builds, and this project builds months apart. Every capability change,
+#     profile regeneration or cert expiry became a build failure that could only
+#     be fixed by re-uploading a file to a web UI. Automatic signing with an App
+#     Store Connect API key removes that whole failure class.
+#
+# ── ONE-TIME SETUP — see docs/RELEASE.md for the full walkthrough ────────────
+#   1. developer.apple.com → Identifiers → com.cristians.b1nary
+#      → tick "Sign In with Apple" → Save.
+#      (Automatic signing creates profiles, but it cannot enable a capability
+#      the App ID does not have. This one tick is unavoidable and manual.)
+#   2. Codemagic → Teams → Integrations → App Store Connect.
+#      The API key ALREADY EXISTS in App Store Connect: name "Codemagic",
+#      Key ID 49ACZ234H8, access App Manager, last used 2026-08-30. Keys do not
+#      expire. Check what that integration is named on the Codemagic side and
+#      make `integrations.app_store_connect` below match it EXACTLY — it is
+#      easier to change this file than to reissue a key (the .p8 private key
+#      can only be downloaded once, at creation).
+#   3. Codemagic → app settings → Build → switch the source from "Workflow
+#      Editor" to "codemagic.yaml". Until this is done, THIS FILE IS IGNORED.
+#   4. Nothing — APP_STORE_APP_ID is already filled in (6762030524).
+#
+# NOTE: a green build is necessary but NOT sufficient to ship. iOS 1.0 is
+# REJECTED with four unresolved issues, three of which are not code. See
+# docs/RELEASE.md "What still blocks the App Store".
+
 workflows:
-  ios-workflow:
-    name: iOS Build
-    max_build_duration: 60
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Fast, unsigned verification. Runs the real test suite and the analyzer.
+  # Use this on branches; it needs no signing assets and burns few minutes.
+  # ───────────────────────────────────────────────────────────────────────────
+  verify:
+    name: Verify (analyze + test)
+    max_build_duration: 30
+    instance_type: linux_x2
     environment:
       flutter: stable
+    scripts:
+      - name: Get packages
+        script: flutter pub get
+      - name: Analyze
+        # --no-fatal-infos on purpose: the tree currently has 10 info-level
+        # lints (deprecated share_plus API, a non-snake_case filename, unused
+        # imports). They are real but cosmetic, and gating on them would fail
+        # every build today. This still fails the build on any WARNING or
+        # ERROR, which is the part that matters. Drop the flag once the infos
+        # are cleaned up — see docs/RELEASE.md.
+        script: flutter analyze --no-fatal-infos
+      - name: Test
+        script: flutter test --reporter expanded
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Signed iOS release → TestFlight.
+  # ───────────────────────────────────────────────────────────────────────────
+  ios-testflight:
+    name: iOS → TestFlight
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    integrations:
+      # Must match the integration name configured in Codemagic exactly.
+      app_store_connect: binary-asc-key
+    environment:
+      flutter: stable
+      # `latest` tracks whatever Xcode Codemagic has provisioned. Pin this to a
+      # specific version (e.g. `16.2`) once a build is green, so a future Xcode
+      # major release cannot silently break a build months from now. Pinning to
+      # a version Codemagic has retired fails instantly — only pin what you saw
+      # actually work.
       xcode: latest
       cocoapods: default
+      ios_signing:
+        # With `integrations.app_store_connect` set, Codemagic fetches — and
+        # creates if missing — the distribution certificate and provisioning
+        # profile for this bundle id on every build. Nothing to upload by hand.
+        distribution_type: app_store
+        bundle_identifier: com.cristians.b1nary
+      vars:
+        BUNDLE_ID: "com.cristians.b1nary"
+        # App Store Connect app id for B1nary Academy.
+        APP_STORE_APP_ID: 6762030524
     scripts:
-      - name: Get Flutter packages
+      - name: Get packages
         script: flutter pub get
+
+      # A release that fails its own tests should never reach a tester's phone.
+      - name: Analyze and test
+        script: |
+          flutter analyze --no-fatal-infos
+          flutter test
+
       - name: Install pods
         script: |
-          find . -name "Podfile" -execdir pod install \;
-      - name: Build iOS
+          # There is no ios/Podfile committed to this repo, so `flutter build`
+          # generates a default one. Running pod install unconditionally here
+          # would fail on a missing Podfile; let Flutter own the generation and
+          # only install if a Podfile actually exists.
+          if [ -f ios/Podfile ]; then
+            cd ios && pod install
+          else
+            echo "No ios/Podfile — Flutter will generate one during the build."
+          fi
+
+      - name: Set up signing profiles on the Xcode project
+        script: xcode-project use-profiles
+
+      # App Store Connect rejects a duplicate build number, which previously
+      # meant hand-editing `version:` in pubspec.yaml before every single
+      # upload — and forgetting meant a wasted build. Derive it instead.
+      - name: Derive the next build number
         script: |
-          flutter build ios --release --no-codesign
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APP_ID" || echo "0")
+          echo "Latest build number on TestFlight: $LATEST"
+          echo "NEXT_BUILD_NUMBER=$(($LATEST + 1))" >> $CM_ENV
+
+      - name: Build the signed IPA
+        script: |
+          flutter build ipa --release \
+            --build-number="$NEXT_BUILD_NUMBER" \
+            --export-options-plist=/Users/builder/export_options.plist
     artifacts:
-      - build/ios/iphoneos/Runner.app
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # Uncomment and name a real group to auto-distribute to testers.
+        # beta_groups:
+        #   - Internal Testers
