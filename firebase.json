@@ -5,33 +5,52 @@
   },
   "hosting": {
     "site": "binary-6a372",
-    "public": "build/web",
+    "//": "public/ is assembled by tools/build-site.ps1 — never edit it directly. It contains the marketing site at the root and the Flutter app under /app.",
+    "public": "public",
+    "cleanUrls": true,
+    "trailingSlash": false,
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
-    "redirects": [
-      {
-        "source": "/privacy",
-        "destination": "/privacy.html",
-        "type": 301
-      },
-      {
-        "source": "/terms",
-        "destination": "/terms.html",
-        "type": 301
-      },
-      {
-        "source": "/support",
-        "destination": "/support.html",
-        "type": 301
-      }
-    ],
     "rewrites": [
       {
+        "//": "The app is hash-routed, so this only catches a hard refresh on a path under /app.",
+        "source": "/app/**",
+        "destination": "/app/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "//": "HTML must revalidate, or a deploy leaves visitors on the old page.",
+        "source": "**/*.html",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+        ]
+      },
+      {
+        "//": "site.css has no content hash in its name, so it cannot be cached hard.",
+        "source": "/site.css",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=3600" }
+        ]
+      },
+      {
+        "source": "**/*.@(png|jpg|jpeg|svg|webp|woff2)",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        ]
+      },
+      {
+        "//": "Baseline security headers. No CSP yet: the Flutter app needs a policy of its own and an over-tight one would break it silently.",
         "source": "**",
-        "destination": "/index.html"
+        "headers": [
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+          { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+          { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=(), payment=()" }
+        ]
       }
     ]
   },

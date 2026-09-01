@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /$
+Allow: /privacy
+Allow: /terms
+Allow: /support
+Allow: /accessibility
+
+# The Flutter application is a signed-in, client-rendered app. There is nothing
+# there for a crawler to index, and letting one in produces a page of empty
+# loading shell in search results.
+Disallow: /app
+
+Sitemap: https://binaryapp.org/sitemap.xml

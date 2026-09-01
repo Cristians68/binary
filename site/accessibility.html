@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Accessibility — B1nary Academy</title>
+<meta name="description" content="B1nary Academy's accessibility statement: what this site and app support today, what is not yet verified, and how to report a barrier.">
+<link rel="canonical" href="https://binaryapp.org/accessibility">
+<meta name="theme-color" content="#0071E3">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="icons/Icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="container site-header__inner">
+    <a class="brand" href="/">
+      <span class="brand__mark" aria-hidden="true">B1</span>
+      <span>B1nary Academy</span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a class="nav__link" href="/#courses">Courses</a>
+      <a class="nav__link" href="/#pricing">Pricing</a>
+      <a class="nav__link" href="/support">Support</a>
+      <a class="btn btn--primary btn--sm" href="/app">Open the app</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="container section--tight">
+  <div class="prose">
+
+    <p class="eyebrow">Accessibility</p>
+    <h1 style="margin-top:var(--sp-4)">Accessibility statement</h1>
+    <p style="color:var(--subtext);margin-top:var(--sp-3)">
+      Last updated: 1 September 2026
+    </p>
+
+    <p style="margin-top:var(--sp-8)">
+      We want B1nary Academy to be usable by everyone studying for a
+      certification, including people who use screen readers, navigate by
+      keyboard, or need larger text. This page says plainly what is supported
+      today and what has not yet been verified.
+    </p>
+
+    <h2 id="target">Conformance target</h2>
+    <p>
+      We are working towards <strong>WCAG 2.2 Level AA</strong>. This website is
+      built to meet it. The application itself is
+      <strong>partially conformant</strong>: it has not yet been through a full
+      independent audit, so we do not claim conformance for it.
+    </p>
+
+    <h2 id="website">What this website supports</h2>
+    <ul>
+      <li>A skip link to jump straight to the main content.</li>
+      <li>A logical heading structure with no skipped levels.</li>
+      <li>Visible focus indicators on every interactive element.</li>
+      <li>Full keyboard operability — no interaction requires a mouse or a hover.</li>
+      <li>Text contrast of at least 4.5:1, verified in both light and dark themes rather than assumed.</li>
+      <li>Light and dark themes that follow your system setting.</li>
+      <li>Text that reflows without horizontal scrolling down to a 320&nbsp;px viewport, and that scales when you zoom to 200%.</li>
+      <li>Touch targets of at least 44&nbsp;&times;&nbsp;44&nbsp;px.</li>
+      <li>Respect for <code>prefers-reduced-motion</code> — animation is switched off, not merely shortened.</li>
+      <li>Content that is fully readable with JavaScript disabled.</li>
+    </ul>
+
+    <h2 id="app">What the app supports</h2>
+    <ul>
+      <li>Light and dark themes.</li>
+      <li>System text-size settings.</li>
+      <li>Screen reader labels on its main controls.</li>
+    </ul>
+
+    <h2 id="known">Known limitations</h2>
+    <p>
+      We would rather name these than let you discover them:
+    </p>
+    <ul>
+      <li>The app has not had a full screen-reader audit, so some controls may be announced less clearly than they should be.</li>
+      <li>The app's layout is designed mobile-first; on a tablet in landscape some screens are wider than ideal for comfortable reading.</li>
+      <li>Some course content uses tables and diagrams whose alternatives are still being improved.</li>
+    </ul>
+
+    <h2 id="feedback">Report a barrier</h2>
+    <div class="callout">
+      <p>
+        If any part of this site or the app is difficult or impossible to use,
+        please email <a href="mailto:support@binaryapp.org">support@binaryapp.org</a>.
+        Tell us the page or screen, what you were trying to do, and the
+        assistive technology you were using if relevant.
+      </p>
+      <p style="margin-top:var(--sp-3)">
+        We aim to respond within 1–2 business days and will tell you what we can
+        fix and when.
+      </p>
+    </div>
+
+    <h2 id="assessment">How this was assessed</h2>
+    <p>
+      This website was assessed by internal review against the WCAG 2.2 Level AA
+      success criteria, including contrast calculation for every text and
+      background pair in both themes, keyboard-only navigation, and testing at
+      320&nbsp;px, 768&nbsp;px, 1024&nbsp;px and 1440&nbsp;px viewport widths. It
+      has not been assessed by an external auditor.
+    </p>
+
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <a class="brand" href="/">
+          <span class="brand__mark" aria-hidden="true">B1</span>
+          <span>B1nary Academy</span>
+        </a>
+        <p style="color:var(--subtext);font-size:var(--step--1);margin-top:var(--sp-3);max-width:38ch">
+          An independent study app for IT certification preparation.
+        </p>
+      </div>
+      <nav aria-labelledby="f-product">
+        <h2 class="footer-heading" id="f-product">Product</h2>
+        <ul class="footer-list">
+          <li><a href="/app">Open the app</a></li>
+          <li><a href="/#courses">Courses</a></li>
+          <li><a href="/#pricing">Pricing</a></li>
+          <li><a href="/#faq">FAQ</a></li>
+        </ul>
+      </nav>
+      <nav aria-labelledby="f-company">
+        <h2 class="footer-heading" id="f-company">Company</h2>
+        <ul class="footer-list">
+          <li><a href="/support">Support</a></li>
+          <li><a href="/privacy">Privacy</a></li>
+          <li><a href="/terms">Terms</a></li>
+          <li><a href="/accessibility" aria-current="page">Accessibility</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-legal">
+      <p>&copy; 2026 B1nary Academy. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>B1nary Academy — IT certification study app</title>
+<meta name="description" content="Study for IT certifications with structured courses, flashcard lessons and quizzes. Service management, Agile and Scrum, networking, cybersecurity and cloud. One-time purchase, no subscription.">
+<link rel="canonical" href="https://binaryapp.org/">
+<meta name="theme-color" content="#0071E3">
+
+<!-- Certification marks are deliberately absent from the description and
+     keywords. Listing them as what this product delivers implies an
+     accreditation we do not have (App Store Guideline 5.2.1) — the same reason
+     course titles come from lib/course_catalog.dart. Nominative references
+     appear only in the course cards, each with its attribution. -->
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://binaryapp.org/">
+<meta property="og:title" content="B1nary Academy — IT certification study app">
+<meta property="og:description" content="Structured courses, flashcard lessons and quizzes for IT certification study. One-time purchase, no subscription.">
+<meta property="og:image" content="https://binaryapp.org/icons/Icon-512.png">
+<meta property="og:site_name" content="B1nary Academy">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="B1nary Academy — IT certification study app">
+<meta name="twitter:description" content="Structured courses, flashcard lessons and quizzes for IT certification study. One-time purchase, no subscription.">
+<meta name="twitter:image" content="https://binaryapp.org/icons/Icon-512.png">
+
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="site.css">
+
+<!-- Structured data carries only facts that are true today: the real product
+     name, the real one-time prices, and the real platform. No aggregateRating
+     is published, because the app has no ratings — inventing one would be
+     both false and a review-guideline problem. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "B1nary Academy",
+  "applicationCategory": "EducationalApplication",
+  "operatingSystem": "Web, iOS",
+  "description": "Structured courses, flashcard lessons and quizzes for IT certification study.",
+  "url": "https://binaryapp.org/",
+  "offers": [
+    { "@type": "Offer", "name": "Single course", "price": "14.99", "priceCurrency": "USD", "category": "one-time" },
+    { "@type": "Offer", "name": "Any four courses", "price": "49.99", "priceCurrency": "USD", "category": "one-time" },
+    { "@type": "Offer", "name": "All courses", "price": "99.99", "priceCurrency": "USD", "category": "one-time" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="container site-header__inner">
+    <a class="brand" href="/">
+      <span class="brand__mark" aria-hidden="true">B1</span>
+      <span>B1nary Academy</span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a class="nav__link" href="#courses">Courses</a>
+      <a class="nav__link" href="#pricing">Pricing</a>
+      <a class="nav__link" href="#faq">FAQ</a>
+      <a class="nav__link" href="/support">Support</a>
+      <a class="btn btn--primary btn--sm" href="/app">Open the app</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ── Hero ────────────────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="container hero__inner">
+      <div class="hero__copy">
+        <p class="eyebrow">
+          <svg class="icon" style="width:16px;height:16px" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
+          One-time purchase — no subscription
+        </p>
+        <h1>Study for your IT certification without the subscription trap.</h1>
+        <p class="lede">
+          Six structured courses built from flashcard lessons and quizzes that
+          actually test you. Learn at your own pace, keep your progress, and
+          own what you buy.
+        </p>
+        <div class="btn-row">
+          <a class="btn btn--primary" href="/app">Start learning free</a>
+          <a class="btn btn--secondary" href="#courses">See the courses</a>
+        </div>
+        <p class="hero__note">
+          The first module of every course is free, and you can start without
+          creating an account. Also coming to iOS.
+        </p>
+      </div>
+
+      <!-- An illustration of the app's own concepts, not a screenshot. It is
+           drawn from live tokens so it always matches the current design, and
+           it is aria-hidden because everything it shows is stated in the text
+           beside it. -->
+      <div class="hero__art" aria-hidden="true">
+        <div class="preview">
+          <div class="preview__row">
+            <div class="preview__streak">
+              <span class="preview__streak-num">7</span>
+              <span class="preview__streak-label">day streak</span>
+            </div>
+            <div class="preview__goal">
+              <span class="preview__goal-label">Daily goal</span>
+              <span class="preview__bar"><span class="preview__bar-fill" style="width:72%"></span></span>
+              <span class="preview__goal-val">36 / 50 pts</span>
+            </div>
+          </div>
+          <div class="preview__card">
+            <span class="preview__tag">Cybersecurity Professional</span>
+            <p class="preview__q">Which control protects data <em>in transit</em>?</p>
+            <span class="preview__opt">Full-disk encryption</span>
+            <span class="preview__opt preview__opt--right">TLS</span>
+            <span class="preview__opt">Database backups</span>
+          </div>
+          <div class="preview__row preview__row--tight">
+            <span class="preview__chip">6 courses</span>
+            <span class="preview__chip">Flashcards</span>
+            <span class="preview__chip">Quizzes</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── How it works ────────────────────────────────────────────────────── -->
+  <section class="section" aria-labelledby="how-heading">
+    <div class="container">
+      <h2 id="how-heading" class="reveal">How it works</h2>
+      <p class="lede reveal" style="margin-top:var(--sp-3)">
+        Three steps, repeated until the material sticks.
+      </p>
+      <div class="grid grid--3" style="margin-top:var(--sp-8)">
+        <div class="card reveal">
+          <div class="icon-tile">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+          </div>
+          <h3>1. Learn the concept</h3>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">
+            Each module is a set of flashcards covering one topic, written in
+            plain language with worked scenarios and the traps exams like to set.
+          </p>
+        </div>
+        <div class="card reveal">
+          <div class="icon-tile">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          </div>
+          <h3>2. Prove it on the quiz</h3>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">
+            Every module ends in a quiz with shuffled answers, so passing means
+            you know the material rather than the position of the right option.
+          </p>
+        </div>
+        <div class="card reveal">
+          <div class="icon-tile">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>
+          </div>
+          <h3>3. Keep the streak</h3>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">
+            Daily goals, streaks and badges track consistency — the thing that
+            actually decides whether you finish a certification.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Courses ─────────────────────────────────────────────────────────── -->
+  <section class="section" id="courses" aria-labelledby="courses-heading" style="background:var(--surface)">
+    <div class="container">
+      <h2 id="courses-heading" class="reveal">Six courses</h2>
+      <p class="lede reveal" style="margin-top:var(--sp-3)">
+        Each one is a full syllabus of flashcard modules and quizzes, not a
+        handful of sample questions.
+      </p>
+
+      <div class="grid grid--3" style="margin-top:var(--sp-8)">
+        <article class="card reveal">
+          <h3>IT Service Management Foundations</h3>
+          <p class="course__blurb">How service organisations create value — service value systems, the four dimensions, guiding principles, and core practices.</p>
+          <p class="course__note">Covers the body of knowledge assessed by ITIL&reg; 4 Foundation. ITIL&reg; is a registered trademark of PeopleCert/AXELOS Limited. This course is independent and is not accredited, affiliated with, or endorsed by them.</p>
+        </article>
+
+        <article class="card reveal">
+          <h3>Agile &amp; Scrum Foundations</h3>
+          <p class="course__blurb">Agile delivery in practice — the Scrum framework, accountabilities, events, artifacts, and how teams scale it.</p>
+          <p class="course__note">Covers the body of knowledge assessed by entry-level Scrum certifications. Certified ScrumMaster&reg; and CSM&reg; are registered trademarks of Scrum Alliance, Inc. This course is independent and is not accredited, affiliated with, or endorsed by them.</p>
+        </article>
+
+        <article class="card reveal">
+          <h3>Network Professional</h3>
+          <p class="course__blurb">Networking end to end — OSI and TCP/IP, subnetting, routing and switching, wireless, DNS/DHCP, and troubleshooting.</p>
+          <p class="course__note">Covers foundational networking concepts also assessed by vendor-neutral networking certifications. CompTIA&reg; and Network+&reg; are registered trademarks of CompTIA, Inc. This course is independent and is not accredited, affiliated with, or endorsed by them.</p>
+        </article>
+
+        <article class="card reveal">
+          <h3>Cybersecurity Professional</h3>
+          <p class="course__blurb">Defensive security fundamentals — threats, cryptography, access control, network hardening, and incident response.</p>
+          <p class="course__note">Covers foundational security concepts also assessed by vendor-neutral security certifications. CompTIA&reg; and Security+&reg; are registered trademarks of CompTIA, Inc. This course is independent and is not accredited, affiliated with, or endorsed by them.</p>
+        </article>
+
+        <article class="card reveal">
+          <h3>Cloud Fundamentals</h3>
+          <p class="course__blurb">Cloud computing from first principles — service and deployment models, virtualisation, storage, and cost.</p>
+        </article>
+
+        <article class="card reveal">
+          <h3>Cloud Architecture</h3>
+          <p class="course__blurb">Designing for the cloud — availability, scaling, networking, identity, and well-architected trade-offs.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Features ────────────────────────────────────────────────────────── -->
+  <section class="section" aria-labelledby="features-heading">
+    <div class="container">
+      <h2 id="features-heading" class="reveal">What you get</h2>
+      <div class="grid grid--3" style="margin-top:var(--sp-8)">
+
+        <div class="card reveal">
+          <div class="icon-tile"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg></div>
+          <h3>Flashcard lessons</h3>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">Bite-sized modules you can finish in a commute, with scenarios and exam traps called out explicitly.</p>
+        </div>
+
+        <div class="card reveal">
+          <div class="icon-tile"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></div>
+          <h3>Spaced review</h3>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">Cards you found hard come back sooner, so revision time goes where it is actually needed.</p>
+        </div>
+
+        <div class="card reveal">
+          <div class="icon-tile"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2-6.3-4.6L5.7 21 8 13.8l-6-4.4h7.6z"/></svg></div>
+          <h3>Streaks and badges</h3>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">Daily goals and earned badges that reward turning up, plus optional reminders you control per type.</p>
+        </div>
+
+        <div class="card reveal">
+          <div class="icon-tile"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></div>
+          <h3>Offline downloads</h3>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">Save a course to your device and keep studying on a plane, on the underground, or anywhere with no signal.</p>
+        </div>
+
+        <div class="card reveal">
+          <div class="icon-tile"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="4" width="3" height="14"/></svg></div>
+          <h3>Progress you can see</h3>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">Per-course completion, quiz history and scores, so you know what is solid and what still needs work.</p>
+        </div>
+
+        <div class="card reveal">
+          <div class="icon-tile"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="6"/><path d="M8.5 14.5L7 22l5-3 5 3-1.5-7.5"/></svg></div>
+          <h3>Completion certificates</h3>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">Finish every module in a course and get a shareable certificate of completion from B1nary Academy.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Pricing ─────────────────────────────────────────────────────────── -->
+  <section class="section" id="pricing" aria-labelledby="pricing-heading" style="background:var(--surface)">
+    <div class="container">
+      <h2 id="pricing-heading" class="reveal">Pay once. Keep it.</h2>
+      <p class="lede reveal" style="margin-top:var(--sp-3)">
+        No subscription, no renewal, no losing access to something you already
+        paid for. Prices are in US dollars and may vary by region.
+      </p>
+
+      <div class="grid grid--3" style="margin-top:var(--sp-8)">
+        <div class="card reveal price">
+          <h3>Single course</h3>
+          <p class="price__amount">$14.99</p>
+          <p class="price__meta">One-time · lifetime access</p>
+          <ul class="price__list">
+            <li>Any one course, in full</li>
+            <li>Every module and quiz in it</li>
+            <li>Certificate on completion</li>
+          </ul>
+        </div>
+
+        <div class="card reveal price price--featured">
+          <span class="price__flag">Most flexible</span>
+          <h3>Any four courses</h3>
+          <p class="price__amount">$49.99</p>
+          <p class="price__meta">One-time · lifetime access</p>
+          <ul class="price__list">
+            <li>Pick any four courses</li>
+            <li>Every module and quiz in them</li>
+            <li>Certificate on each completion</li>
+          </ul>
+        </div>
+
+        <div class="card reveal price">
+          <h3>All courses</h3>
+          <p class="price__amount">$99.99</p>
+          <p class="price__meta">One-time · lifetime access</p>
+          <ul class="price__list">
+            <li>All six courses</li>
+            <li>All future courses included</li>
+            <li>Certificate on each completion</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout reveal" style="margin-top:var(--sp-8);max-width:var(--measure)">
+        <p><strong>Try before you pay.</strong> The first module of every course
+        is free, and you can start without an account. There is also a one-time
+        free trial you can spend on a single full course.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FAQ ─────────────────────────────────────────────────────────────── -->
+  <section class="section" id="faq" aria-labelledby="faq-heading">
+    <div class="container">
+      <h2 id="faq-heading" class="reveal">Common questions</h2>
+      <div style="max-width:var(--measure);margin-top:var(--sp-8)">
+
+        <details class="reveal">
+          <summary>Is this an official certification course?</summary>
+          <p>No. B1nary Academy is an independent study aid. It is not
+          accredited by, affiliated with, or endorsed by any certification body,
+          and completing a course here does not award an industry certification.
+          It is built to help you prepare for one. Each course card above names
+          the trademark holder for the exam it relates to.</p>
+        </details>
+
+        <details class="reveal">
+          <summary>Is it a subscription?</summary>
+          <p>No. Every purchase is a one-time payment and access does not
+          expire. If you buy the all-courses bundle, future courses are included
+          at no extra cost.</p>
+        </details>
+
+        <details class="reveal">
+          <summary>Do I need an account to try it?</summary>
+          <p>No. You can open the app and start the free first module of any
+          course as a guest. If you later create an account, your progress and
+          streak carry across — you are upgraded in place rather than starting
+          again.</p>
+        </details>
+
+        <details class="reveal">
+          <summary>Can I study offline?</summary>
+          <p>Yes. Courses you have access to can be downloaded to your device
+          and studied without a connection. Your progress syncs the next time
+          you are online.</p>
+        </details>
+
+        <details class="reveal">
+          <summary>What happens to my purchase if I change device?</summary>
+          <p>Purchases are tied to your store account, so "Restore purchases" in
+          the app brings them back on a new device. Signing in with the same
+          account also restores your progress, streak and badges.</p>
+        </details>
+
+        <details class="reveal">
+          <summary>How do I delete my account and data?</summary>
+          <p>There is a Delete account option inside the app under Profile. It
+          removes your account and the study data attached to it. See the
+          <a href="/privacy">privacy policy</a> for exactly what is stored
+          and for how long.</p>
+        </details>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Closing CTA ─────────────────────────────────────────────────────── -->
+  <section class="section section--tight" aria-labelledby="cta-heading">
+    <div class="container" style="text-align:center">
+      <h2 id="cta-heading" class="reveal">Start with a free module</h2>
+      <p class="lede reveal" style="margin:var(--sp-3) auto 0">
+        No account, no card, no subscription. Open a course and see whether the
+        material works for you.
+      </p>
+      <div class="btn-row reveal" style="justify-content:center;margin-top:var(--sp-6)">
+        <a class="btn btn--primary" href="/app">Open B1nary Academy</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <a class="brand" href="/">
+          <span class="brand__mark" aria-hidden="true">B1</span>
+          <span>B1nary Academy</span>
+        </a>
+        <p style="color:var(--subtext);font-size:var(--step--1);margin-top:var(--sp-3);max-width:38ch">
+          An independent study app for IT certification preparation.
+        </p>
+      </div>
+
+      <nav aria-labelledby="footer-product">
+        <h2 class="footer-heading" id="footer-product">Product</h2>
+        <ul class="footer-list">
+          <li><a href="/app">Open the app</a></li>
+          <li><a href="#courses">Courses</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </nav>
+
+      <nav aria-labelledby="footer-legal-nav">
+        <h2 class="footer-heading" id="footer-legal-nav">Company</h2>
+        <ul class="footer-list">
+          <li><a href="/support">Support</a></li>
+          <li><a href="/privacy">Privacy</a></li>
+          <li><a href="/terms">Terms</a></li>
+          <li><a href="/accessibility">Accessibility</a></li>
+        </ul>
+      </nav>
+    </div>
+
+    <div class="footer-legal">
+      <p>&copy; 2026 B1nary Academy. All rights reserved.</p>
+      <p>
+        B1nary Academy is an independent study aid and is not accredited by,
+        affiliated with, or endorsed by any certification body. ITIL&reg; is a
+        registered trademark of PeopleCert/AXELOS Limited. Certified
+        ScrumMaster&reg; and CSM&reg; are registered trademarks of Scrum
+        Alliance, Inc. CompTIA&reg;, Network+&reg; and Security+&reg; are
+        registered trademarks of CompTIA, Inc. All trademarks are the property
+        of their respective owners and are used for identification only.
+      </p>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Progressive enhancement only. The reveal class does nothing until this
+  // script confirms IntersectionObserver exists and adds .js-reveal, so with
+  // JavaScript off, or on a browser without the API, every section is simply
+  // visible from the start rather than permanently blank.
+  (function () {
+    if (!('IntersectionObserver' in window)) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    document.documentElement.classList.add('js-reveal');
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-visible');
+        observer.unobserve(entry.target);
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+
+    document.querySelectorAll('.reveal').forEach(function (el, i) {
+      // A small stagger within a row, capped so a long list never crawls.
+      el.style.transitionDelay = Math.min(i % 3, 2) * 60 + 'ms';
+      observer.observe(el);
+    });
+  })();
+</script>
+
+</body>
+</html>

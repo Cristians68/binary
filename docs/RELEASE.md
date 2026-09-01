@@ -237,3 +237,67 @@ closed the free-paid-catalogue leak. Steps 1–5 below are what remain.
 - No `admins/{uid}` documents exist, so `isAdmin()` is false for everyone and
   catalogue writes are effectively closed to all clients. That is safe, but it
   means the in-app admin path is inert.
+
+---
+
+## Part 3 — the website
+
+**The deploy flow changed on 2026-09-01. `firebase deploy --only hosting` alone
+is no longer enough** — it would publish whatever `public/` happens to contain.
+
+```
+pwsh tools/build-site.ps1        # builds the app, assembles public/
+firebase emulators:start --only hosting   # optional: preview on :5000
+firebase deploy --only hosting
+```
+
+### Why there is a build step now
+
+`binaryapp.org` is the App Store **Marketing URL**, and it used to serve the
+Flutter app directly: a visitor got a dark loading shell and then a sign-in
+wall, with nothing explaining the product.
+
+There is now a real landing page at `/`, and the app moved to `/app`.
+
+That split needs assembling because **Firebase Hosting serves a matching static
+file before it applies any rewrite**. With `build/web` as the public directory,
+`build/web/index.html` always wins for `/`, and no rewrite can put a landing
+page there. So `tools/build-site.ps1` builds the app with `--base-href /app/`
+and lays out:
+
+```
+public/            <- site/ (landing, legal, support, robots, sitemap)
+public/app/        <- build/web
+```
+
+`public/` is generated and git-ignored. Edit `site/` or `web/`, never `public/`.
+
+### Layout
+
+| Path | Source | What it is |
+|---|---|---|
+| `site/` | committed | Marketing and legal pages, `site.css` |
+| `web/` | committed | Flutter web shell, icons, favicon, manifest |
+| `public/` | generated | Assembled deploy output |
+
+`site.css` mirrors the tokens in `lib/screens/app_theme.dart`, so the site and
+the app share one identity. The three legal pages previously each carried their
+own inline violet palette that matched neither each other nor the app.
+
+### What is verified
+
+`node scratchpad/audit.js public` — heading order, one `<h1>` per page, lang,
+viewport, zoom not disabled, `<main>`, skip link, canonical, meta description,
+`alt` on images, `aria-hidden` on decorative SVG, no emoji used as icons, and
+contrast for all eleven text/background pairs in both themes. Every check was
+mutation-tested. The lowest passing ratio is button text on brand blue at
+4.70:1, and `#0071E3` on the dark background is 4.18:1 — which is why body-size
+links in dark mode use `#4DA3FF` (7.48:1) instead.
+
+### Still open
+
+- **Not yet deployed.** Everything above runs locally only.
+- The App Store Marketing URL should stay `https://binaryapp.org`, which now
+  resolves to the landing page rather than the app.
+- No Content-Security-Policy yet. The Flutter app needs a policy of its own and
+  an over-tight one fails silently, so it was left out rather than guessed.
