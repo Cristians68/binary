@@ -83,7 +83,9 @@ Firebase imports, therefore unit-testable without a device or emulator.
 - `badgesToAward({streak, quizzesPassed, coursesCompleted, coursesAvailable,
   perfectQuiz, alreadyEarned})` returns the set to award — the single place
   badge eligibility is decided
-- `pointsFor(Activity activity)` — lesson 10, quiz 20, one definition
+- `pointsFor(Activity activity)` where `enum Activity { lesson, quizPass }` —
+  lesson 10, quiz 20, one definition replacing the two literals currently
+  inline in `recordLessonComplete` and `recordQuizPass`
 
 **`lib/screens/notification_prefs.dart`**
 
@@ -146,8 +148,9 @@ prompt fires only on opt-in. The unconditional `requestPermissions()` call at
 `badges.complete_*` and keeps `completedCourses`, which is the real data;
 course badges derive from its length.
 
-`setDailyTarget()` — currently dead — is wired to a control in the goal
-settings UI.
+`setDailyTarget()` — currently dead — is wired to a stepper in the existing
+notifications sheet in `profile_screen.dart` (`_showNotificationsSheet`),
+which becomes a combined reminders-and-goal sheet.
 
 ### Migration
 
@@ -167,8 +170,12 @@ defects are fixed regardless so the code is correct whenever Blaze lands:
 - pagination instead of loading the whole `users` collection
 - `sendEachForMulticast` instead of one send per user
 
-The two daily reminders are marked as superseded by local scheduling and gated
-behind a dedupe flag so they cannot double-fire on the day they are enabled.
+The two daily reminders are marked as superseded by local scheduling. The
+dedupe is a per-user `usesLocalReminders: true` field, written by the app
+whenever it successfully schedules a local reminder; `reminderCandidates()`
+skips any user carrying it. A user who has never granted local notification
+permission does not carry the flag, so the server remains their fallback and
+nobody receives both.
 `newContentReminder` and `sendCourseCompleteNotification` remain server-side,
 because the device cannot know about new content.
 
@@ -200,10 +207,7 @@ Every new suite is mutation-tested before its green result is trusted.
 
 ## Out of scope
 
-- Changing the `dailyGoal` target default. It stays at 50. Once points actually
-  accumulate, that number becomes load-bearing for the first time and there is
-  no evidence for the right value; it becomes user-adjustable via
-  `setDailyTarget()`, and the default should be revisited with real data.
+- Changing the `dailyGoal` target default. See the open question below.
 - Leaderboards, social features, or any new badge beyond the existing nine plus
   derived course badges.
 - The Blaze upgrade and function deployment, tracked in `docs/RELEASE.md`.
@@ -211,4 +215,8 @@ Every new suite is mutation-tested before its green result is trusted.
 ## Open question
 
 The `dailyGoal` default of 50 points equals five lessons, or two quizzes plus a
-lesson, per day. This is a product decision, deliberately left unchanged.
+lesson, per day. Until this work lands, `todayPoints` is always zero, so that
+target has never once been exercised — it becomes load-bearing for the first
+time here, with no evidence behind the number. It stays at 50 because changing
+it is a product decision, and it becomes user-adjustable via `setDailyTarget()`.
+Revisit the default once real completion data exists.
