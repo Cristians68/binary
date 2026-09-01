@@ -18,13 +18,9 @@
 #      → tick "Sign In with Apple" → Save.
 #      (Automatic signing creates profiles, but it cannot enable a capability
 #      the App ID does not have. This one tick is unavoidable and manual.)
-#   2. Codemagic → Teams → Integrations → App Store Connect.
-#      The API key ALREADY EXISTS in App Store Connect: name "Codemagic",
-#      Key ID 49ACZ234H8, access App Manager, last used 2026-08-30. Keys do not
-#      expire. Check what that integration is named on the Codemagic side and
-#      make `integrations.app_store_connect` below match it EXACTLY — it is
-#      easier to change this file than to reissue a key (the .p8 private key
-#      can only be downloaded once, at creation).
+#   2. DONE — the Apple Developer Portal integration is already connected on
+#      the Codemagic personal account under the name "Codemagic"
+#      (Key ID 49ACZ234H8, App Manager access). `integrations` below matches it.
 #   3. Codemagic → app settings → Build → switch the source from "Workflow
 #      Editor" to "codemagic.yaml". Until this is done, THIS FILE IS IGNORED.
 #   4. Nothing — APP_STORE_APP_ID is already filled in (6762030524).
@@ -63,8 +59,11 @@ workflows:
     max_build_duration: 90
     instance_type: mac_mini_m2
     integrations:
-      # Must match the integration name configured in Codemagic exactly.
-      app_store_connect: binary-asc-key
+      # Verified 2026-08-31 against Codemagic -> Settings -> Integrations ->
+      # Developer Portal: the connected key is named exactly "Codemagic"
+      # (Key ID 49ACZ234H8), which is the same App Store Connect API key that
+      # issued the current distribution certificate. Must match exactly.
+      app_store_connect: Codemagic
     environment:
       flutter: stable
       # `latest` tracks whatever Xcode Codemagic has provisioned. Pin this to a
