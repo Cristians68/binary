@@ -75,6 +75,11 @@ class NotificationPrefsService {
           // Kept in sync because the deployed-later Cloud Functions still read
           // this older field.
           'notificationsEnabled': prefs.master,
+          // The server schedulers run hourly and pick out the users for whom
+          // it is now their chosen local hour. Without this they can only fall
+          // back to UTC, which is what made a single '0 18 * * *' cron fire at
+          // 10:00 in California and 04:00 in Sydney.
+          'utcOffsetMinutes': DateTime.now().timeZoneOffset.inMinutes,
         },
         SetOptions(merge: true),
       );
