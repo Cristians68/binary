@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../course_catalog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
@@ -161,7 +162,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
       context,
       AppRouter.push(
         LessonScreen(
-          moduleTitle: (module['title'] as String?) ?? '',
+          moduleTitle: displayModuleTitle(module['title'] as String?),
           courseTag: widget.tag,
           color: widget.color,
           moduleId: module['id'] as String,
@@ -506,7 +507,8 @@ class _ModuleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = (module['title'] as String?) ?? 'Module ${index + 1}';
+    final raw = displayModuleTitle(module['title'] as String?);
+    final title = raw.isEmpty ? 'Module ${index + 1}' : raw;
     // Use Firestore subtitle (e.g. "6 flashcards · 6 questions") when available
     final subtitle = (module['subtitle'] as String?);
     final isDone = status == 'done';

@@ -211,8 +211,10 @@ class _LessonsScreenState extends State<LessonsScreen> {
                             final tag =
                                 (lesson['courseTag'] as String?) ?? 'Unknown';
                             final color = _colorForTag(tag);
+                            final rawTitle = displayModuleTitle(
+                                lesson['moduleTitle'] as String?);
                             final moduleTitle =
-                                (lesson['moduleTitle'] as String?) ?? 'Lesson';
+                                rawTitle.isEmpty ? 'Lesson' : rawTitle;
                             final date = _formatDate(lesson['completedAt']);
 
                             return _AnimatedItem(

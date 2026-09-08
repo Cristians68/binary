@@ -159,3 +159,39 @@ const String kTrademarkNotice =
     'AWS® is a registered trademark of Amazon Web Services, Inc.\n'
     'Azure® is a registered trademark of Microsoft Corporation.\n'
     'Google Cloud® is a registered trademark of Google LLC.';
+
+/// Trademark-safe replacements for module titles stored in Firestore.
+///
+/// The course-level scrub renamed the *products* ('itil-v4' displays as "IT
+/// Service Management Foundations") but it never reached the module titles,
+/// which live in `courses/{id}/modules` and were seeded before it. Three of
+/// them still used a certification mark as the title of paid content:
+/// "Introduction to ITIL V4", "ITIL Practices Overview" and "CSM Exam Prep".
+///
+/// That is the same Guideline 5.2.1 problem the catalogue exists to avoid, and
+/// it was visible on the course screen a reviewer opens first.
+///
+/// Mapped here rather than rewritten in Firestore on purpose. The stored title
+/// is also the key written into each user's `completedLessons` history, so
+/// changing it in the database would orphan every existing record; translating
+/// at the point of display fixes new and historical rows alike.
+///
+/// Naming the framework *inside* a lesson stays as it is. You cannot teach
+/// service management without saying "ITIL", and a factual reference in
+/// educational content is nominative use — the thing that is not allowed is
+/// using the mark to name the product.
+const Map<String, String> _moduleTitleOverrides = {
+  'introduction to itil v4': 'Introduction to Service Management',
+  'itil practices overview': 'Core Service Management Practices',
+  'csm exam prep': 'Scrum Master Exam Preparation',
+};
+
+/// The trademark-safe title for a module.
+///
+/// Falls through unchanged for the great majority of modules, which never
+/// carried a mark ("The OSI Model", "Incident Response", "Scrum Events").
+String displayModuleTitle(String? rawTitle) {
+  final raw = (rawTitle ?? '').trim();
+  if (raw.isEmpty) return raw;
+  return _moduleTitleOverrides[raw.toLowerCase()] ?? raw;
+}

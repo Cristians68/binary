@@ -632,7 +632,12 @@ class _ProgressScreenState extends State<ProgressScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          item['moduleTitle'] as String? ?? 'Lesson',
+                          displayModuleTitle(
+                                      item['moduleTitle'] as String?)
+                                  .isEmpty
+                              ? 'Lesson'
+                              : displayModuleTitle(
+                                  item['moduleTitle'] as String?),
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
