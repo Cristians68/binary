@@ -56,6 +56,7 @@ class ServerClock {
   static Future<bool> calibrate(
     DocumentReference<Map<String, dynamic>> doc,
   ) async {
+    if (_failCalibration) return false;
     try {
       final before = DateTime.now();
       await doc.set(
@@ -91,7 +92,21 @@ class ServerClock {
   @visibleForTesting
   static void useOffset(Duration offset) => _offset = offset;
 
+  static bool _failCalibration = false;
+
+  /// Make [calibrate] fail, standing in for an offline or blocked device.
+  ///
+  /// This exists so the "an uncalibrated clock must not write a streak" rule
+  /// has a test that can actually fail. A fake Firestore calibrates
+  /// successfully, so without a way to force the failure the assertion would
+  /// pass whether the fallback to device time were present or not.
+  @visibleForTesting
+  static void failCalibration(bool value) => _failCalibration = value;
+
   /// Forget any calibration, returning [isCalibrated] to false.
   @visibleForTesting
-  static void reset() => _offset = null;
+  static void reset() {
+    _offset = null;
+    _failCalibration = false;
+  }
 }

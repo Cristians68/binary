@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'notification_service.dart';
 import 'service_backend.dart';
+import 'streak_service.dart';
 
 class ProgressService {
   static FirebaseFirestore get _db => ServiceBackend.db;
@@ -119,8 +121,14 @@ class ProgressService {
       );
     }
 
-    // 8. Update streak using StreakService-compatible nested field
-    await _updateStreak(userRef);
+    // 8. Streak, points and badges all belong to StreakService.
+    //
+    // This used to call a private _updateStreak() that reimplemented the
+    // same day-diff against the same fields. Two writers agreeing by
+    // coincidence is not agreement, and only one of them had the
+    // server-clock and DST fixes.
+    await StreakService.recordLogin();
+    await StreakService.recordQuizPass(score: score, total: total);
   }
 
   // ── Check if a course is fully complete for this user ─────────────────────
@@ -197,70 +205,21 @@ class ProgressService {
       'completedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
-    // Award badge in user doc
-    final badgeKey = 'badges.complete_$courseId';
-    try {
-      await userRef.update({
-        badgeKey: FieldValue.serverTimestamp(),
-        'completedCourses': FieldValue.arrayUnion([courseId]),
-      });
-    } catch (_) {
-      await userRef.set({
-        'badges': {'complete_$courseId': Timestamp.now()},
-        'completedCourses': FieldValue.arrayUnion([courseId]),
-      }, SetOptions(merge: true));
-    }
+    // Record the completion itself. This array is the real data; the course
+    // badges are derived from its length.
+    //
+    // It used to also write `badges.complete_<courseId>` -- an id in neither
+    // badge list, so it incremented the "N / 9" counter on the badges and
+    // profile screens while lighting nothing up in the grid. Existing accounts
+    // keep credit because StreakService.completedCourseIds still reads the old
+    // keys; nothing writes new ones.
+    await safeUpdate(
+      userRef as DocumentReference<Map<String, dynamic>>,
+      {'completedCourses': FieldValue.arrayUnion([courseId])},
+    );
+
+    await StreakService.recordCourseComplete();
+    await NotificationService.showCourseCompleteNotification(courseTag);
   }
 
-  // ── Internal: update streak using StreakService-compatible fields ──────────
-  // Uses nested 'streak.current' map to match StreakService format
-  static Future<void> _updateStreak(DocumentReference userRef) async {
-    try {
-      final snap = await userRef.get();
-      final data = (snap.data() as Map<String, dynamic>?) ?? {};
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-
-      // Read from nested streak map (StreakService format)
-      final streakMap = data['streak'] as Map<String, dynamic>? ?? {};
-      final lastTs = streakMap['lastLogin'] as Timestamp?;
-      final lastLogin = lastTs?.toDate();
-      final last = lastLogin != null
-          ? DateTime(lastLogin.year, lastLogin.month, lastLogin.day)
-          : null;
-
-      int current = (streakMap['current'] as num?)?.toInt() ?? 0;
-      int longest = (streakMap['longest'] as num?)?.toInt() ?? 0;
-
-      if (last == null) {
-        current = 1;
-      } else if (last == today) {
-        return; // Already recorded today
-      } else if (today.difference(last).inDays == 1) {
-        current += 1;
-      } else {
-        current = 1;
-      }
-
-      if (current > longest) longest = current;
-
-      // Write back in StreakService-compatible nested format
-      try {
-        await userRef.update({
-          'streak.current': current,
-          'streak.longest': longest,
-          'streak.lastLogin': Timestamp.fromDate(now),
-        });
-      } catch (_) {
-        // Document may not exist yet — use nested map (NOT dot-notation with set)
-        await userRef.set({
-          'streak': {
-            'current': current,
-            'longest': longest,
-            'lastLogin': Timestamp.fromDate(now),
-          },
-        }, SetOptions(merge: true));
-      }
-    } catch (_) {}
-  }
 }

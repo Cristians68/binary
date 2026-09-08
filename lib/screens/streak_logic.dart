@@ -185,3 +185,14 @@ Set<String> legacyCompletedCourseIds(Iterable<String> badgeKeys) => badgeKeys
     .where((k) => k.startsWith('complete_') && k.length > 'complete_'.length)
     .map((k) => k.substring('complete_'.length))
     .toSet();
+
+/// The badges in [keys] that the app actually displays.
+///
+/// Both badge counters used raw `badges.length`, which counted every key in
+/// the map. `ProgressService` wrote `badges.complete_<courseId>` — an id in
+/// neither display list — so finishing a course showed "1 / 9" with nothing
+/// lit in the grid. Counting the intersection with [kKnownBadgeIds] makes the
+/// number and the grid agree, and keeps agreeing for accounts that still carry
+/// the old keys.
+Set<String> knownEarnedBadges(Iterable<String> keys) =>
+    keys.toSet().intersection(kKnownBadgeIds);

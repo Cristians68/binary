@@ -6,7 +6,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'notification_service.dart';
 import 'subscription_service.dart';
 import 'user_document.dart';
 
@@ -242,10 +241,11 @@ class AuthService {
     } catch (e) {
       debugPrint('identifyUser error: $e');
     }
-    try {
-      await NotificationService.requestPermissions();
-    } catch (e) {
-      debugPrint('requestPermissions error: $e');
-    }
+    // Deliberately does NOT request notification permission here.
+    //
+    // iOS shows that prompt exactly once per install. Firing it the instant
+    // someone signs in spends it before they have seen a single lesson, and a
+    // decline can never be undone from inside the app. It now lives behind
+    // NotificationPrimingScreen, shown after the first completed lesson.
   }
 }

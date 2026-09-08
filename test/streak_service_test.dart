@@ -13,7 +13,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:binary/screens/server_clock.dart';
 import 'package:binary/screens/service_backend.dart';
+import 'package:binary/screens/streak_logic.dart';
 import 'package:binary/screens/streak_service.dart';
 
 const uid = 'test-uid';
@@ -24,9 +26,16 @@ void main() {
   setUp(() {
     db = FakeFirebaseFirestore();
     ServiceBackend.useFake(db, uid: uid);
+    // recordLogin refuses to write unless the clock is calibrated, which is
+    // the point: a device clock is not trusted. Zero offset means "the server
+    // agrees with this test's DateTime.now()".
+    ServerClock.useOffset(Duration.zero);
   });
 
-  tearDown(ServiceBackend.reset);
+  tearDown(() {
+    ServiceBackend.reset();
+    ServerClock.reset();
+  });
 
   DocumentReference<Map<String, dynamic>> userDoc() =>
       db.collection('users').doc(uid);
@@ -178,9 +187,10 @@ void main() {
 
   group('daily goal', () {
     test('addPoints accumulates on a fresh document', () async {
-      await StreakService.addPoints(10);
-      await StreakService.addPoints(15);
-      expect((await read())['dailyGoal']['todayPoints'], 25);
+      await StreakService.addPoints(Activity.lesson);
+      await StreakService.addPoints(Activity.quizPass);
+      expect((await read())['dailyGoal']['todayPoints'],
+          pointsFor(Activity.lesson) + pointsFor(Activity.quizPass));
     });
 
     test('logging in on a new day resets the points', () async {

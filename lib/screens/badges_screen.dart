@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'app_theme.dart';
+import 'streak_logic.dart';
 
 class BadgesScreen extends StatelessWidget {
   const BadgesScreen({super.key});
@@ -182,8 +183,14 @@ class BadgesScreen extends StatelessWidget {
               final data =
                   snap.data?.data() as Map<String, dynamic>? ?? {};
               final badgesRaw = data['badges'];
-              int count = 0;
-              if (badgesRaw is Map) count = badgesRaw.length;
+              // Counts only ids this grid can actually light up. Raw
+              // badges.length also counted the orphan complete_<courseId>
+              // keys ProgressService used to write, so the number ran ahead
+              // of the grid.
+              final count = badgesRaw is Map
+                  ? knownEarnedBadges(badgesRaw.keys.map((k) => k.toString()))
+                      .length
+                  : 0;
               return Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 10, vertical: 4),

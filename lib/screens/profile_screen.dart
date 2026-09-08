@@ -16,6 +16,10 @@ import 'paywall_screen.dart';
 import 'app_router.dart';
 import 'streak_service.dart';
 import 'app_theme.dart';
+import 'notification_prefs_service.dart';
+import 'notification_settings_sheet.dart';
+import 'signup_screen.dart';
+import 'streak_logic.dart';
 
 Map<String, dynamic> _toMap(dynamic value) {
   if (value == null) return {};
@@ -67,7 +71,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   Future<void> _loadStats() async {
     final data = await StreakService.getStats();
     if (!mounted) return;
-    final badges = _toMap(data['badges']).length;
+    // Only ids the badges grid displays — see knownEarnedBadges.
+    final badges =
+        knownEarnedBadges(_toMap(data['badges']).keys).length;
     final lessons = (data['completedLessons'] as List<dynamic>?)?.length ?? 0;
     final rawScores = data['quizScores'];
     List<Map<String, dynamic>> scores = [];
@@ -94,44 +100,14 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Future<void> _loadNotifPref() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
-      setState(() => _loadingNotifPref = false);
-      return;
-    }
-    try {
-      final snap = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
-      final enabled = (snap.data()?['notificationsEnabled'] as bool?) ?? true;
-      if (mounted) {
-        setState(() {
-          _notificationsEnabled = enabled;
-          _loadingNotifPref = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _loadingNotifPref = false);
-    }
-  }
-
-  Future<void> _toggleNotifications(bool value) async {
-    setState(() => _notificationsEnabled = value);
-    HapticFeedback.selectionClick();
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-    try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .update({'notificationsEnabled': value});
-    } catch (_) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .set({'notificationsEnabled': value}, SetOptions(merge: true));
-    }
+    // Reads notificationPrefs.master, falling back to the legacy
+    // notificationsEnabled boolean for accounts that predate the sheet.
+    final prefs = await NotificationPrefsService.load();
+    if (!mounted) return;
+    setState(() {
+      _notificationsEnabled = prefs.master;
+      _loadingNotifPref = false;
+    });
   }
 
   String _getFullName() =>
@@ -516,135 +492,31 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
+  /// Send a guest to sign-up so their session becomes a real account.
+  ///
+  /// SignupScreen's email path and AuthService._signInOrLink both link the new
+  /// credential to the current anonymous user, so the uid — and with it the
+  /// streak, badges and completed lessons — carries over rather than being
+  /// replaced by a fresh one.
+  Future<void> _upgradeGuest() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SignupScreen()),
+    );
+    if (!mounted) return;
+    setState(() {});
+    await _loadStats();
+  }
+
   void _showNotificationsSheet() {
-    final theme = AppTheme.of(context);
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: theme.surface,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModal) => Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 48),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: theme.subtext.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2)),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(13)),
-                    child: const Icon(CupertinoIcons.bell_fill,
-                        color: AppColors.primary, size: 20),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Push notifications',
-                            style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: theme.text)),
-                        Text('Daily reminders & course updates',
-                            style: TextStyle(
-                                fontSize: 12, color: theme.subtext)),
-                      ],
-                    ),
-                  ),
-                  CupertinoSwitch(
-                    value: _notificationsEnabled,
-                    activeTrackColor: AppColors.primary,
-                    onChanged: (v) {
-                      setModal(() {});
-                      _toggleNotifications(v);
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                    color: theme.bg,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: theme.border)),
-                child: Column(
-                  children: [
-                    _buildNotifRow(theme, '🔥', 'Daily streak reminder', true),
-                    const SizedBox(height: 12),
-                    _buildNotifRow(theme, '🎓', 'Course completion', true),
-                    const SizedBox(height: 12),
-                    _buildNotifRow(
-                        theme, '📚', 'New content available', false),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              GestureDetector(
-                onTap: () => Navigator.pop(ctx),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  decoration: BoxDecoration(
-                      color: theme.border,
-                      borderRadius: BorderRadius.circular(16)),
-                  child: Text('Done',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: theme.subtext)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    NotificationSettingsSheet.show(
+      context,
+      onChanged: (prefs) {
+        if (!mounted) return;
+        setState(() => _notificationsEnabled = prefs.master);
+      },
     );
   }
 
-  Widget _buildNotifRow(
-      ThemeNotifier theme, String emoji, String label, bool enabled) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 14)),
-            const SizedBox(width: 10),
-            Text(label, style: TextStyle(fontSize: 14, color: theme.text)),
-          ],
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: enabled
-                ? AppColors.green.withValues(alpha: 0.12)
-                : theme.border.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(enabled ? 'On' : 'Off',
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: enabled ? AppColors.green : theme.subtext)),
-        ),
-      ],
-    );
-  }
 
   void _showMyStats() {
     final theme = AppTheme.of(context);
@@ -1051,9 +923,21 @@ class _ProfileScreenState extends State<ProfileScreen>
 
               // ── Account ───────────────────────────────────────────────────
               _buildSection('Account', theme, [
-                _buildItem(CupertinoIcons.person_fill, 'Edit profile',
-                    AppColors.primary, theme,
-                    onTap: _showEditProfile),
+                // Guest mode shipped with no way out of it: `isGuest` existed
+                // but nothing in the UI read it, so a guest who studied for a
+                // week could never turn that into a real account, and losing
+                // the device lost the lot. Signing up from here links the
+                // credential to the same uid, so the streak and progress
+                // survive the upgrade.
+                if (AuthService.isGuest)
+                  _buildItem(CupertinoIcons.person_badge_plus_fill,
+                      'Create an account', AppColors.green, theme,
+                      subtitle: 'Save your streak and progress',
+                      onTap: _upgradeGuest),
+                if (!AuthService.isGuest)
+                  _buildItem(CupertinoIcons.person_fill, 'Edit profile',
+                      AppColors.primary, theme,
+                      onTap: _showEditProfile),
                 _buildItem(CupertinoIcons.bell_fill, 'Notifications',
                     AppColors.primary, theme,
                     onTap: _showNotificationsSheet,
@@ -1420,6 +1304,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     required VoidCallback onTap,
     bool isLast = false,
     Widget? trailing,
+    String? subtitle,
   }) {
     return GestureDetector(
       onTap: () {
@@ -1445,11 +1330,21 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             const SizedBox(width: 14),
             Expanded(
-              child: Text(label,
-                  style: TextStyle(
-                      fontSize: 14,
-                      color: theme.text,
-                      letterSpacing: -0.2)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: TextStyle(
+                          fontSize: 14,
+                          color: theme.text,
+                          letterSpacing: -0.2)),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(subtitle,
+                        style: TextStyle(fontSize: 11.5, color: theme.subtext)),
+                  ],
+                ],
+              ),
             ),
             if (trailing != null) ...[trailing, const SizedBox(width: 8)],
             Icon(CupertinoIcons.chevron_right,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'quiz_screen.dart';
 import 'app_router.dart';
 import 'app_theme.dart';
+import 'streak_service.dart';
 import '../course_catalog.dart';
 
 class LessonScreen extends StatefulWidget {
@@ -86,6 +89,18 @@ class _LessonScreenState extends State<LessonScreen> {
       setState(() => _currentCard++);
     } else {
       HapticFeedback.mediumImpact();
+      // Reaching the last flashcard is what "completed a lesson" means. This
+      // was the missing caller that made recordLessonComplete dead code, and
+      // with it the daily goal: todayPoints had no writer, so the home-screen
+      // goal ring read 0 / 50 for every user forever.
+      //
+      // Not awaited — the quiz should open at once, and a failed write is
+      // logged inside the service rather than blocking the user.
+      unawaited(StreakService.recordLessonComplete(
+        courseId: widget.courseId,
+        moduleId: widget.moduleId,
+        moduleTitle: widget.moduleTitle,
+      ));
       Navigator.pushReplacement(
         context,
         AppRouter.push(

@@ -198,14 +198,22 @@ void main() {
       expect((await courseProgress())['completed'], isTrue);
     });
 
-    test('records the course and awards its badge', () async {
+    test('records the course and awards the canonical course badge', () async {
       await seedCourse(count: 2);
       await complete('module-1');
       await complete('module-2');
 
       final data = await userData();
       expect(data['completedCourses'], contains(courseId));
-      expect((data['badges'] as Map).keys, contains('complete_$courseId'));
+
+      final keys = (data['badges'] as Map).keys;
+      // course_first is a badge the grid can actually light up.
+      expect(keys, contains('course_first'));
+      // The orphan key this used to write is gone. It appeared in neither
+      // badge list, so it inflated the "N / 9" counter while lighting nothing
+      // up. Existing accounts keep credit because completedCourseIds still
+      // reads the old keys; nothing writes new ones.
+      expect(keys, isNot(contains('complete_$courseId')));
     });
 
     test('isCourseComplete reports it', () async {

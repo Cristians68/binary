@@ -1,7 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
+import '../course_catalog.dart';
+import 'notification_service.dart';
+import 'server_clock.dart';
 import 'service_backend.dart';
+import 'streak_logic.dart';
 
 // ─────────────────────────────────────────────
 // Safe map cast — works on iOS, Android & Web
@@ -215,75 +219,74 @@ class StreakService {
   // ── Alias for backward compat ─────────────────────────────────────────────
   static Future<void> checkAndUpdateStreak() => recordLogin();
 
-  // ── Record daily login + update streak ────────────────────────────────────
+  // -- Record daily login + update streak -----------------------------------
+  /// Count today towards the streak.
+  ///
+  /// The day is decided by [ServerClock], not the device. If the clock cannot
+  /// be calibrated this returns without writing: the day is not lost, it is
+  /// simply not counted until the app can reach the server. Falling back to
+  /// `DateTime.now()` would hand the streak straight back to anyone willing to
+  /// change their device clock, which is exactly what this used to do.
   static Future<void> recordLogin() async {
     final doc = _userDoc;
     if (doc == null) return;
 
     try {
+      // Doubles as the "user is active" write, so it costs no extra round trip.
+      final calibrated = await ServerClock.calibrate(doc);
+      if (!calibrated) {
+        debugPrint('StreakService.recordLogin: clock uncalibrated, skipping');
+        return;
+      }
+      final now = ServerClock.now();
+
       final snapshot = await doc.get();
       final data = snapshot.data() ?? {};
       final streak = StreakData.fromMap(_safeMap(data['streak']));
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
 
-      int newCurrent = streak.current;
-      final lastLogin = streak.lastLogin;
+      final outcome = computeStreak(
+        now: now,
+        lastLogin: streak.lastLogin,
+        currentStreak: streak.current,
+        longestStreak: streak.longest,
+      );
 
-      if (lastLogin != null) {
-        final lastDay =
-            DateTime(lastLogin.year, lastLogin.month, lastLogin.day);
-        final diff = today.difference(lastDay).inDays;
-        if (diff == 0) {
-          await _resetDailyGoalIfNeeded(doc, data, today);
-          return;
-        } else if (diff == 1) {
-          newCurrent = streak.current + 1;
-        } else {
-          newCurrent = 1;
-        }
-      } else {
-        newCurrent = 1;
+      if (outcome.changed) {
+        // Dot-notation MUST go through update(), not set() -- see _safeUpdate.
+        await _safeUpdate(doc, {
+          'streak.current': outcome.current,
+          'streak.longest': outcome.longest,
+          'streak.lastLogin': Timestamp.fromDate(now),
+        });
       }
 
-      final newLongest =
-          newCurrent > streak.longest ? newCurrent : streak.longest;
-
-      // ✅ Use _safeUpdate — dot-notation MUST go through update(), not set()
-      await _safeUpdate(doc, {
-        'streak.current': newCurrent,
-        'streak.longest': newLongest,
-        'streak.lastLogin': Timestamp.fromDate(now),
-      });
-
-      await _resetDailyGoalIfNeeded(doc, data, today);
-      await _checkStreakBadges(newCurrent);
+      await _resetDailyGoalIfNeeded(doc, data, now);
+      await _awardEligibleBadges(streakOverride: outcome.current);
     } catch (e) {
       debugPrint('StreakService.recordLogin error: $e');
     }
   }
 
-  // ── Add points toward daily goal ──────────────────────────────────────────
-  static Future<void> addPoints(int points) async {
+  // -- Add points toward daily goal ------------------------------------------
+  ///
+  /// Uses `FieldValue.increment` rather than read-then-write. Two lessons
+  /// finished in quick succession used to race: both read the same total and
+  /// the second overwrote the first, silently losing points.
+  static Future<void> addPoints(Activity activity) async {
     final doc = _userDoc;
     if (doc == null) return;
 
     try {
-      final snapshot = await doc.get();
-      final data = snapshot.data() ?? {};
-      final goal = DailyGoalData.fromMap(_safeMap(data['dailyGoal']));
-
       await _safeUpdate(doc, {
-        'dailyGoal.todayPoints': goal.todayPoints + points,
+        'dailyGoal.todayPoints': FieldValue.increment(pointsFor(activity)),
       });
     } catch (e) {
       debugPrint('StreakService.addPoints error: $e');
     }
   }
 
-  // ── Record a completed lesson ─────────────────────────────────────────────
+  // -- Record a completed lesson ---------------------------------------------
   /// Call this after a user finishes a flashcard module.
-  /// Increments the lessonsCompleted counter used by HomeScreen and Profile.
   static Future<void> recordLessonComplete({
     required String courseId,
     required String moduleId,
@@ -293,12 +296,6 @@ class StreakService {
     if (doc == null) return;
 
     try {
-      final snapshot = await doc.get();
-      final data = snapshot.data() ?? {};
-      final current =
-          ((data['lessonsCompleted'] as num?) ?? 0).toInt();
-
-      // Build a completed lesson entry for the history list
       final entry = {
         'courseId': courseId,
         'moduleId': moduleId,
@@ -307,19 +304,17 @@ class StreakService {
       };
 
       await _safeUpdate(doc, {
-        'lessonsCompleted': current + 1,
-        // Append to completedLessons array (used by LessonsScreen history)
+        'lessonsCompleted': FieldValue.increment(1),
         'completedLessons': FieldValue.arrayUnion([entry]),
       });
 
-      // Award points for completing a lesson
-      await addPoints(10);
+      await addPoints(Activity.lesson);
     } catch (e) {
       debugPrint('StreakService.recordLessonComplete error: $e');
     }
   }
 
-  // ── Call after passing a quiz ─────────────────────────────────────────────
+  // -- Call after passing a quiz ---------------------------------------------
   static Future<void> recordQuizPass({
     required int score,
     required int total,
@@ -328,32 +323,35 @@ class StreakService {
     if (doc == null) return;
 
     try {
-      await addPoints(20);
-
-      final snapshot = await doc.get();
-      final data = snapshot.data() ?? {};
-      final quizzesPassed =
-          ((data['quizzesPassed'] as num?) ?? 0).toInt() + 1;
-
-      await _safeUpdate(doc, {'quizzesPassed': quizzesPassed});
-
-      final earnedIds = _earnedBadgeIds(data);
-      if (!earnedIds.contains('quiz_first')) await _awardBadge('quiz_first');
-      if (score == total && !earnedIds.contains('quiz_perfect')) {
-        await _awardBadge('quiz_perfect');
-      }
-      if (quizzesPassed >= 10 && !earnedIds.contains('quiz_10')) {
-        await _awardBadge('quiz_10');
-      }
+      await addPoints(Activity.quizPass);
+      await _safeUpdate(doc, {'quizzesPassed': FieldValue.increment(1)});
+      await _awardEligibleBadges(perfectQuiz: total > 0 && score == total);
     } catch (e) {
       debugPrint('StreakService.recordQuizPass error: $e');
     }
   }
 
-  // ── Call after completing a course ────────────────────────────────────────
-  static Future<void> recordCourseComplete({
-    required int totalCoursesCompleted,
-    required int totalCoursesAvailable,
+  // -- Call after completing a course ----------------------------------------
+  ///
+  /// Course counts come from the user document's `completedCourses` array and
+  /// the shipped catalogue, so the caller no longer has to supply totals that
+  /// it could get wrong -- passing `coursesAvailable: 0` used to award the
+  /// rarest badge in the app to everyone.
+  static Future<void> recordCourseComplete() => _awardEligibleBadges();
+
+  // -- Badge awarding --------------------------------------------------------
+  /// Award every badge the user now qualifies for.
+  ///
+  /// One place decides eligibility: `badgesToAward` in `streak_logic.dart`.
+  /// Every recording method funnels through here rather than each carrying its
+  /// own conditions, which is how six of the nine badges came to be
+  /// unreachable -- they were only ever awarded inside methods nothing called.
+  ///
+  /// [streakOverride] lets `recordLogin` pass the streak it has just written,
+  /// which the re-read below may not yet reflect.
+  static Future<void> _awardEligibleBadges({
+    bool perfectQuiz = false,
+    int? streakOverride,
   }) async {
     final doc = _userDoc;
     if (doc == null) return;
@@ -361,21 +359,57 @@ class StreakService {
     try {
       final snapshot = await doc.get();
       final data = snapshot.data() ?? {};
-      final earnedIds = _earnedBadgeIds(data);
 
-      if (!earnedIds.contains('course_first')) {
-        await _awardBadge('course_first');
-      }
-      if (totalCoursesCompleted >= 3 && !earnedIds.contains('course_3')) {
-        await _awardBadge('course_3');
-      }
-      if (totalCoursesCompleted >= totalCoursesAvailable &&
-          !earnedIds.contains('course_all')) {
-        await _awardBadge('course_all');
+      final earned = _earnedBadgeIds(data);
+      final streak = streakOverride ??
+          StreakData.fromMap(_safeMap(data['streak'])).current;
+
+      final toAward = badgesToAward(
+        streak: streak,
+        quizzesPassed: ((data['quizzesPassed'] as num?) ?? 0).toInt(),
+        coursesCompleted: completedCourseIds(data).length,
+        coursesAvailable: kCourseCatalog.length,
+        perfectQuiz: perfectQuiz,
+        alreadyEarned: earned,
+      );
+
+      if (toAward.isEmpty) return;
+
+      await _safeUpdate(doc, {
+        for (final id in toAward) 'badges.$id': Timestamp.now(),
+      });
+
+      for (final id in toAward) {
+        BadgeData? badge;
+        for (final b in kAllBadges) {
+          if (b.id == id) badge = b;
+        }
+        if (badge == null) continue;
+        await NotificationService.showBadgeEarnedNotification(
+          badge.title,
+          badge.emoji,
+        );
       }
     } catch (e) {
-      debugPrint('StreakService.recordCourseComplete error: $e');
+      debugPrint('StreakService._awardEligibleBadges error: $e');
     }
+  }
+
+  /// Courses this user has finished, including ones only ever recorded under
+  /// the old `badges.complete_<courseId>` scheme.
+  ///
+  /// `ProgressService` used to write that key, which appears in no badge list,
+  /// so it inflated the "N / 9" counter while lighting nothing up in the grid.
+  /// Reading it here means an account that finished a course before this
+  /// shipped still earns the canonical course badges.
+  @visibleForTesting
+  static Set<String> completedCourseIds(Map<String, dynamic> data) {
+    final fromArray = (data['completedCourses'] as List?)
+            ?.map((e) => e.toString())
+            .toSet() ??
+        <String>{};
+    return fromArray
+        .union(legacyCompletedCourseIds(_safeMap(data['badges']).keys));
   }
 
   // ── Fetch all structured data ─────────────────────────────────────────────
@@ -428,44 +462,11 @@ class StreakService {
     DateTime today,
   ) async {
     final goal = DailyGoalData.fromMap(_safeMap(data['dailyGoal']));
-    final lastReset = goal.lastReset;
-    final needsReset = lastReset == null ||
-        today.isAfter(
-          DateTime(lastReset.year, lastReset.month, lastReset.day),
-        );
+    if (!needsDailyGoalReset(today: today, lastReset: goal.lastReset)) return;
 
-    if (needsReset) {
-      await _safeUpdate(doc, {
-        'dailyGoal.todayPoints': 0,
-        'dailyGoal.lastReset': Timestamp.fromDate(today),
-      });
-    }
-  }
-
-  static Future<void> _checkStreakBadges(int current) async {
-    final doc = _userDoc;
-    if (doc == null) return;
-    final snapshot = await doc.get();
-    final data = snapshot.data() ?? {};
-    final earnedIds = _earnedBadgeIds(data);
-
-    if (current >= 7 && !earnedIds.contains('streak_7')) {
-      await _awardBadge('streak_7');
-    }
-    if (current >= 30 && !earnedIds.contains('streak_30')) {
-      await _awardBadge('streak_30');
-    }
-    if (current >= 100 && !earnedIds.contains('streak_100')) {
-      await _awardBadge('streak_100');
-    }
-  }
-
-  static Future<void> _awardBadge(String badgeId) async {
-    final doc = _userDoc;
-    if (doc == null) return;
-    debugPrint('Awarding badge: $badgeId');
     await _safeUpdate(doc, {
-      'badges.$badgeId': Timestamp.now(),
+      'dailyGoal.todayPoints': 0,
+      'dailyGoal.lastReset': Timestamp.fromDate(today),
     });
   }
 

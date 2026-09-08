@@ -97,7 +97,7 @@ List<ScheduledReminder> remindersFor(NotificationPrefs prefs) {
       hour: goalHourFor(prefs.reminderHour),
       minute: prefs.reminderMinute,
       repeat: Repeat.daily,
-      payload: '/home',
+      payload: routeHome,
     ));
   }
 
@@ -109,7 +109,7 @@ List<ScheduledReminder> remindersFor(NotificationPrefs prefs) {
       hour: prefs.reminderHour,
       minute: prefs.reminderMinute,
       repeat: Repeat.daily,
-      payload: '/home',
+      payload: routeHome,
     ));
   }
 
@@ -122,9 +122,48 @@ List<ScheduledReminder> remindersFor(NotificationPrefs prefs) {
       minute: 0,
       repeat: Repeat.weekly,
       weekday: DateTime.monday,
-      payload: '/courses',
+      payload: routeCourses,
     ));
   }
 
   return out;
 }
+
+// ─────────────────────────────────────────────
+// Tap routing
+// ─────────────────────────────────────────────
+
+/// Routes a notification payload is allowed to open.
+///
+/// Taps used to reach a `debugPrint` and stop, so every reminder dropped the
+/// user wherever the app had last been left. The payload is our own, but the
+/// OS persists a scheduled notification across app updates, so a payload
+/// written by an older build can arrive at a newer one — hence a whitelist
+/// rather than a direct push of whatever string turns up.
+const Set<String> kNotificationRoutes = {
+  routeHome,
+  routeCourses,
+  routeProgress,
+  routeBadges,
+};
+
+const String routeHome = '/home';
+const String routeCourses = '/courses';
+const String routeProgress = '/progress';
+const String routeBadges = '/badges';
+
+/// Which `MainNavigation` tab a route belongs to, or null if it is not a tab.
+///
+/// Indices match the `_screens` list in `main_navigation.dart`:
+/// Home 0, Courses 1, Progress 2, Profile 3. `/badges` is not a tab — it is a
+/// screen pushed on top of Progress, so it maps there.
+int? tabIndexForRoute(String route) => switch (route) {
+      routeHome => 0,
+      routeCourses => 1,
+      routeProgress => 2,
+      routeBadges => 2,
+      _ => null,
+    };
+
+/// Whether [route] additionally pushes the badges screen once the tab is set.
+bool routePushesBadges(String route) => route == routeBadges;

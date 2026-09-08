@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -9,14 +11,14 @@ import 'screens/welcome_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/app_theme.dart';
 import 'screens/subscription_service.dart';
+import 'screens/notification_prefs_service.dart';
 import 'screens/notification_service.dart';
+import 'screens/main_navigation.dart';
 import 'security_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  await _ensureUserIdentity();
 
   // RevenueCat must be configured before any purchase / entitlement check.
   await SubscriptionService.configure();
@@ -40,19 +42,15 @@ void main() async {
   );
 }
 
-Future<void> _ensureUserIdentity() async {
-  final auth = FirebaseAuth.instance;
-  if (auth.currentUser == null) {
-    try {
-      await auth.signInAnonymously();
-      debugPrint('Anonymous user created: ${auth.currentUser?.uid}');
-    } catch (e) {
-      debugPrint('Failed to sign in anonymously: $e');
-    }
-  } else {
-    debugPrint('Existing user: ${auth.currentUser?.uid}');
-  }
-}
+// _ensureUserIdentity() used to live here and signed every launch in
+// anonymously before the UI appeared. It was written long before guest mode
+// existed and now actively fights it: an install was already an anonymous
+// account by the time the welcome screen rendered, so "Continue as guest" was
+// relabelling a session the user had never chosen, and every install that went
+// on to create a real account left an orphan anonymous user behind.
+//
+// Anonymous sign-in now happens in exactly one place — AuthService.signInAsGuest,
+// behind the button that says so.
 
 class BinaryApp extends StatefulWidget {
   final bool initialIsDark;
@@ -141,6 +139,10 @@ class _AppEntryState extends State<_AppEntry> {
   }
 
   Future<void> _check() async {
+    // Reminders are scheduled from the local mirror of the user's preferences,
+    // so this does not wait on Firestore and works offline.
+    unawaited(NotificationPrefsService.applyAtStartup());
+
     if (kIsWeb) {
       if (mounted) setState(() => _showOnboarding = false);
       return;
@@ -168,6 +170,13 @@ class _AppEntryState extends State<_AppEntry> {
     }
     if (_showOnboarding!) {
       return OnboardingScreen(onComplete: _completeOnboarding);
+    }
+    // A session that survived the last launch goes straight in. Without this
+    // the welcome screen rendered on every cold start even for a signed-in
+    // user, who then had to log in again — including a guest, who would have
+    // been handed a brand new anonymous uid and silently lost their streak.
+    if (FirebaseAuth.instance.currentUser != null) {
+      return const MainNavigation();
     }
     return const WelcomeScreen();
   }

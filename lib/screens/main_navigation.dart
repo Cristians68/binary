@@ -1,7 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'badges_screen.dart';
 import 'home_screen.dart';
+import 'notification_schedule.dart';
+import 'notification_service.dart';
 import 'courses_screen.dart';
 import 'progress_screen.dart';
 import 'profile_screen.dart';
@@ -51,10 +54,36 @@ class _MainNavigationState extends State<MainNavigation>
       parent: _controller,
       curve: Curves.easeInOut,
     );
+
+    // A notification tap sets pendingNotificationRoute. Consume anything
+    // already waiting — a cold start delivers the tap long before this widget
+    // exists — and then listen for taps that arrive while the app is running.
+    pendingNotificationRoute.addListener(_consumePendingRoute);
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _consumePendingRoute());
+  }
+
+  /// Open whatever screen a tapped notification asked for.
+  void _consumePendingRoute() {
+    final route = pendingNotificationRoute.value;
+    if (route == null) return;
+    // Cleared before acting, so a rebuild cannot replay the same tap.
+    pendingNotificationRoute.value = null;
+
+    final index = tabIndexForRoute(route);
+    if (index == null || !mounted) return;
+    setState(() => _currentIndex = index);
+
+    if (routePushesBadges(route)) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const BadgesScreen()),
+      );
+    }
   }
 
   @override
   void dispose() {
+    pendingNotificationRoute.removeListener(_consumePendingRoute);
     _controller.dispose();
     super.dispose();
   }

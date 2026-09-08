@@ -8,7 +8,7 @@ import 'app_theme.dart';
 import 'quiz_logic.dart';
 import 'review_service.dart';
 import 'progress_service.dart';
-import 'notification_service.dart';
+import 'notification_priming_screen.dart';
 import 'certificate_screen.dart';
 import '../course_catalog.dart';
 
@@ -153,11 +153,18 @@ class _QuizScreenState extends State<QuizScreen> {
         score: _score,
         total: _questions.length,
       ).then((_) async {
-        final courseComplete =
-            await ProgressService.isCourseComplete(widget.courseId);
-        if (courseComplete && mounted) {
-          NotificationService.showCourseCompleteNotification(widget.courseTag);
-        }
+        // The course-complete notification used to be fired here, after
+        // re-reading isCourseComplete(). That re-fired on every later pass of
+        // any module in an already-finished course. It now lives in
+        // ProgressService._markCourseComplete, which runs exactly once, on the
+        // transition.
+        //
+        // Ask about reminders now instead: the user has just finished a lesson
+        // and passed its quiz, so they have a streak worth protecting. iOS
+        // grants the permission prompt once per install and a decline is
+        // final, so the moment it is spent matters.
+        if (!mounted) return;
+        await NotificationPrimingScreen.showIfNeeded(context);
       });
     }
 
