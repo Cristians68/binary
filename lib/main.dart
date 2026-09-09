@@ -106,11 +106,17 @@ class _BinaryAppState extends State<BinaryApp> {
               bodyColor: isDark ? AppColors.darkText : AppColors.lightText,
               displayColor: isDark ? AppColors.darkText : AppColors.lightText,
             ),
+            // NOT const. CupertinoPageTransitionsBuilder stopped being a
+            // constant expression in a Flutter newer than the one installed
+            // here, so `const` compiled locally and failed the archive on CI
+            // with "Not a constant expression" — after five minutes of
+            // building. Dropping it compiles on both, and costs nothing: the
+            // enclosing PageTransitionsTheme is not const either.
             pageTransitionsTheme: PageTransitionsTheme(
               builders: {
-                TargetPlatform.android: const CupertinoPageTransitionsBuilder(),
-                TargetPlatform.iOS: const CupertinoPageTransitionsBuilder(),
-                TargetPlatform.windows: const CupertinoPageTransitionsBuilder(),
+                TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+                TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+                TargetPlatform.windows: CupertinoPageTransitionsBuilder(),
               },
             ),
           ),
