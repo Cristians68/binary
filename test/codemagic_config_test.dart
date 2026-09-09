@@ -146,6 +146,25 @@ void main() {
     expect((env['vars'] as YamlMap)['BUNDLE_ID'], 'com.cristians.b1nary');
   });
 
+  test('every workflow pins an exact Flutter version', () {
+    // `stable` moved underneath this project and broke two builds:
+    // CupertinoPageTransitionsBuilder was moved out of the material library,
+    // so the CI archive failed in the Dart front end while the local analyzer
+    // — running an older Flutter — reported zero issues. Local verification is
+    // only meaningful when it runs the same Flutter the build does.
+    final version = RegExp(r'^\d+\.\d+\.\d+$');
+    for (final id in workflows.keys) {
+      final env = (workflows[id] as YamlMap)['environment'] as YamlMap;
+      final flutter = env['flutter'].toString();
+      expect(
+        version.hasMatch(flutter),
+        isTrue,
+        reason: '$id pins Flutter to "$flutter"; it must be an exact version, '
+            'not a moving channel',
+      );
+    }
+  });
+
   test('a Podfile is committed and pins the platform', () {
     // Without a committed Podfile, Flutter generates one from its template
     // with the `platform :ios` line commented OUT. CocoaPods then assigns

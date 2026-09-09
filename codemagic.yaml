@@ -50,7 +50,8 @@ workflows:
     max_build_duration: 30
     instance_type: linux_x2
     environment:
-      flutter: stable
+      # Pinned, not `stable`. See the note in ios-testflight.
+      flutter: 3.47.2
     scripts:
       - name: Get packages
         script: flutter pub get
@@ -75,7 +76,15 @@ workflows:
       # issued the current distribution certificate. Must match exactly.
       app_store_connect: Codemagic
     environment:
-      flutter: stable
+      # Pinned, not `stable`. `stable` moved underneath this project and cost
+      # two six-minute builds: CupertinoPageTransitionsBuilder had been moved
+      # out of the material library, so the archive died in the Dart front end
+      # while the local analyzer — on an older Flutter — reported zero issues.
+      # A version here that nobody runs locally makes `flutter analyze` and
+      # `flutter test` a weaker gate than the build they are supposed to guard.
+      # Bump this deliberately, after upgrading locally and seeing the suite
+      # green on the new version.
+      flutter: 3.47.2
       # `latest` tracks whatever Xcode Codemagic has provisioned. Pin this to a
       # specific version (e.g. `16.2`) once a build is green, so a future Xcode
       # major release cannot silently break a build months from now. Pinning to

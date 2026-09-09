@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -106,13 +107,13 @@ class _BinaryAppState extends State<BinaryApp> {
               bodyColor: isDark ? AppColors.darkText : AppColors.lightText,
               displayColor: isDark ? AppColors.darkText : AppColors.lightText,
             ),
-            // NOT const. CupertinoPageTransitionsBuilder stopped being a
-            // constant expression in a Flutter newer than the one installed
-            // here, so `const` compiled locally and failed the archive on CI
-            // with "Not a constant expression" — after five minutes of
-            // building. Dropping it compiles on both, and costs nothing: the
-            // enclosing PageTransitionsTheme is not const either.
-            pageTransitionsTheme: PageTransitionsTheme(
+            // CupertinoPageTransitionsBuilder now lives in the cupertino
+            // library, not material — hence the import above. Without it the
+            // analyzer on an older Flutter was happy and the CI archive died
+            // five minutes in, first with "Not a constant expression" and then
+            // with "isn't defined for the type _BinaryAppState", which is the
+            // front end failing to resolve the name at all.
+            pageTransitionsTheme: const PageTransitionsTheme(
               builders: {
                 TargetPlatform.android: CupertinoPageTransitionsBuilder(),
                 TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
