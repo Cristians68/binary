@@ -58,3 +58,31 @@ class AuthResult {
   @override
   String toString() => 'AuthResult($outcome, code: $code, message: $message)';
 }
+
+/// Provider error codes that mean the user backed out.
+///
+/// Firebase's web-context OAuth flow reports a cancellation as an *error*, so
+/// without this a user tapping "Cancel" on the Google account chooser would be
+/// told sign-in failed.
+///
+/// It matters more than a wording nit. [AuthService.signInWithApple] and the
+/// iOS Google path both fall back to a second flow when the first one fails.
+/// If a cancellation were treated as a failure, backing out of one sheet would
+/// immediately raise another one the user never asked for — and backing out of
+/// that would raise the first again on the next tap. A cancellation must stop
+/// the chain.
+const Set<String> kCancellationCodes = {
+  'web-context-canceled',
+  'web-context-cancelled',
+  'user-canceled',
+  'user-cancelled',
+  'canceled',
+  'cancelled',
+  'popup-closed-by-user',
+  'cancelled-popup-request',
+  'ERROR_ABORTED_BY_USER',
+};
+
+/// Whether [code] is a provider's way of saying "the user backed out".
+bool isCancellationCode(String? code) =>
+    code != null && kCancellationCodes.contains(code);
