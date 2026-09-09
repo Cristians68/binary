@@ -7,20 +7,30 @@
 #     emitted an UNSIGNED Runner.app. That artifact can never reach TestFlight,
 #     so anyone reading the repo got a false picture of how releases happen.
 #     The real pipeline lived only in the Codemagic web UI.
-#   * Manual code signing. A hand-uploaded .mobileprovision goes stale between
-#     builds, and this project builds months apart. Every capability change,
-#     profile regeneration or cert expiry became a build failure that could only
-#     be fixed by re-uploading a file to a web UI. Automatic signing with an App
-#     Store Connect API key removes that whole failure class.
+#   * Signing assets that only existed on someone's laptop. A hand-uploaded
+#     .mobileprovision goes stale between builds, and this project builds
+#     months apart, so every capability change or cert expiry became a build
+#     failure fixable only by re-exporting a file from a Mac — which nobody
+#     here has. The certificate and profile are now held by Codemagic, pulled
+#     from Apple through the App Store Connect integration, and refreshed with
+#     a button. `ios_signing` names them; see the block below for why it does
+#     not use the fetch-per-build form.
 #
 # ── ONE-TIME SETUP — see docs/RELEASE.md for the full walkthrough ────────────
 #   1. developer.apple.com → Identifiers → com.cristians.b1nary
 #      → tick "Sign In with Apple" → Save.
-#      (Automatic signing creates profiles, but it cannot enable a capability
-#      the App ID does not have. This one tick is unavoidable and manual.)
+#      (Nothing on the CI side can enable a capability the App ID does not
+#      have. This one tick is unavoidable and manual. Note it INVALIDATES every
+#      existing provisioning profile — regenerate the profile afterwards and
+#      re-fetch it into Codemagic, or the build fails with "No matching
+#      profiles found".)
 #   2. DONE — the Apple Developer Portal integration is already connected on
 #      the Codemagic personal account under the name "Codemagic"
 #      (Key ID 49ACZ234H8, App Manager access). `integrations` below matches it.
+#      The distribution certificate and app-store profile have been fetched
+#      through it and saved as `binary_distribution` and `binary_app_store`
+#      under Code signing identities. Refresh them there after any capability
+#      change, which invalidates existing profiles.
 #   3. Codemagic → app settings → Build → switch the source from "Workflow
 #      Editor" to "codemagic.yaml". Until this is done, THIS FILE IS IGNORED.
 #   4. Nothing — APP_STORE_APP_ID is already filled in (6762030524).
@@ -74,11 +84,26 @@ workflows:
       xcode: latest
       cocoapods: default
       ios_signing:
-        # With `integrations.app_store_connect` set, Codemagic fetches — and
-        # creates if missing — the distribution certificate and provisioning
-        # profile for this bundle id on every build. Nothing to upload by hand.
-        distribution_type: app_store
-        bundle_identifier: com.cristians.b1nary
+        # Signing assets are referenced by the names they were saved under in
+        # Codemagic -> Personal account settings -> Code signing identities.
+        #
+        # The first attempt used the `distribution_type` / `bundle_identifier`
+        # form, which is documented to fetch and create signing assets from
+        # Apple on every build. On this account it does not: two builds failed
+        # instantly, before provisioning a machine, with "No matching profiles
+        # found for bundle identifier com.cristians.b1nary and distribution
+        # type app_store" — while Codemagic's own "Fetch profiles" dialog,
+        # using the very same API key, listed that exact profile. It resolves
+        # signing from the stored identities, and the store was empty.
+        #
+        # These are NOT the old hand-uploaded files the rewrite removed. Both
+        # were pulled straight from Apple by the App Store Connect integration
+        # below and are stored on the Codemagic side, so refreshing them after
+        # a capability change is a button, not a laptop.
+        provisioning_profiles:
+          - binary_app_store
+        certificates:
+          - binary_distribution
       vars:
         BUNDLE_ID: "com.cristians.b1nary"
         # App Store Connect app id for B1nary Academy.

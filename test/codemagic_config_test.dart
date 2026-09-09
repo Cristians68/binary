@@ -50,17 +50,30 @@ void main() {
       expect(text, isNot(contains('flutter build ios ')));
     });
 
-    test('declares app-store signing for the real bundle id', () {
+    test('names the signing assets stored in Codemagic', () {
+      // The `distribution_type` / `bundle_identifier` form is documented to
+      // fetch and create these from Apple per build, but on this account it
+      // resolved nothing: two builds failed instantly with "No matching
+      // profiles found", while Codemagic's own Fetch dialog listed the exact
+      // profile using the same API key. Signing resolves from the stored
+      // identities, so the yaml names them.
       final env = (workflows[id] as YamlMap)['environment'] as YamlMap;
       final signing = env['ios_signing'] as YamlMap;
-      expect(signing['distribution_type'], 'app_store');
-      expect(signing['bundle_identifier'], 'com.cristians.b1nary');
+
+      expect(
+        (signing['provisioning_profiles'] as YamlList).toList(),
+        ['binary_app_store'],
+      );
+      expect(
+        (signing['certificates'] as YamlList).toList(),
+        ['binary_distribution'],
+      );
     });
 
-    test('signs via the App Store Connect integration, not an uploaded file', () {
-      // Manual signing is the failure this pipeline exists to remove: a
-      // hand-uploaded .mobileprovision goes stale between builds, and this
-      // project builds months apart.
+    test('still authenticates to Apple through the integration', () {
+      // The stored assets were fetched through this integration and the
+      // TestFlight upload still authenticates with it, so losing it breaks
+      // both refreshing the profile and publishing.
       final integrations = (workflows[id] as YamlMap)['integrations'] as YamlMap;
       expect(integrations['app_store_connect'], isNotNull);
       expect(scriptText(id), contains('xcode-project use-profiles'));
@@ -115,15 +128,22 @@ void main() {
   });
 
   test('the signed bundle id matches the Xcode project', () {
-    // Codemagic signs whatever `ios_signing.bundle_identifier` says; Xcode
-    // builds whatever PRODUCT_BUNDLE_IDENTIFIER says. If those drift apart the
-    // build fails late, on the CI machine, with an unhelpful signing error.
+    // The provisioning profile is issued for one bundle id; Xcode builds
+    // whatever PRODUCT_BUNDLE_IDENTIFIER says. If those drift apart the build
+    // fails late, on the CI machine, with an unhelpful signing error.
+    //
+    // The id is no longer written in the yaml — it lives inside the stored
+    // profile — so this asserts against the id that profile was fetched for.
     final pbxproj =
         File('ios/Runner.xcodeproj/project.pbxproj').readAsStringSync();
+    expect(
+      pbxproj,
+      contains('PRODUCT_BUNDLE_IDENTIFIER = com.cristians.b1nary;'),
+    );
+
+    // And the vars the build scripts read must agree with it.
     final env = (workflows['ios-testflight'] as YamlMap)['environment'] as YamlMap;
-    final signed =
-        (env['ios_signing'] as YamlMap)['bundle_identifier'] as String;
-    expect(pbxproj, contains('PRODUCT_BUNDLE_IDENTIFIER = $signed;'));
+    expect((env['vars'] as YamlMap)['BUNDLE_ID'], 'com.cristians.b1nary');
   });
 
   test('the entitlements file still declares Sign In with Apple', () {
