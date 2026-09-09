@@ -120,15 +120,13 @@ workflows:
 
       - name: Install pods
         script: |
-          # There is no ios/Podfile committed to this repo, so `flutter build`
-          # generates a default one. Running pod install unconditionally here
-          # would fail on a missing Podfile; let Flutter own the generation and
-          # only install if a Podfile actually exists.
-          if [ -f ios/Podfile ]; then
-            cd ios && pod install
-          else
-            echo "No ios/Podfile — Flutter will generate one during the build."
-          fi
+          # ios/Podfile IS committed, and deliberately so. Without it Flutter
+          # generates one from its template with the platform line commented
+          # out, CocoaPods falls back to iOS 13.0, and the build dies on
+          # "could not find compatible versions for pod Flutter". The
+          # committed Podfile pins the platform to match
+          # IPHONEOS_DEPLOYMENT_TARGET in the Xcode project.
+          cd ios && pod install
 
       - name: Set up signing profiles on the Xcode project
         script: xcode-project use-profiles

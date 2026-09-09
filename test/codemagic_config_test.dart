@@ -146,6 +146,43 @@ void main() {
     expect((env['vars'] as YamlMap)['BUNDLE_ID'], 'com.cristians.b1nary');
   });
 
+  test('a Podfile is committed and pins the platform', () {
+    // Without a committed Podfile, Flutter generates one from its template
+    // with the `platform :ios` line commented OUT. CocoaPods then assigns
+    // 13.0 by default, which the Flutter pod and the Firebase / RevenueCat
+    // plugins no longer accept, and a TestFlight build dies at `pod install`
+    // with "could not find compatible versions for pod Flutter".
+    final podfile = File('ios/Podfile');
+    expect(podfile.existsSync(), isTrue,
+        reason: 'ios/Podfile must be committed, not generated per build');
+
+    final platform = RegExp(r"^platform :ios, '([\d.]+)'", multiLine: true)
+        .firstMatch(podfile.readAsStringSync());
+    expect(platform, isNotNull,
+        reason: 'the platform line must be active, not commented out');
+  });
+
+  test('the Podfile platform matches the Xcode deployment target', () {
+    // CocoaPods builds the pods against the Podfile platform and Xcode builds
+    // the app against IPHONEOS_DEPLOYMENT_TARGET. When they disagree the pods
+    // link against a different minimum than the app, which fails at archive
+    // time on the CI machine rather than here.
+    final platform = RegExp(r"^platform :ios, '([\d.]+)'", multiLine: true)
+        .firstMatch(File('ios/Podfile').readAsStringSync())!
+        .group(1)!;
+    final pbxproj =
+        File('ios/Runner.xcodeproj/project.pbxproj').readAsStringSync();
+
+    final targets = RegExp(r'IPHONEOS_DEPLOYMENT_TARGET = ([\d.]+);')
+        .allMatches(pbxproj)
+        .map((m) => m.group(1))
+        .toSet();
+
+    expect(targets, {platform},
+        reason: 'every build configuration must target iOS $platform, '
+            'matching the Podfile');
+  });
+
   test('the entitlements file still declares Sign In with Apple', () {
     // Guideline 4.8 requires it because the app offers Google Sign-In, and
     // Apple Review has already flagged its absence once. It is also the reason
