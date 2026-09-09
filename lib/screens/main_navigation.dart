@@ -190,39 +190,14 @@ class _SideNav extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 28, 20, 36),
               child: Row(
                 children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.30),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'B',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
-                          height: 1.0,
-                        ),
-                      ),
-                    ),
-                  ),
+                  // The shared mark, not a third hand-drawn copy of it.
+                  const AppIcon(size: 36),
                   const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Binary.',
+                        'ByteStack',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -279,7 +254,7 @@ class _SideNav extends StatelessWidget {
                   Container(height: 1, color: theme.border),
                   const SizedBox(height: 14),
                   Text(
-                    'B1nary Academy',
+                    'ByteStack',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,

@@ -188,7 +188,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           color: theme.text,
                           letterSpacing: -0.4)),
                   const SizedBox(height: 8),
-                  Text('We read every message and use it to improve Binary.',
+                  Text('We read every message and use it to improve ByteStack.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           fontSize: 14, color: theme.subtext, height: 1.5)),
@@ -261,7 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ],
                 ),
                 const SizedBox(height: 24),
-                Text('How would you rate Binary?',
+                Text('How would you rate ByteStack?',
                     style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -792,7 +792,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   borderRadius: BorderRadius.circular(2)),
             ),
             const SizedBox(height: 24),
-            Text('Sign out of Binary?',
+            Text('Sign out of ByteStack?',
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -900,7 +900,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
             ),
             const SizedBox(height: 16),
-            Text('Binary',
+            Text('ByteStack',
                 style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -1020,13 +1020,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                 _buildItem(CupertinoIcons.question_circle_fill, 'Help center',
                     AppColors.amber, theme,
                     onTap: _openHelpCenter),
-                _buildItem(CupertinoIcons.star_fill, 'Rate Binary',
+                _buildItem(CupertinoIcons.star_fill, 'Rate ByteStack',
                     AppColors.amber, theme,
                     onTap: _rateApp),
                 _buildItem(CupertinoIcons.chat_bubble_text_fill,
                     'Send feedback', AppColors.amber, theme,
                     onTap: _showFeedbackSheet),
-                _buildItem(CupertinoIcons.info_circle_fill, 'About Binary',
+                _buildItem(CupertinoIcons.info_circle_fill, 'About ByteStack',
                     AppColors.amber, theme,
                     onTap: _showAboutSheet, isLast: true),
               ]),
@@ -1042,7 +1042,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           context,
                           CupertinoPageRoute(
                             builder: (_) => const PaywallScreen(
-                              courseTitle: 'Binary Academy',
+                              courseTitle: 'ByteStack',
                               courseColor: AppColors.primary,
                               defaultToAllPlans: true,
                             ),

@@ -1,4 +1,4 @@
-# Binary Academy — security model and deploy runbook
+# ByteStack — security model and deploy runbook
 
 Last updated: 2026-07-26
 

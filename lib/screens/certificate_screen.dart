@@ -170,7 +170,7 @@ class _CertificateScreenState extends State<CertificateScreen>
   Future<void> _addToLinkedIn() async {
     HapticFeedback.selectionClick();
     final name = Uri.encodeComponent(widget.courseTitle);
-    final org = Uri.encodeComponent('Binary Academy');
+    final org = Uri.encodeComponent('ByteStack');
     final certUrl = Uri.encodeComponent(kCertificateUrl);
     final uri = Uri.parse(
       'https://www.linkedin.com/profile/add'
@@ -204,7 +204,7 @@ class _CertificateScreenState extends State<CertificateScreen>
   // ── Share certificate as text ─────────────────────────────────────────────
   Future<void> _shareCertificate() async {
     HapticFeedback.selectionClick();
-    final text = '''🎓 I just completed ${widget.courseTitle} on Binary Academy!
+    final text = '''🎓 I just completed ${widget.courseTitle} on ByteStack!
 
 ✅ ${_modules ?? '—'} modules completed
 📊 ${_score == null ? '—' : '$_score%'} quiz score
@@ -213,7 +213,7 @@ class _CertificateScreenState extends State<CertificateScreen>
 
 Prepare for your IT certifications at $kSiteDisplayHost
 
-#BinaryAcademy #${widget.courseTag.replaceAll(' ', '')} #ITCertification #Learning''';
+#ByteStack #${widget.courseTag.replaceAll(' ', '')} #ITCertification #Learning''';
 
     await SharePlus.instance.share(
       ShareParams(
@@ -388,7 +388,7 @@ Prepare for your IT certifications at $kSiteDisplayHost
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              const Text('Binary Academy',
+                                              const Text('ByteStack',
                                                   style: TextStyle(
                                                       color: Colors.white,
                                                       fontSize: 14,
@@ -508,7 +508,7 @@ Prepare for your IT certifications at $kSiteDisplayHost
                                                     letterSpacing: -0.3)),
                                             const SizedBox(height: 2),
                                             Text(
-                                                'Issued by Binary Academy',
+                                                'Issued by ByteStack',
                                                 style: TextStyle(
                                                     fontSize: 12,
                                                     color: color,
@@ -556,9 +556,9 @@ Prepare for your IT certifications at $kSiteDisplayHost
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              // "ISSUED BY / Binary Learning"
+                                              // "ISSUED BY / ByteStack"
                                               // was here, which both duplicated
-                                              // the "Issued by Binary Academy"
+                                              // the "Issued by ByteStack"
                                               // line above and used a third
                                               // name for the same company. The
                                               // credential is what belongs in

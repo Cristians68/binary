@@ -32,7 +32,7 @@ Future<void> _pump(WidgetTester tester, {String? courseId}) async {
         notifier: ThemeNotifier(),
         child: PaywallScreen(
           courseId: courseId,
-          courseTitle: courseId == null ? 'Binary Academy' : 'A Course',
+          courseTitle: courseId == null ? 'ByteStack' : 'A Course',
           courseColor: const Color(0xFF2F6BFF),
         ),
       ),

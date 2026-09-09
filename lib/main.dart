@@ -38,7 +38,7 @@ void main() async {
 
   runApp(
     SecurityGate(
-      child: BinaryApp(initialIsDark: isDark),
+      child: ByteStackApp(initialIsDark: isDark),
     ),
   );
 }
@@ -67,15 +67,15 @@ void main() async {
 /// seen it.
 const String kOnboardingCompleteKey = 'onboardingComplete';
 
-class BinaryApp extends StatefulWidget {
+class ByteStackApp extends StatefulWidget {
   final bool initialIsDark;
-  const BinaryApp({super.key, required this.initialIsDark});
+  const ByteStackApp({super.key, required this.initialIsDark});
 
   @override
-  State<BinaryApp> createState() => _BinaryAppState();
+  State<ByteStackApp> createState() => _ByteStackAppState();
 }
 
-class _BinaryAppState extends State<BinaryApp> {
+class _ByteStackAppState extends State<ByteStackApp> {
   late final ThemeNotifier _themeNotifier;
 
   @override
@@ -98,7 +98,7 @@ class _BinaryAppState extends State<BinaryApp> {
       builder: (context, _) {
         final isDark = _themeNotifier.isDark;
         return MaterialApp(
-          title: 'B1nary Academy',
+          title: 'ByteStack',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
             brightness: isDark ? Brightness.dark : Brightness.light,
@@ -125,7 +125,8 @@ class _BinaryAppState extends State<BinaryApp> {
             // library, not material — hence the import above. Without it the
             // analyzer on an older Flutter was happy and the CI archive died
             // five minutes in, first with "Not a constant expression" and then
-            // with "isn't defined for the type _BinaryAppState", which is the
+            // with "isn't defined for the type _BinaryAppState" (the class's
+            // name at the time), which is the
             // front end failing to resolve the name at all.
             pageTransitionsTheme: const PageTransitionsTheme(
               builders: {

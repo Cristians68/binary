@@ -105,7 +105,7 @@ List<ScheduledReminder> remindersFor(NotificationPrefs prefs) {
     out.add(ScheduledReminder(
       id: kIdStreakReminder,
       title: '🔥 Keep your streak alive',
-      body: 'Open Binary and complete a lesson to keep your streak going.',
+      body: 'Open ByteStack and complete a lesson to keep your streak going.',
       hour: prefs.reminderHour,
       minute: prefs.reminderMinute,
       repeat: Repeat.daily,
@@ -117,7 +117,7 @@ List<ScheduledReminder> remindersFor(NotificationPrefs prefs) {
     out.add(const ScheduledReminder(
       id: kIdNewContent,
       title: '📚 New week, new lessons',
-      body: 'Fresh lessons and quizzes are waiting in Binary.',
+      body: 'Fresh lessons and quizzes are waiting in ByteStack.',
       hour: 9,
       minute: 0,
       repeat: Repeat.weekly,

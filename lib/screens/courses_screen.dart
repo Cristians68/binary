@@ -251,7 +251,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
           context,
           CupertinoPageRoute(
             builder: (_) => const PaywallScreen(
-              courseTitle: 'Binary Academy',
+              courseTitle: 'ByteStack',
               courseColor: AppColors.primary,
               defaultToAllPlans: true,
             ),
