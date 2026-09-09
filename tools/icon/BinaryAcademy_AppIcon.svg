@@ -1,0 +1,226 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="100%" height="100%">
+  <defs>
+    <!-- Glow and Lighting Filters -->
+    <filter id="ambient-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="45" result="blur" />
+    </filter>
+    <filter id="neon-glow-cyan" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="12" result="blur1" />
+      <feGaussianBlur stdDeviation="4" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur1" />
+        <feMergeNode in="blur2" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="neon-glow-magenta" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="14" result="blur1" />
+      <feGaussianBlur stdDeviation="5" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur1" />
+        <feMergeNode in="blur2" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="cap-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="25" stdDeviation="35" flood-color="#000000" flood-opacity="0.9" />
+    </filter>
+
+    <!-- Gradients -->
+    <radialGradient id="bg-radial" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#0f1424" />
+      <stop offset="50%" stop-color="#080912" />
+      <stop offset="100%" stop-color="#030305" />
+    </radialGradient>
+
+    <radialGradient id="core-aurora" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.7" />
+      <stop offset="40%" stop-color="#b026ff" stop-opacity="0.5" />
+      <stop offset="70%" stop-color="#ff007a" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#030305" stop-opacity="0" />
+    </radialGradient>
+
+    <linearGradient id="cap-top" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2e344d" />
+      <stop offset="45%" stop-color="#181b29" />
+      <stop offset="100%" stop-color="#0a0b12" />
+    </linearGradient>
+
+    <linearGradient id="chrome-rim" x1="0%" y1="0%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#70819e" />
+      <stop offset="25%" stop-color="#ffffff" />
+      <stop offset="50%" stop-color="#5a6782" />
+      <stop offset="75%" stop-color="#a0b2d6" />
+      <stop offset="100%" stop-color="#2b3345" />
+    </linearGradient>
+
+    <linearGradient id="ribbon-grad-1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f0ff" />
+      <stop offset="50%" stop-color="#8a2be2" />
+      <stop offset="100%" stop-color="#ff00aa" />
+    </linearGradient>
+
+    <linearGradient id="ribbon-grad-2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff00c8" />
+      <stop offset="50%" stop-color="#7928ca" />
+      <stop offset="100%" stop-color="#00d4ff" />
+    </linearGradient>
+
+    <linearGradient id="tassel-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e0e8f5" />
+      <stop offset="30%" stop-color="#8ba1c7" />
+      <stop offset="70%" stop-color="#55688c" />
+      <stop offset="100%" stop-color="#2a354c" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background (Full-bleed square, no white corners) -->
+  <rect width="1024" height="1024" fill="url(#bg-radial)" />
+
+  <!-- Ambient AI Glow Behind Core -->
+  <circle cx="512" cy="580" r="340" fill="url(#core-aurora)" filter="url(#ambient-glow)" />
+
+  <!-- ================= ORBITAL BINARY RIBBON 1 ================= -->
+  <g transform="translate(512, 590) rotate(-26)" filter="url(#neon-glow-cyan)">
+    <ellipse cx="0" cy="0" rx="350" ry="115" fill="none" stroke="url(#ribbon-grad-1)" stroke-width="18" opacity="0.85" />
+    <ellipse cx="0" cy="0" rx="340" ry="105" fill="none" stroke="#00f0ff" stroke-width="2" opacity="0.6" />
+    <ellipse cx="0" cy="0" rx="360" ry="125" fill="none" stroke="#ff00aa" stroke-width="2" opacity="0.6" />
+  </g>
+
+  <!-- ================= ORBITAL BINARY RIBBON 2 ================= -->
+  <g transform="translate(512, 590) rotate(32)" filter="url(#neon-glow-magenta)">
+    <ellipse cx="0" cy="0" rx="365" ry="115" fill="none" stroke="url(#ribbon-grad-2)" stroke-width="18" opacity="0.85" />
+    <ellipse cx="0" cy="0" rx="355" ry="105" fill="none" stroke="#ff00c8" stroke-width="2" opacity="0.6" />
+    <ellipse cx="0" cy="0" rx="375" ry="125" fill="none" stroke="#00d4ff" stroke-width="2" opacity="0.6" />
+  </g>
+
+  <!-- ================= NEURAL SYNAPTIC BRAIN SPHERE ================= -->
+  <g id="neural-sphere" transform="translate(512, 590)">
+    <!-- Inner glowing nucleus -->
+    <circle cx="0" cy="0" r="160" fill="#080d1e" stroke="url(#ribbon-grad-1)" stroke-width="4" />
+    <circle cx="0" cy="0" r="130" fill="url(#core-aurora)" filter="url(#ambient-glow)" opacity="0.7" />
+
+    <!-- Synaptic Connective Filaments -->
+    <g stroke="#00f0ff" stroke-width="1.8" opacity="0.7" filter="url(#neon-glow-cyan)">
+      <line x1="-110" y1="-60" x2="-60" y2="-110" />
+      <line x1="-60" y1="-110" x2="20" y2="-130" />
+      <line x1="20" y1="-130" x2="90" y2="-80" />
+      <line x1="90" y1="-80" x2="130" y2="-10" />
+      <line x1="130" y1="-10" x2="100" y2="70" />
+      <line x1="100" y1="70" x2="40" y2="120" />
+      <line x1="40" y1="120" x2="-40" y2="130" />
+      <line x1="-40" y1="130" x2="-110" y2="80" />
+      <line x1="-110" y1="80" x2="-130" y2="10" />
+      <line x1="-130" y1="10" x2="-110" y2="-60" />
+
+      <!-- Inner cross-synapses -->
+      <line x1="-60" y1="-110" x2="-20" y2="-30" />
+      <line x1="-20" y1="-30" x2="60" y2="-40" />
+      <line x1="60" y1="-40" x2="90" y2="-80" />
+      <line x1="-20" y1="-30" x2="-50" y2="40" />
+      <line x1="-50" y1="40" x2="20" y2="50" />
+      <line x1="20" y1="50" x2="60" y2="-40" />
+      <line x1="20" y1="50" x2="40" y2="120" />
+      <line x1="-50" y1="40" x2="-110" y2="80" />
+      <line x1="-20" y1="-30" x2="-110" y2="-60" />
+      <line x1="60" y1="-40" x2="130" y2="-10" />
+      <line x1="20" y1="50" x2="100" y2="70" />
+      <line x1="-50" y1="40" x2="-40" y2="130" />
+      <line x1="20" y1="-130" x2="-20" y2="-30" />
+    </g>
+
+    <!-- Magenta Secondary Filaments -->
+    <g stroke="#ff00c8" stroke-width="2" opacity="0.8" filter="url(#neon-glow-magenta)">
+      <line x1="-80" y1="-20" x2="-10" y2="-80" />
+      <line x1="-10" y1="-80" x2="70" y2="-20" />
+      <line x1="70" y1="-20" x2="50" y2="60" />
+      <line x1="50" y1="60" x2="-30" y2="70" />
+      <line x1="-30" y1="70" x2="-80" y2="-20" />
+      <line x1="-10" y1="-80" x2="50" y2="60" />
+      <line x1="-80" y1="-20" x2="20" y2="0" />
+      <line x1="20" y1="0" x2="70" y2="-20" />
+    </g>
+
+    <!-- Synaptic Nodes (Glowing Dots) -->
+    <g fill="#ffffff" filter="url(#neon-glow-cyan)">
+      <circle cx="-110" cy="-60" r="6" />
+      <circle cx="-60" cy="-110" r="8" />
+      <circle cx="20" cy="-130" r="7" />
+      <circle cx="90" cy="-80" r="8" />
+      <circle cx="130" cy="-10" r="6.5" />
+      <circle cx="100" cy="70" r="8" />
+      <circle cx="40" cy="120" r="6" />
+      <circle cx="-40" cy="130" r="7.5" />
+      <circle cx="-110" cy="80" r="6.5" />
+      <circle cx="-130" cy="10" r="8" />
+      <!-- Central Hub Nodes -->
+      <circle cx="-20" cy="-30" r="9" fill="#00ffff" />
+      <circle cx="60" cy="-40" r="8" fill="#ff55ee" />
+      <circle cx="-50" cy="40" r="7.5" fill="#00ffff" />
+      <circle cx="20" cy="50" r="9.5" fill="#ffffff" />
+      <circle cx="20" cy="0" r="11" fill="#00f0ff" />
+    </g>
+  </g>
+
+  <!-- ================= BINARY STREAM TEXT PARTICLES ================= -->
+  <g font-family="Courier New, Menlo, Monaco, monospace" font-size="24" font-weight="bold" fill="#ffffff" opacity="0.95">
+    <!-- Ribbon 1 Binary Stream -->
+    <g transform="translate(512, 590) rotate(-26)" filter="url(#neon-glow-cyan)">
+      <text x="-310" y="8" text-anchor="middle" fill="#00ffff">101011</text>
+      <text x="-160" y="90" text-anchor="middle" fill="#ffffff">01101</text>
+      <text x="160" y="95" text-anchor="middle" fill="#e080ff">100101</text>
+      <text x="305" y="8" text-anchor="middle" fill="#ff00c8">010110</text>
+      <text x="180" y="-95" text-anchor="middle" fill="#00d4ff">110100</text>
+      <text x="-180" y="-90" text-anchor="middle" fill="#ffffff">001011</text>
+    </g>
+
+    <!-- Ribbon 2 Binary Stream -->
+    <g transform="translate(512, 590) rotate(32)" filter="url(#neon-glow-magenta)">
+      <text x="-320" y="8" text-anchor="middle" fill="#ff33cc">010100</text>
+      <text x="-170" y="90" text-anchor="middle" fill="#ffffff">11001</text>
+      <text x="170" y="95" text-anchor="middle" fill="#00f0ff">011010</text>
+      <text x="320" y="8" text-anchor="middle" fill="#ffffff">101101</text>
+      <text x="180" y="-95" text-anchor="middle" fill="#c060ff">001110</text>
+      <text x="-180" y="-90" text-anchor="middle" fill="#00ffff">101001</text>
+    </g>
+  </g>
+
+  <!-- ================= 3D GRADUATION CAP (MORTARBOARD) ================= -->
+  <g id="mortarboard-cap" filter="url(#cap-shadow)">
+    <!-- Skull Cap Underside Base (3D Dome) -->
+    <path d="M 360 310 Q 512 360 664 310 L 650 380 Q 512 430 374 380 Z" fill="#121524" stroke="url(#chrome-rim)" stroke-width="5" />
+    <path d="M 374 380 Q 512 430 650 380" fill="none" stroke="#a6c2f0" stroke-width="4" filter="url(#neon-glow-cyan)" opacity="0.8" />
+
+    <!-- Cap Diamond Top (Glass & Dark Titanium) -->
+    <polygon points="244,235 512,340 512,354 244,249" fill="#141724" stroke="#2e344d" stroke-width="2" />
+    <polygon points="780,235 512,340 512,354 780,249" fill="#0c0e18" stroke="#2e344d" stroke-width="2" />
+
+    <!-- Main Diamond Face -->
+    <polygon points="512,130 780,235 512,340 244,235" fill="url(#cap-top)" stroke="url(#chrome-rim)" stroke-width="7" />
+
+    <!-- Frosted Glass Specular Rim Lines -->
+    <line x1="512" y1="133" x2="248" y2="235" stroke="#ffffff" stroke-width="3.5" opacity="0.85" />
+    <line x1="248" y1="235" x2="512" y2="337" stroke="#7ea5e0" stroke-width="3" opacity="0.75" />
+    <line x1="512" y1="133" x2="776" y2="235" stroke="#a2bfe8" stroke-width="2" opacity="0.5" />
+
+    <!-- Center Pivot Button -->
+    <ellipse cx="512" cy="235" rx="24" ry="14" fill="#22293d" stroke="url(#chrome-rim)" stroke-width="4" />
+    <ellipse cx="512" cy="233" rx="16" ry="9" fill="#d2e0f8" />
+
+    <!-- Tassel Ribbon & Metallic Clasp -->
+    <path d="M 512 235 Q 640 215 700 290" fill="none" stroke="url(#tassel-grad)" stroke-width="6" stroke-linecap="round" />
+    <path d="M 512 235 Q 640 215 700 290" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.8" />
+
+    <!-- Tassel Metal Ring/Bell -->
+    <ellipse cx="700" cy="295" rx="14" ry="8" fill="#dce7fa" stroke="#4a5a78" stroke-width="2" />
+
+    <!-- Tassel Bristles / Strands -->
+    <g filter="url(#cap-shadow)">
+      <path d="M 692 298 L 680 435 Q 705 445 730 435 L 708 298 Z" fill="url(#tassel-grad)" stroke="#1b2333" stroke-width="1.5" />
+      <line x1="688" y1="302" x2="684" y2="436" stroke="#e2ecfc" stroke-width="1.5" />
+      <line x1="695" y1="302" x2="695" y2="440" stroke="#ffffff" stroke-width="2" />
+      <line x1="701" y1="302" x2="706" y2="441" stroke="#c5d7f2" stroke-width="2" />
+      <line x1="706" y1="302" x2="718" y2="437" stroke="#8aa0c4" stroke-width="1.5" />
+    </g>
+  </g>
+</svg>
