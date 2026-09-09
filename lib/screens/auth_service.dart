@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'auth_result.dart';
 import 'subscription_service.dart';
 import 'user_document.dart';
 
@@ -21,43 +22,55 @@ class AuthService {
     await _auth.signOut();
   }
 
-  static Future<UserCredential?> signInWithGoogle() async {
+  static Future<AuthResult> signInWithGoogle() async {
     // ── Web — use popup (redirect requires handling result on page reload) ──
     if (kIsWeb) {
       try {
         final provider = GoogleAuthProvider()
           ..addScope('email')
-          ..addScope('profile');
+          ..addScope('profile')
+          // Forces the account chooser instead of silently reusing whichever
+          // Google account the browser last used.
+          ..setCustomParameters({'prompt': 'select_account'});
         final result = await _auth.signInWithPopup(provider);
         if (result.user != null) {
           await _onSignInSuccess();
         }
-        return result;
+        return const AuthResult.success();
       } on FirebaseAuthException catch (e) {
-        // User closed the popup — not an error
         if (e.code == 'popup-closed-by-user' ||
             e.code == 'cancelled-popup-request') {
           debugPrint('Google Sign-In: popup closed by user');
-          return null;
+          return const AuthResult.cancelled();
         }
         debugPrint('Web Google Sign-In FirebaseAuthException: ${e.code}');
-        return null;
+        return AuthResult.failed(code: e.code, message: e.message);
       } catch (e) {
         debugPrint('Web Google Sign-In ERROR: $e');
-        return null;
+        return AuthResult.failed(message: e.toString());
       }
     }
 
     // ── iOS / Android ─────────────────────────────────────────────────────
     try {
+      // signOut, NOT disconnect.
+      //
+      // disconnect() REVOKES the OAuth grant, and it throws when nobody is
+      // signed in — which was swallowed here. The plugin then kept its cached
+      // account and signIn() completed silently against it, so there was no
+      // way to pick a different Google account: the chooser never appeared.
+      // signOut() clears the cached selection without revoking, which is
+      // exactly what makes the next signIn() present the account list.
       try {
-        await _googleSignIn.disconnect();
-      } catch (_) {}
+        await _googleSignIn.signOut();
+      } catch (e) {
+        debugPrint('Google signOut before sign-in failed (ignored): $e');
+      }
 
       final googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         debugPrint('Google Sign-In: cancelled by user');
-        return null;
+        return const AuthResult.cancelled();
       }
       debugPrint('Google Sign-In: got user ${googleUser.email}');
 
@@ -67,7 +80,7 @@ class AuthService {
 
       if (idToken == null) {
         debugPrint('Google Sign-In: idToken is null — aborting');
-        return null;
+        return const AuthResult.failed(code: 'missing-id-token');
       }
 
       final credential = GoogleAuthProvider.credential(
@@ -79,18 +92,18 @@ class AuthService {
       debugPrint(
           'Google Sign-In: Firebase success uid=${userCredential.user?.uid}');
       await _onSignInSuccess();
-      return userCredential;
+      return const AuthResult.success();
     } on PlatformException catch (e) {
       debugPrint('Google Sign-In PlatformException: ${e.code} - ${e.message}');
-      return null;
+      return AuthResult.failed(code: e.code, message: e.message);
     } on FirebaseAuthException catch (e) {
       debugPrint(
           'Google Sign-In FirebaseAuthException: ${e.code} - ${e.message}');
-      return null;
+      return AuthResult.failed(code: e.code, message: e.message);
     } catch (e, stack) {
       debugPrint('Google Sign-In ERROR: $e');
       debugPrint('Stack: $stack');
-      return null;
+      return AuthResult.failed(message: e.toString());
     }
   }
 
@@ -138,12 +151,12 @@ class AuthService {
   /// Returns null on failure. The most likely failure is `operation-not-allowed`,
   /// which means Anonymous sign-in is not enabled in the Firebase console under
   /// Authentication -> Sign-in method.
-  static Future<UserCredential?> signInAsGuest() async {
+  static Future<AuthResult> signInAsGuest() async {
     try {
       final credential = await _auth.signInAnonymously();
       debugPrint('Guest sign-in: uid=${credential.user?.uid}');
       await _onSignInSuccess();
-      return credential;
+      return const AuthResult.success();
     } on FirebaseAuthException catch (e) {
       if (e.code == 'operation-not-allowed') {
         debugPrint(
@@ -153,10 +166,10 @@ class AuthService {
       } else {
         debugPrint('Guest sign-in failed: ${e.code} - ${e.message}');
       }
-      return null;
+      return AuthResult.failed(code: e.code, message: e.message);
     } catch (e) {
       debugPrint('Guest sign-in ERROR: $e');
-      return null;
+      return AuthResult.failed(message: e.toString());
     }
   }
 
@@ -178,7 +191,7 @@ class AuthService {
     return sha256.convert(bytes).toString();
   }
 
-  static Future<UserCredential?> signInWithApple() async {
+  static Future<AuthResult> signInWithApple() async {
     try {
       final rawNonce = _generateNonce();
       final nonce = _sha256ofString(rawNonce);
@@ -211,17 +224,29 @@ class AuthService {
       }
 
       await _onSignInSuccess();
-      return userCredential;
+      return const AuthResult.success();
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code == AuthorizationErrorCode.canceled) {
         debugPrint('Apple Sign-In: cancelled by user');
-        return null;
+        return const AuthResult.cancelled();
       }
-      debugPrint('Apple Sign-In AuthorizationException: ${e.code}');
-      return null;
+      // `unknown` here is usually the app's own configuration, not the user:
+      // a missing com.apple.developer.applesignin entitlement in the signed
+      // build, or a provisioning profile issued before the capability was
+      // enabled on the App ID.
+      debugPrint('Apple Sign-In AuthorizationException: ${e.code} ${e.message}');
+      return AuthResult.failed(
+        code: e.code.name,
+        message: e.message,
+      );
+    } on FirebaseAuthException catch (e) {
+      // operation-not-allowed means Apple is not enabled in the Firebase
+      // console, which the App ID capability alone does not cover.
+      debugPrint('Apple Sign-In FirebaseAuthException: ${e.code} ${e.message}');
+      return AuthResult.failed(code: e.code, message: e.message);
     } catch (e) {
       debugPrint('Apple Sign-In ERROR: $e');
-      return null;
+      return AuthResult.failed(message: e.toString());
     }
   }
 

@@ -10,8 +10,10 @@ import 'welcome_screen.dart';
 import 'course_detail_screen.dart';
 import 'app_router.dart';
 import 'badges_screen.dart';
+import 'paywall_screen.dart';
 import 'lessons_screen.dart';
 import 'quiz_score_screen.dart';
+import 'streak_logic.dart';
 import 'streak_service.dart';
 import 'review_service.dart';
 import 'review_screen.dart';
@@ -44,6 +46,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String _avgQuizScore = '-';
   int _dailyPoints = 0;
   int _dailyTarget = 50;
+
+  /// Whether the user owns the All Courses plan. Drives the upgrade card.
+  bool _hasFullAccess = false;
 
   int _reviewDue = 0;
   String? _reviewNextLabel;
@@ -134,11 +139,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       _streak = (streakMap['current'] as num?)?.toInt() ?? 0;
-      _badgeCount = badgesMap.length;
+      // Only badges the grid can display — see knownEarnedBadges.
+      _badgeCount =
+          knownEarnedBadges(badgesMap.keys.map((k) => k.toString())).length;
       _lessonCount = lessons;
       _avgQuizScore = avgScore;
       _dailyPoints = (goalMap['todayPoints'] as num?)?.toInt() ?? 0;
       _dailyTarget = (goalMap['target'] as num?)?.toInt() ?? 50;
+      // Read from the same live stream as everything else, so the upgrade
+      // card disappears the moment the webhook grants the entitlement.
+      _hasFullAccess = (data['subscriptionPlan'] as String?) == 'all';
     });
   }
 
@@ -154,7 +164,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (user?.displayName != null && user!.displayName!.isNotEmpty) {
       return user.displayName!.split(' ')[0];
     }
-    return 'there';
+    // "there" was the fallback, which rendered as a 32pt bold "there" under
+    // "Good evening" — the first thing a guest, and therefore an App Review
+    // tester, sees. A guest has no name because they chose not to give one;
+    // greeting them by the app's name reads as deliberate rather than broken.
+    return AuthService.isGuest ? 'Welcome' : 'there';
   }
 
   void _navigateToCourse(Map<String, dynamic> course) {
@@ -312,6 +326,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildHeader(theme),
+                    // Plans sit on the FIRST screen, not two taps away.
+                    //
+                    // App Review reported under 2.1(b) that they could not
+                    // locate the in-app purchases. The only entry points were
+                    // the Courses tab, a locked module inside a course, and
+                    // Profile — none of them visible on the screen the app
+                    // opens to. A reviewer who signs in and looks at Home saw
+                    // nothing purchasable at all.
+                    if (!_hasFullAccess) _buildUpgradeCard(theme),
                     SizedBox(height: isWide ? 28 : 20),
                     // Streak + daily goal: side-by-side on desktop
                     if (isWide)
@@ -364,6 +387,97 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// The review entry point. Hidden entirely until the user has actually
   /// missed something, so a new account is not shown an empty feature.
+  /// Opens the paywall with every plan shown.
+  void _openPaywall() {
+    HapticFeedback.selectionClick();
+    Navigator.push(
+      context,
+      CupertinoPageRoute(
+        builder: (_) => const PaywallScreen(
+          courseId: 'itil-v4',
+          courseTitle: 'Binary Academy',
+          courseColor: AppColors.primary,
+          defaultToAllPlans: true,
+        ),
+        fullscreenDialog: true,
+      ),
+    );
+  }
+
+  Widget _buildUpgradeCard(ThemeNotifier theme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+      child: GestureDetector(
+        onTap: _openPaywall,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.25),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(CupertinoIcons.lock_open_fill,
+                    color: AppColors.primary, size: 20),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Unlock every course',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: theme.text,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Module 1 is always free. One-time purchase, '
+                      'no subscription.',
+                      style: TextStyle(fontSize: 12, color: theme.subtext),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  'View Plans',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildReviewCard(ThemeNotifier theme) {
     if (_reviewNextLabel == null) return const SizedBox.shrink();
 

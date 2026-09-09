@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'login_screen.dart';
 import 'signup_screen.dart';
+import 'auth_result.dart';
 import 'auth_service.dart';
 import 'main_navigation.dart';
 import 'app_theme.dart';
@@ -86,64 +87,63 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 
-  Future<void> _handleGuest() async {
-    HapticFeedback.selectionClick();
-    setState(() => _guestLoading = true);
-    final result = await AuthService.signInAsGuest();
-    if (!mounted) return;
-    setState(() => _guestLoading = false);
-    if (result != null) {
-      _goToHome();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not continue as guest. Please try again.'),
-        ),
-      );
-    }
+  /// Show a failure. Cancellations never reach here.
+  ///
+  /// The provider's own code is included because the person who hits the bug
+  /// is usually the only one who can see it: this app ships through
+  /// TestFlight, where a debugPrint goes nowhere anybody can read.
+  void _showAuthError(AuthResult result, String provider) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result.displayMessage(provider)),
+        duration: const Duration(seconds: 8),
+        backgroundColor: Colors.white.withValues(alpha: 0.1),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
-  Future<void> _handleApple() async {
+  Future<void> _handleAuth(
+    Future<AuthResult> Function() signIn,
+    String provider,
+    void Function(bool) setLoading,
+  ) async {
     HapticFeedback.selectionClick();
-    setState(() => _appleLoading = true);
-    final result = await AuthService.signInWithApple();
+    setState(() => setLoading(true));
+    final result = await signIn();
     if (!mounted) return;
-    setState(() => _appleLoading = false);
-    if (result != null) {
+    setState(() => setLoading(false));
+
+    if (result.isSuccess) {
       _goToHome();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Apple sign-in failed. Please try again.'),
-          backgroundColor: Colors.white.withValues(alpha: 0.1),
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+      return;
     }
+    // Backing out of the Apple or Google sheet is not a failure. It used to
+    // raise "sign-in failed. Please try again.", which made the app look
+    // broken every time somebody changed their mind.
+    if (result.isCancelled) return;
+
+    _showAuthError(result, provider);
   }
 
-  Future<void> _handleGoogle() async {
-    HapticFeedback.selectionClick();
-    setState(() => _googleLoading = true);
-    final result = await AuthService.signInWithGoogle();
-    if (!mounted) return;
-    setState(() => _googleLoading = false);
-    if (result != null) {
-      _goToHome();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Google sign-in failed. Please try again.'),
-          backgroundColor: Colors.white.withValues(alpha: 0.1),
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+  Future<void> _handleGuest() => _handleAuth(
+        AuthService.signInAsGuest,
+        'Guest',
+        (v) => _guestLoading = v,
       );
-    }
-  }
+
+  Future<void> _handleApple() => _handleAuth(
+        AuthService.signInWithApple,
+        'Apple',
+        (v) => _appleLoading = v,
+      );
+
+  Future<void> _handleGoogle() => _handleAuth(
+        AuthService.signInWithGoogle,
+        'Google',
+        (v) => _googleLoading = v,
+      );
 
   @override
   Widget build(BuildContext context) {

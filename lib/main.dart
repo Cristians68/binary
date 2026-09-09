@@ -53,6 +53,20 @@ void main() async {
 // Anonymous sign-in now happens in exactly one place — AuthService.signInAsGuest,
 // behind the button that says so.
 
+/// Whether the intro carousel has been seen on this install.
+///
+/// Deliberately NOT keyed by uid. It used to be `onboardingComplete_$uid`,
+/// read with whatever uid existed at the time — and at first launch there is
+/// no user, so the flag was written under the bare key and then looked up
+/// under `onboardingComplete_<uid>` on the next cold start, once the user had
+/// signed up. It never matched, so **the intro replayed after signing in**,
+/// every launch, until they happened to complete it while signed in.
+///
+/// Onboarding is a property of the install, not of the account. Someone who
+/// signs out and back in, or switches accounts on their own phone, has already
+/// seen it.
+const String kOnboardingCompleteKey = 'onboardingComplete';
+
 class BinaryApp extends StatefulWidget {
   final bool initialIsDark;
   const BinaryApp({super.key, required this.initialIsDark});
@@ -154,18 +168,14 @@ class _AppEntryState extends State<_AppEntry> {
       if (mounted) setState(() => _showOnboarding = false);
       return;
     }
-    final uid = FirebaseAuth.instance.currentUser?.uid;
     final prefs = await SharedPreferences.getInstance();
-    final key = uid != null ? 'onboardingComplete_$uid' : 'onboardingComplete';
-    final done = prefs.getBool(key) ?? false;
+    final done = prefs.getBool(kOnboardingCompleteKey) ?? false;
     if (mounted) setState(() => _showOnboarding = !done);
   }
 
   Future<void> _completeOnboarding() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
     final prefs = await SharedPreferences.getInstance();
-    final key = uid != null ? 'onboardingComplete_$uid' : 'onboardingComplete';
-    await prefs.setBool(key, true);
+    await prefs.setBool(kOnboardingCompleteKey, true);
     if (mounted) setState(() => _showOnboarding = false);
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../main.dart';
 import 'app_theme.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -53,8 +54,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _complete() async {
+    // Writes the same key _AppEntry reads. These were two separate string
+    // literals in two files, and they disagreed the moment a uid existed.
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('onboardingComplete', true);
+    await prefs.setBool(kOnboardingCompleteKey, true);
     widget.onComplete();
   }
 
