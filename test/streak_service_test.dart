@@ -243,16 +243,34 @@ void main() {
       expect(await badges(), contains('quiz_10'));
     });
 
-    test('recordLessonComplete counts the lesson and scores points', () async {
-      await StreakService.recordLessonComplete(
-        courseId: 'c1',
-        moduleId: 'module-2',
-        moduleTitle: 'Subnetting',
-      );
+    test('finishing the flashcards scores the lesson points', () async {
+      await StreakService.recordFlashcardsFinished();
+
       final data = await read();
-      expect(data['lessonsCompleted'], 1);
-      expect(data['dailyGoal']['todayPoints'], 10);
-      expect((data['completedLessons'] as List).single['moduleId'], 'module-2');
+      expect(data['dailyGoal']['todayPoints'], pointsFor(Activity.lesson));
+    });
+
+    test('finishing the flashcards does NOT write the completion record',
+        () async {
+      await StreakService.recordFlashcardsFinished();
+
+      // ProgressService.completeModule owns both of these and writes the
+      // richer entry, with the score. Writing them here too counted one
+      // module as two lessons and left two differently-shaped entries in the
+      // history list.
+      final data = await read();
+      expect(data['lessonsCompleted'], isNull);
+      expect(data['completedLessons'], isNull);
+    });
+
+    test('the lesson and its quiz score separately, and stack', () async {
+      await StreakService.recordFlashcardsFinished();
+      await StreakService.recordQuizPass(score: 5, total: 5);
+
+      expect(
+        (await read())['dailyGoal']['todayPoints'],
+        pointsFor(Activity.lesson) + pointsFor(Activity.quizPass),
+      );
     });
   });
 

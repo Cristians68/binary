@@ -2,8 +2,14 @@
 ///
 /// Progress is per-user: it lives under `users/{uid}/progress/{courseId}` and
 /// must never be written into the shared `courses/` collection, which every
-/// user reads. Module unlock state is the one deliberate exception, being
-/// course-level metadata. These tests pin that split as well as the arithmetic.
+/// user reads. There is NO exception -- the comment here used to claim module
+/// unlock state was one, and that claim cost the app every quiz record it ever
+/// took. See the "shared course data" group below.
+///
+/// NOTE ON THE FAKE: fake_cloud_firestore enforces no security rules, so a
+/// write that real Firestore rejects succeeds here silently. Any test that
+/// only asserts "the write worked" therefore proves nothing about production.
+/// The rule is pinned by asserting the shared documents are UNCHANGED.
 library;
 
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
@@ -60,14 +66,28 @@ void main() {
               .data() ??
           {};
 
-  Future<String?> moduleStatus(String moduleId) async =>
-      (await db
-              .collection('courses')
-              .doc(courseId)
-              .collection('modules')
-              .doc(moduleId)
-              .get())
-          .data()?['status'] as String?;
+  /// The status as the UI resolves it: the per-user value, which
+  /// `course_detail_screen._moduleStatus` prefers, falling back to the shared
+  /// course metadata only when the user has no record of their own.
+  Future<String?> moduleStatus(String moduleId) async {
+    final mine = (await db
+            .collection('users')
+            .doc(uid)
+            .collection('progress')
+            .doc(courseId)
+            .collection('modules')
+            .doc(moduleId)
+            .get())
+        .data()?['status'] as String?;
+    if (mine != null) return mine;
+    return (await db
+            .collection('courses')
+            .doc(courseId)
+            .collection('modules')
+            .doc(moduleId)
+            .get())
+        .data()?['status'] as String?;
+  }
 
   group('completeModule', () {
     test('marks the module done for this user only', () async {
@@ -142,7 +162,8 @@ void main() {
       await seedCourse(count: 2);
       await complete('module-1');
       await complete('module-2');
-      expect(await moduleStatus('module-2'), 'active');
+      // Finishing it outranks having been unlocked by the previous module.
+      expect(await moduleStatus('module-2'), 'done');
     });
   });
 
@@ -185,6 +206,84 @@ void main() {
       final streak = (await userData())['streak'] as Map;
       expect(streak['current'], 1);
       expect(streak['longest'], 1);
+    });
+  });
+
+  group('shared course data is never written', () {
+    /// Snapshot every shared module document, so a write to any of them shows
+    /// up as a difference rather than having to be predicted in advance.
+    Future<Map<String, Map<String, dynamic>>> sharedModules() async {
+      final snap = await db
+          .collection('courses')
+          .doc(courseId)
+          .collection('modules')
+          .get();
+      return {for (final d in snap.docs) d.id: Map.of(d.data())};
+    }
+
+    test('completing a module leaves the shared collection untouched',
+        () async {
+      await seedCourse();
+      final before = await sharedModules();
+
+      await complete('module-1');
+
+      // firestore.rules allows writes under courses/ only for isAdmin(), and
+      // no admin documents exist. This used to set module-2 to 'active' here,
+      // which real Firestore rejected with PERMISSION_DENIED -- aborting
+      // completeModule so the lesson record, quiz score, course-completion
+      // check, streak and badges never ran. Passing a quiz recorded nothing.
+      expect(await sharedModules(), before);
+    });
+
+    test('the next module is unlocked under the user instead', () async {
+      await seedCourse();
+      await complete('module-1');
+
+      final next = await db
+          .collection('users')
+          .doc(uid)
+          .collection('progress')
+          .doc(courseId)
+          .collection('modules')
+          .doc('module-2')
+          .get();
+
+      // course_detail_screen._moduleStatus prefers the per-user status and
+      // only falls back to the shared one, so this is what the UI reads.
+      expect(next.data()?['status'], 'active');
+    });
+
+    test('unlocking does not overwrite a module the user already finished',
+        () async {
+      await seedCourse();
+      await complete('module-2');
+      await complete('module-1');
+
+      final two = await db
+          .collection('users')
+          .doc(uid)
+          .collection('progress')
+          .doc(courseId)
+          .collection('modules')
+          .doc('module-2')
+          .get();
+
+      expect(two.data()?['status'], 'done');
+    });
+
+    test('the quiz score survives the whole method', () async {
+      await seedCourse();
+      await complete('module-1', score: 9, total: 10);
+
+      final user =
+          (await db.collection('users').doc(uid).get()).data() ?? {};
+      // Everything below the old throwing write. Each of these was silently
+      // lost on every quiz pass in production.
+      expect(user['lessonsCompleted'], 1);
+      expect((user['quizScores'] as List?)?.length, 1);
+      expect((user['completedLessons'] as List?)?.length, 1);
+      expect(user['quizzesPassed'], isNotNull);
     });
   });
 

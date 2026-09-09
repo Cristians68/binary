@@ -89,18 +89,17 @@ class _LessonScreenState extends State<LessonScreen> {
       setState(() => _currentCard++);
     } else {
       HapticFeedback.mediumImpact();
-      // Reaching the last flashcard is what "completed a lesson" means. This
-      // was the missing caller that made recordLessonComplete dead code, and
-      // with it the daily goal: todayPoints had no writer, so the home-screen
-      // goal ring read 0 / 50 for every user forever.
+      // Reaching the last flashcard earns the lesson's points. This was the
+      // missing caller that left the daily goal permanently at zero:
+      // todayPoints had no writer at all, so the home-screen goal ring read
+      // 0 / 50 for every user forever.
       //
-      // Not awaited — the quiz should open at once, and a failed write is
+      // The completion RECORD is written by ProgressService.completeModule
+      // when the quiz is passed — see recordFlashcardsFinished.
+      //
+      // Not awaited: the quiz should open at once, and a failed write is
       // logged inside the service rather than blocking the user.
-      unawaited(StreakService.recordLessonComplete(
-        courseId: widget.courseId,
-        moduleId: widget.moduleId,
-        moduleTitle: widget.moduleTitle,
-      ));
+      unawaited(StreakService.recordFlashcardsFinished());
       Navigator.pushReplacement(
         context,
         AppRouter.push(

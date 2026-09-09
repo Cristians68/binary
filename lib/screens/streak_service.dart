@@ -285,34 +285,23 @@ class StreakService {
     }
   }
 
-  // -- Record a completed lesson ---------------------------------------------
-  /// Call this after a user finishes a flashcard module.
-  static Future<void> recordLessonComplete({
-    required String courseId,
-    required String moduleId,
-    required String moduleTitle,
-  }) async {
-    final doc = _userDoc;
-    if (doc == null) return;
-
-    try {
-      final entry = {
-        'courseId': courseId,
-        'moduleId': moduleId,
-        'title': moduleTitle,
-        'completedAt': Timestamp.now(),
-      };
-
-      await _safeUpdate(doc, {
-        'lessonsCompleted': FieldValue.increment(1),
-        'completedLessons': FieldValue.arrayUnion([entry]),
-      });
-
-      await addPoints(Activity.lesson);
-    } catch (e) {
-      debugPrint('StreakService.recordLessonComplete error: $e');
-    }
-  }
+  // -- Reading a lesson through to the end ------------------------------------
+  /// Award the lesson's points once the user reaches the last flashcard.
+  ///
+  /// Points ONLY. It deliberately does not touch `lessonsCompleted` or
+  /// `completedLessons`, even though the name might suggest it should:
+  /// `ProgressService.completeModule` already writes both when the quiz is
+  /// passed, and it writes the richer entry, with the score and percentage.
+  ///
+  /// Having both write them counted one module as two lessons and put two
+  /// differently-shaped entries in the history list. That only became possible
+  /// today, because this method previously had no caller at all.
+  ///
+  /// The split is deliberate rather than incidental: finishing the flashcards
+  /// is worth points, but a lesson is not *completed* until its quiz is
+  /// passed, which is the definition `lessonsCompleted` has always used.
+  static Future<void> recordFlashcardsFinished() =>
+      addPoints(Activity.lesson);
 
   // -- Call after passing a quiz ---------------------------------------------
   static Future<void> recordQuizPass({

@@ -55,8 +55,25 @@ class ProgressService {
       'lastUpdated': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
-    // 5. Unlock the next module in the shared courses collection
-    //    (this is fine — module order/unlock is course-level metadata)
+    // 5. Unlock the next module FOR THIS USER.
+    //
+    // This used to write `status: 'active'` into the shared
+    // `courses/{id}/modules/{id}` document, which was wrong twice over.
+    //
+    // Globally: module status there is course-level metadata shared by every
+    // user, so one person finishing a module unlocked it for everybody.
+    //
+    // Practically: firestore.rules allows writes to that collection only for
+    // `isAdmin()`, and no admin documents exist, so the write always threw
+    // PERMISSION_DENIED. completeModule has no try/catch and its caller
+    // attaches no onError, so the exception was swallowed and *every step
+    // after it silently never ran* — the completed-lesson record, the quiz
+    // score, the course-completion check, and the streak and badge updates.
+    // Passing a quiz recorded nothing at all.
+    //
+    // `_moduleStatus` in course_detail_screen.dart already prefers the
+    // per-user status and only falls back to the shared one, so writing it
+    // under the user is both permitted and what the UI reads first.
     final orderedModules = modulesSnap.docs
       ..sort(
         (a, b) => ((a.data()['order'] as int?) ?? 0)
@@ -64,14 +81,17 @@ class ProgressService {
       );
     final currentIndex =
         orderedModules.indexWhere((d) => d.id == moduleId);
-    if (currentIndex != -1 &&
-        currentIndex + 1 < orderedModules.length) {
+    if (currentIndex != -1 && currentIndex + 1 < orderedModules.length) {
       final nextModule = orderedModules[currentIndex + 1];
-      if ((nextModule.data()['status'] as String?) == 'locked') {
-        await courseRef
-            .collection('modules')
-            .doc(nextModule.id)
-            .set({'status': 'active'}, SetOptions(merge: true));
+      final nextUserModule =
+          userProgressRef.collection('modules').doc(nextModule.id);
+      final alreadyDone =
+          (await nextUserModule.get()).data()?['status'] == 'done';
+      if (!alreadyDone) {
+        await nextUserModule.set(
+          {'status': 'active'},
+          SetOptions(merge: true),
+        );
       }
     }
 
