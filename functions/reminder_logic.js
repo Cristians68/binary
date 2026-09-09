@@ -199,8 +199,8 @@ function chunk(items, size = MULTICAST_LIMIT) {
  */
 function streakBody(currentStreak) {
   return currentStreak > 0 ?
-    `You're on a ${currentStreak}-day streak — open ByteStack to keep it going.` :
-    "Start a streak today — open ByteStack and complete a lesson.";
+    `You're on a ${currentStreak}-day streak — open B1nary to keep it going.` :
+    "Start a streak today — open B1nary and complete a lesson.";
 }
 
 module.exports = {

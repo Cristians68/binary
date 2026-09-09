@@ -188,7 +188,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           color: theme.text,
                           letterSpacing: -0.4)),
                   const SizedBox(height: 8),
-                  Text('We read every message and use it to improve ByteStack.',
+                  Text('We read every message and use it to improve B1nary.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           fontSize: 14, color: theme.subtext, height: 1.5)),
@@ -261,7 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ],
                 ),
                 const SizedBox(height: 24),
-                Text('How would you rate ByteStack?',
+                Text('How would you rate B1nary?',
                     style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -792,7 +792,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   borderRadius: BorderRadius.circular(2)),
             ),
             const SizedBox(height: 24),
-            Text('Sign out of ByteStack?',
+            Text('Sign out of B1nary?',
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -900,7 +900,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
             ),
             const SizedBox(height: 16),
-            Text('ByteStack',
+            Text('B1nary',
                 style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -1020,13 +1020,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                 _buildItem(CupertinoIcons.question_circle_fill, 'Help center',
                     AppColors.amber, theme,
                     onTap: _openHelpCenter),
-                _buildItem(CupertinoIcons.star_fill, 'Rate ByteStack',
+                _buildItem(CupertinoIcons.star_fill, 'Rate B1nary',
                     AppColors.amber, theme,
                     onTap: _rateApp),
                 _buildItem(CupertinoIcons.chat_bubble_text_fill,
                     'Send feedback', AppColors.amber, theme,
                     onTap: _showFeedbackSheet),
-                _buildItem(CupertinoIcons.info_circle_fill, 'About ByteStack',
+                _buildItem(CupertinoIcons.info_circle_fill, 'About B1nary',
                     AppColors.amber, theme,
                     onTap: _showAboutSheet, isLast: true),
               ]),
@@ -1042,7 +1042,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           context,
                           CupertinoPageRoute(
                             builder: (_) => const PaywallScreen(
-                              courseTitle: 'ByteStack',
+                              courseTitle: 'B1nary',
                               courseColor: AppColors.primary,
                               defaultToAllPlans: true,
                             ),

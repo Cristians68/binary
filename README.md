@@ -1,4 +1,4 @@
-# ByteStack
+# B1nary
 
 IT certification study app — flashcard lessons, timed quizzes, streaks and
 badges — built in Flutter, shipping to iOS with a Firebase backend.

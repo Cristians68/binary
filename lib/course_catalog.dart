@@ -176,7 +176,7 @@ String? preparesFor(String idOrTag) => courseInfo(idOrTag)?.preparesFor;
 
 /// Global attribution shown on the legal screen and in the App Store listing.
 const String kTrademarkNotice =
-    'ByteStack is an independent educational app. It is not accredited '
+    'B1nary is an independent educational app. It is not accredited '
     'by, affiliated with, endorsed by, or sponsored by any certification '
     'body. All product names, logos, and brands are property of their '
     'respective owners and are used for identification purposes only.\n\n'

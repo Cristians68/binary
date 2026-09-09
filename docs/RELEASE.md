@@ -1,4 +1,4 @@
-# ByteStack — release runbook
+# B1nary — release runbook
 
 Two independent pipelines. Neither blocks the other.
 
@@ -18,7 +18,7 @@ Last updated: 2026-08-31.
 The build fails at `Building iOS` with:
 
 ```
-Provisioning profile "ByteStack ios_app_store" doesn't include the
+Provisioning profile "B1nary ios_app_store" doesn't include the
 Sign In with Apple capability / com.apple.developer.applesignin entitlement.
 ```
 

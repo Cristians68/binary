@@ -51,7 +51,7 @@ class NotificationService {
   // Android notification channel
   static const _androidChannel = AndroidNotificationChannel(
     'binary_main',
-    'ByteStack Notifications',
+    'B1nary Notifications',
     description: 'Streak reminders and course updates',
     importance: Importance.high,
   );
@@ -264,7 +264,7 @@ class _PluginBackend implements NotificationBackend {
       FlutterLocalNotificationsPlugin();
 
   static const _channelId = 'binary_main';
-  static const _channelName = 'ByteStack Notifications';
+  static const _channelName = 'B1nary Notifications';
 
   NotificationDetails _details({required bool high}) => NotificationDetails(
         android: AndroidNotificationDetails(

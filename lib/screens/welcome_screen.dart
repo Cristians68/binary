@@ -188,7 +188,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     const AppIcon(size: 64),
                     const SizedBox(height: 28),
                     Text(
-                      'ByteStack',
+                      'B1nary',
                       style: TextStyle(
                         fontSize: 72,
                         fontWeight: FontWeight.w700,
@@ -312,7 +312,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         const AppIcon(size: 72),
         const SizedBox(height: 20),
         Text(
-          'ByteStack',
+          'B1nary',
           style: TextStyle(
             fontSize: 48,
             fontWeight: FontWeight.w700,

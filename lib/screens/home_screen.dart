@@ -396,7 +396,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       CupertinoPageRoute(
         builder: (_) => const PaywallScreen(
-          courseTitle: 'ByteStack',
+          courseTitle: 'B1nary',
           courseColor: AppColors.primary,
           defaultToAllPlans: true,
         ),

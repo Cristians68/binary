@@ -10,7 +10,7 @@
 ///
 /// DESIGN
 /// ------
-/// `BS-<COURSE>-XXXX-XXXX-XXXX`, where the trailing 12 hex digits are the first
+/// `B1-<COURSE>-XXXX-XXXX-XXXX`, where the trailing 12 hex digits are the first
 /// 48 bits of `SHA-256("<uid>:<courseId>")`, uppercased and grouped.
 ///
 ///   * **Unique per learner and per course** — different uid or different
@@ -42,18 +42,18 @@ import 'course_catalog.dart';
 
 /// Prefix on every credential this app issues.
 ///
-/// Changed from 'BA' to 'BS' with the ByteStack rename. That was only safe
-/// because no build carrying a credential had reached anybody yet — the
-/// feature and the rename landed the same day. Once one certificate is in
-/// somebody's hands this becomes as un-renameable as [CourseInfo.code]:
-/// changing it reissues every credential under a new identity, and a
-/// credential that changes is not a credential.
-const String kCredentialPrefix = 'BS';
+/// It has moved twice on the day it was written, while the product name was
+/// being settled. That was only ever safe because no build carrying a
+/// credential had reached anybody. Once one certificate is in somebody's
+/// hands this becomes as un-renameable as [CourseInfo.code]: changing it
+/// reissues every credential under a new identity, and a credential that
+/// changes is not a credential.
+const String kCredentialPrefix = 'B1';
 
 /// Course segment used when a course is not in the catalogue.
 ///
 /// A newly seeded course can be completed before its catalogue entry ships.
-/// Issuing `BS-GEN-...` is better than issuing nothing: the digest half still
+/// Issuing `B1-GEN-...` is better than issuing nothing: the digest half still
 /// identifies the holder and the course uniquely.
 const String kUncataloguedCourseCode = 'GEN';
 

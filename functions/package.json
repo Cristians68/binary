@@ -1,6 +1,6 @@
 {
   "name": "binary-functions",
-  "description": "Firebase Cloud Functions for ByteStack app",
+  "description": "Firebase Cloud Functions for B1nary app",
   "scripts": {
     "lint": "eslint .",
     "serve": "firebase emulators:start --only functions",

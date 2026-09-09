@@ -210,7 +210,7 @@ exports.newContentReminder = onSchedule("0 * * * *", async () => {
 
     targets.push({
       token: data.fcmToken,
-      body: "Fresh lessons and quizzes are waiting for you in ByteStack.",
+      body: "Fresh lessons and quizzes are waiting for you in B1nary.",
     });
   });
 

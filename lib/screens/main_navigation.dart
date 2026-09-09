@@ -197,7 +197,7 @@ class _SideNav extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'ByteStack',
+                        'B1nary',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -254,7 +254,7 @@ class _SideNav extends StatelessWidget {
                   Container(height: 1, color: theme.border),
                   const SizedBox(height: 14),
                   Text(
-                    'ByteStack',
+                    'B1nary',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,

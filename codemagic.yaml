@@ -1,4 +1,4 @@
-# ByteStack — Codemagic CI/CD
+# B1nary — Codemagic CI/CD
 #
 # This file is the source of truth for the iOS release pipeline.
 #
@@ -115,7 +115,7 @@ workflows:
           - binary_distribution
       vars:
         BUNDLE_ID: "com.cristians.b1nary"
-        # App Store Connect app id for ByteStack.
+        # App Store Connect app id for B1nary.
         APP_STORE_APP_ID: 6762030524
     scripts:
       - name: Get packages

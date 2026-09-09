@@ -63,16 +63,16 @@ void main() {
         // Verified independently of the implementation:
         //   printf '%s' 'test-uid:binary-ai-fundamentals' | sha256sum
         //   -> 10382087631d...
-        'BS-AIML-1038-2087-631D',
+        'B1-AIML-1038-2087-631D',
       );
     });
   });
 
   group('format', () {
-    test('matches BS-CODE-XXXX-XXXX-XXXX', () {
+    test('matches B1-CODE-XXXX-XXXX-XXXX', () {
       final id = courseCredentialId(uid: uidA, courseId: course);
       expect(
-        RegExp(r'^BS-[A-Z]{2,6}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$')
+        RegExp(r'^B1-[A-Z]{2,6}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}$')
             .hasMatch(id),
         isTrue,
         reason: 'unexpected credential shape: $id',
@@ -87,7 +87,7 @@ void main() {
     test('an uncatalogued course still issues a usable credential', () {
       // A course can be seeded and completed before its catalogue entry ships.
       final id = courseCredentialId(uid: uidA, courseId: 'brand-new-course');
-      expect(id, startsWith('BS-$kUncataloguedCourseCode-'));
+      expect(id, startsWith('B1-$kUncataloguedCourseCode-'));
       expect(id, isNot(courseCredentialId(uid: uidB, courseId: 'brand-new-course')),
           reason: 'the holder must still be distinguished without a code');
     });

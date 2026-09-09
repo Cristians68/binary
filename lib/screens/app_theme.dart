@@ -7,10 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 //
 // This used to be a hand-painted blue "B" with two binary dots beneath it — a
 // second, different mark from the one on the home screen. That was tolerable
-// while both were blue Bs. It stopped being tolerable with the ByteStack
-// rebrand: the home screen icon became the neural-cap mark while the app's own
-// header still showed the old blue tile, so the icon a user tapped and the
-// icon they then saw were unrelated images.
+// while both were blue Bs. It stopped being tolerable when the home screen
+// icon became the neural-cap mark and this one did not: the icon a user
+// tapped and the icon they then saw were unrelated images.
 //
 // One source now feeds both. The rounded-square clip matches iOS's own icon
 // mask closely enough that it reads as the same object.

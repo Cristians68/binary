@@ -104,7 +104,7 @@ reference the exam factually with attribution.
 
 **Suggested description opening**
 
-> ByteStack is the fastest way to build the skills IT certification exams actually
+> B1nary is the fastest way to build the skills IT certification exams actually
 > test. Study IT service management, cloud, cybersecurity, networking and agile
 > delivery through flashcard lessons and quizzes built around real exam
 > objectives.

@@ -51,7 +51,7 @@ class LegalScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'ByteStack is an independent educational app and is not affiliated with, endorsed by, or sponsored by any certification body.',
+              'B1nary is an independent educational app and is not affiliated with, endorsed by, or sponsored by any certification body.',
               style: TextStyle(
                 fontSize: 14,
                 color: theme.subtext,
@@ -198,7 +198,7 @@ class LegalScreen extends StatelessWidget {
                   _LegalTile(
                     icon: CupertinoIcons.doc_text_fill,
                     title: 'Terms of Service',
-                    subtitle: 'Rules for using ByteStack',
+                    subtitle: 'Rules for using B1nary',
                     color: const Color(0xFF8B5CF6),
                     theme: theme,
                     onTap: () => _open(kTermsUrl),
@@ -229,7 +229,7 @@ class LegalScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
-                'ByteStack is not affiliated with or endorsed by any certification body.\nVersion 1.0.0',
+                'B1nary is not affiliated with or endorsed by any certification body.\nVersion 1.0.0',
                 style:
                     TextStyle(fontSize: 12, color: theme.subtext, height: 1.6),
               ),

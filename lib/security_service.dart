@@ -112,7 +112,7 @@ class _SecurityGateState extends State<SecurityGate> {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'ByteStack cannot run on jailbroken or rooted devices. This protects your account and learning data.',
+                    'B1nary cannot run on jailbroken or rooted devices. This protects your account and learning data.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Color(0xFF8E8E93),
