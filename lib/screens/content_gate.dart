@@ -231,12 +231,35 @@ class _LockedScreen extends StatelessWidget {
               const SizedBox(height: 14),
 
               // Restore
+              //
+              // This used to pop only on success and do nothing at all
+              // otherwise — no dialog, no spinner, no message. A tap that
+              // found nothing, or failed outright, was indistinguishable from
+              // a button that was not wired up.
               GestureDetector(
                 onTap: () async {
-                  final restored = await SubscriptionService.restore();
-                  if (restored && context.mounted) {
+                  final result = await SubscriptionService.restore();
+                  if (!context.mounted) return;
+                  if (result.isApplied) {
                     Navigator.pop(context);
+                    return;
                   }
+                  await showCupertinoDialog<void>(
+                    context: context,
+                    builder: (_) => CupertinoAlertDialog(
+                      title: Text(result.title),
+                      content: Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(result.displayMessage),
+                      ),
+                      actions: [
+                        CupertinoDialogAction(
+                          child: const Text('OK'),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  );
                 },
                 child: Text(
                   'Restore purchases',

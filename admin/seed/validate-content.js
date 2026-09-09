@@ -138,6 +138,7 @@ const DEFAULT_SCRIPTS = [
   "create-cloud.js",
   "create-cloud-pro.js",
   "create-cyber-pro.js",
+  "create-ai.js",
   "expand-itil-v4.js",
   "expand-csm.js",
 ];

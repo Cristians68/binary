@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import '../app_links.dart';
+import '../credential.dart';
 import 'app_theme.dart';
 
 class CertificateScreen extends StatefulWidget {
@@ -11,8 +14,16 @@ class CertificateScreen extends StatefulWidget {
   final String courseTag;
   final Color color;
   final String courseId;
-  final int totalModules;
-  final int quizScore;
+
+  /// Optional overrides. Both are normally left null and loaded from the
+  /// learner's own record instead.
+  ///
+  /// These used to default to `8` and `100`, and the only caller — the quiz
+  /// screen — never passed either. So every certificate this app has ever
+  /// produced claimed eight modules and a perfect score, on a document people
+  /// share publicly, regardless of what they actually did.
+  final int? totalModules;
+  final int? quizScore;
 
   const CertificateScreen({
     super.key,
@@ -20,8 +31,8 @@ class CertificateScreen extends StatefulWidget {
     required this.courseTag,
     required this.color,
     required this.courseId,
-    this.totalModules = 8,
-    this.quizScore = 100,
+    this.totalModules,
+    this.quizScore,
   });
 
   @override
@@ -34,6 +45,71 @@ class _CertificateScreenState extends State<CertificateScreen>
   late Animation<double> _fadeIn;
   late Animation<double> _scaleIn;
   late Animation<Offset> _slideUp;
+
+  /// Real values from the learner's own record, loaded in initState.
+  int? _loadedModules;
+  int? _loadedScore;
+  DateTime? _loadedCompletedAt;
+
+  int? get _modules => widget.totalModules ?? _loadedModules;
+  int? get _score => widget.quizScore ?? _loadedScore;
+
+  /// The credential for this learner's completion of this course.
+  ///
+  /// Derived, not stored, so it is identical every time the certificate is
+  /// opened. Empty when nobody is signed in, in which case the certificate
+  /// shows no credential rather than a plausible-looking one that means
+  /// nothing.
+  String get _credentialId => courseCredentialId(
+        uid: FirebaseAuth.instance.currentUser?.uid ?? '',
+        courseId: widget.courseId,
+      );
+
+  /// Load the module count, the course's average quiz score, and the date the
+  /// course was actually completed.
+  ///
+  /// The date matters as much as the numbers: it used to be `DateTime.now()`,
+  /// so re-opening a certificate months later reprinted it as if it had been
+  /// earned that morning.
+  Future<void> _loadRecord() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      final db = FirebaseFirestore.instance;
+      final results = await Future.wait([
+        db.collection('users').doc(uid).collection('progress')
+            .doc(widget.courseId).get(),
+        db.collection('users').doc(uid).get(),
+      ]);
+
+      final progress = results[0].data() ?? {};
+      final user = results[1].data() ?? {};
+
+      // Average of this course's quiz scores, rounded.
+      final scores = (user['quizScores'] as List<dynamic>?)
+              ?.whereType<Map>()
+              .where((e) =>
+                  e['courseId'] == widget.courseId ||
+                  e['course'] == widget.courseTag)
+              .map((e) => ((e['score'] as num?) ?? 0).toDouble())
+              .toList() ??
+          [];
+
+      if (!mounted) return;
+      setState(() {
+        _loadedModules = (progress['totalModules'] as num?)?.toInt();
+        _loadedScore = scores.isEmpty
+            ? null
+            : (scores.reduce((a, b) => a + b) / scores.length).round();
+        _loadedCompletedAt =
+            (progress['completedAt'] as Timestamp?)?.toDate();
+      });
+    } catch (e) {
+      // Leave the fields null. The certificate renders an em dash rather than
+      // inventing a figure.
+      debugPrint('CertificateScreen._loadRecord error: $e');
+    }
+  }
 
   String get _userName {
     final user = FirebaseAuth.instance.currentUser;
@@ -48,18 +124,18 @@ class _CertificateScreenState extends State<CertificateScreen>
     'July', 'August', 'September', 'October', 'November', 'December',
   ];
 
-  String get _completionDate {
-    final now = DateTime.now();
-    return '${_months[now.month - 1]} ${now.day}, ${now.year}';
-  }
+  /// When the course was completed, falling back to today only while the
+  /// record is still loading.
+  DateTime get _issuedOn => _loadedCompletedAt ?? DateTime.now();
 
-  String get _completionMonthYear {
-    final now = DateTime.now();
-    return '${_months[now.month - 1]} ${now.year}';
-  }
+  String get _completionDate =>
+      '${_months[_issuedOn.month - 1]} ${_issuedOn.day}, ${_issuedOn.year}';
 
-  int get _issueMonth => DateTime.now().month;
-  int get _issueYear => DateTime.now().year;
+  String get _completionMonthYear =>
+      '${_months[_issuedOn.month - 1]} ${_issuedOn.year}';
+
+  int get _issueMonth => _issuedOn.month;
+  int get _issueYear => _issuedOn.year;
 
   @override
   void initState() {
@@ -81,6 +157,7 @@ class _CertificateScreenState extends State<CertificateScreen>
     });
 
     HapticFeedback.heavyImpact();
+    _loadRecord();
   }
 
   @override
@@ -94,7 +171,7 @@ class _CertificateScreenState extends State<CertificateScreen>
     HapticFeedback.selectionClick();
     final name = Uri.encodeComponent(widget.courseTitle);
     final org = Uri.encodeComponent('Binary Academy');
-    final certUrl = Uri.encodeComponent('https://binaryacademy.app');
+    final certUrl = Uri.encodeComponent(kCertificateUrl);
     final uri = Uri.parse(
       'https://www.linkedin.com/profile/add'
       '?startTask=CERTIFICATION_NAME'
@@ -103,7 +180,10 @@ class _CertificateScreenState extends State<CertificateScreen>
       '&issueYear=$_issueYear'
       '&issueMonth=$_issueMonth'
       '&certUrl=$certUrl'
-      '&certId=${widget.courseId}',
+      // The credential, not the course id. The course id is the same string
+      // for every holder, so LinkedIn was being handed an identifier that
+      // identified the course rather than the person's completion of it.
+      '&certId=${Uri.encodeComponent(_credentialId)}',
     );
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -126,11 +206,12 @@ class _CertificateScreenState extends State<CertificateScreen>
     HapticFeedback.selectionClick();
     final text = '''🎓 I just completed ${widget.courseTitle} on Binary Academy!
 
-✅ ${widget.totalModules} modules completed
-📊 ${widget.quizScore}% quiz score
+✅ ${_modules ?? '—'} modules completed
+📊 ${_score == null ? '—' : '$_score%'} quiz score
 📅 $_completionDate
+🔖 Credential $_credentialId
 
-Prepare for your IT certifications at binaryacademy.app
+Prepare for your IT certifications at $kSiteDisplayHost
 
 #BinaryAcademy #${widget.courseTag.replaceAll(' ', '')} #ITCertification #Learning''';
 
@@ -313,7 +394,7 @@ Prepare for your IT certifications at binaryacademy.app
                                                       fontSize: 14,
                                                       fontWeight:
                                                           FontWeight.w600)),
-                                              Text('binaryacademy.app',
+                                              Text(kSiteDisplayHost,
                                                   style: TextStyle(
                                                       color: Colors.white
                                                           .withValues(alpha: 0.4),
@@ -442,13 +523,19 @@ Prepare for your IT certifications at binaryacademy.app
                                       // Stats row
                                       Row(
                                         children: [
-                                          _buildStat(theme,
-                                              '${widget.totalModules}',
-                                              'Modules', color),
+                                          _buildStat(
+                                              theme,
+                                              _modules?.toString() ?? '—',
+                                              'Modules',
+                                              color),
                                           const SizedBox(width: 10),
-                                          _buildStat(theme,
-                                              '${widget.quizScore}%',
-                                              'Score', color),
+                                          _buildStat(
+                                              theme,
+                                              _score == null
+                                                  ? '—'
+                                                  : '$_score%',
+                                              'Score',
+                                              color),
                                           const SizedBox(width: 10),
                                           _buildStat(theme,
                                               _completionMonthYear,
@@ -469,7 +556,14 @@ Prepare for your IT certifications at binaryacademy.app
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Text('ISSUED BY',
+                                              // "ISSUED BY / Binary Learning"
+                                              // was here, which both duplicated
+                                              // the "Issued by Binary Academy"
+                                              // line above and used a third
+                                              // name for the same company. The
+                                              // credential is what belongs in
+                                              // this position on a certificate.
+                                              Text('CREDENTIAL ID',
                                                   style: TextStyle(
                                                       fontSize: 9,
                                                       fontWeight:
@@ -477,12 +571,19 @@ Prepare for your IT certifications at binaryacademy.app
                                                       color: theme.subtext,
                                                       letterSpacing: 1)),
                                               const SizedBox(height: 3),
-                                              Text('Binary Learning',
+                                              Text(
+                                                  _credentialId.isEmpty
+                                                      ? '—'
+                                                      : _credentialId,
                                                   style: TextStyle(
-                                                      fontSize: 13,
+                                                      fontSize: 12,
                                                       fontWeight:
                                                           FontWeight.w600,
-                                                      color: theme.text)),
+                                                      color: theme.text,
+                                                      fontFeatures: const [
+                                                        FontFeature
+                                                            .tabularFigures()
+                                                      ])),
                                             ],
                                           ),
                                           Container(

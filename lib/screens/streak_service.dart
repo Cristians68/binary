@@ -391,7 +391,11 @@ class StreakService {
   /// so it inflated the "N / 9" counter while lighting nothing up in the grid.
   /// Reading it here means an account that finished a course before this
   /// shipped still earns the canonical course badges.
-  @visibleForTesting
+  ///
+  /// No longer @visibleForTesting: CertificatesScreen is a real caller. It is
+  /// the one place that knows about both storage generations, so a second
+  /// reader open-coding "read completedCourses" would silently miss every
+  /// account that predates the array.
   static Set<String> completedCourseIds(Map<String, dynamic> data) {
     final fromArray = (data['completedCourses'] as List?)
             ?.map((e) => e.toString())
@@ -433,6 +437,25 @@ class StreakService {
       );
     }
   }
+
+  // ── Parsing a raw user document ───────────────────────────────────────────
+  //
+  // statsStream() hands out the raw `users/{uid}` map, so any screen listening
+  // to it has to turn that map into the same shapes fetchAll() returns. These
+  // are the one place that conversion lives, so a second listener cannot drift
+  // into parsing `streak` or `badges` slightly differently.
+
+  /// Badges merged with their earned timestamps from a raw user document.
+  static List<BadgeData> badgesFrom(Map<String, dynamic> data) =>
+      _mergeEarned(data, kAllBadges);
+
+  /// Streak counts from a raw user document.
+  static StreakData streakFrom(Map<String, dynamic> data) =>
+      StreakData.fromMap(_safeMap(data['streak']));
+
+  /// Daily goal state from a raw user document.
+  static DailyGoalData goalFrom(Map<String, dynamic> data) =>
+      DailyGoalData.fromMap(_safeMap(data['dailyGoal']));
 
   // ── Update daily goal target ──────────────────────────────────────────────
   static Future<void> setDailyTarget(int target) async {

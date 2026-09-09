@@ -299,6 +299,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return CupertinoIcons.cloud_fill;
       case 'Binary Cloud Pro':
         return CupertinoIcons.cloud_upload_fill;
+      case 'Binary AI':
+        return CupertinoIcons.sparkles;
       default:
         return CupertinoIcons.book_fill;
     }
@@ -394,7 +396,6 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       CupertinoPageRoute(
         builder: (_) => const PaywallScreen(
-          courseId: 'itil-v4',
           courseTitle: 'Binary Academy',
           courseColor: AppColors.primary,
           defaultToAllPlans: true,

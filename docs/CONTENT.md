@@ -1,11 +1,11 @@
 # Course content — accuracy pass and seeding
 
-Last updated: 2026-08-30
+Last updated: 2026-09-09
 
 ## 1. What was reviewed
 
 The four `admin/seed/create-*.js` scripts and the two `expand-*.js` scripts
-hold roughly 1,000 hand-authored flashcard and quiz items. Three of the four
+hold roughly 1,170 hand-authored flashcard and quiz items. Three of the four
 new courses had previously been spot-checked only:
 
 | Course | Seed script | Items |
@@ -14,6 +14,7 @@ new courses had previously been spot-checked only:
 | Cloud Fundamentals | `create-cloud.js` | 84 flashcards + 84 quiz |
 | Cloud Architecture | `create-cloud-pro.js` | 84 flashcards + 84 quiz |
 | Cybersecurity Professional | `create-cyber-pro.js` | 84 + 84 (previously verified) |
+| AI & Machine Learning Foundations | `create-ai.js` | 84 flashcards + 84 quiz |
 
 All 252 quiz questions across the three unverified courses were read against
 their answer keys and explanations.
@@ -55,6 +56,36 @@ node admin/seed/validate-content.selftest.js
 
 If you add a check to the validator, add a mutation here too. A check with no
 mutation behind it may already be dead.
+
+## 2a. The AI course (added 2026-09-09)
+
+`create-ai.js` seeds `binary-ai-fundamentals` across seven modules: How AI
+Actually Works, Machine Learning Fundamentals, Neural Networks and Deep
+Learning, Large Language Models, Working With AI Tools, Data, Bias and Model
+Quality, and AI Risk, Ethics and Responsible Use.
+
+Two things make it different from the other seed scripts:
+
+1. **It creates the course document itself.** The others assume
+   `courses/{id}` already exists and only fill in modules. This course is new,
+   so the script writes the parent document too — merged, never replaced.
+2. **Answer positions are spread across all four options.** The older content
+   sits at `correctIndex: 1` about 92% of the time, which is what makes
+   `shuffleQuizQuestions` load-bearing (see section 3). The shuffle still
+   protects this course; there is simply no bias left underneath it.
+
+**Content provenance.** Every flashcard, question, distractor and explanation is
+original prose written for this app. No syllabus, exam objective list, courseware,
+book or article was reproduced, paraphrased closely, or used as a structure to
+follow. The subject matter is publicly established technical concept — what a
+loss function is, what recall measures, why models hallucinate — explained in
+our own words, which is not anyone's copyrightable expression.
+
+For the same reason the catalogue entry carries **no `preparesFor`**. Claiming
+alignment with a specific certification would mean describing somebody's exam
+syllabus, and the AI certification landscape is young and vendor-specific.
+The course maps to no external exam, so it claims none. The two cloud courses
+already set that precedent.
 
 ## 3. The answer-position bias
 

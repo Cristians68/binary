@@ -176,6 +176,23 @@ class AuthService {
   /// Whether the current session is a guest.
   static bool get isGuest => _auth.currentUser?.isAnonymous ?? false;
 
+  /// Whether this account actually has an email/password credential.
+  ///
+  /// Profile offered "Change password" to everyone. For a guest that reached
+  /// `EmailAuthProvider.credential(email: user!.email!, ...)` with a null
+  /// email and crashed on the null check — which is not a
+  /// FirebaseAuthException, so the screen's `on FirebaseAuthException` handler
+  /// never saw it. For a Google- or Apple-only account it failed differently
+  /// and reported "Current password is incorrect", which is not what happened
+  /// and sends the user looking for a password they never set.
+  ///
+  /// There is only one honest answer to "can this account change its
+  /// password", and it is this.
+  static bool get hasPasswordProvider =>
+      _auth.currentUser?.providerData
+          .any((p) => p.providerId == 'password') ??
+      false;
+
   // ── Sign in with Apple ────────────────────────────────────────────────────
 
   static String _generateNonce([int length = 32]) {
@@ -204,8 +221,19 @@ class AuthService {
         nonce: nonce,
       );
 
+      // Apple can return a credential with no identity token. Passing that
+      // straight to Firebase produces an opaque `invalid-credential` (or, in a
+      // release build, the obfuscated "Error: Error") several frames later,
+      // with nothing pointing back at the real cause. The Google path has
+      // guarded its idToken since it was written; this one never did.
+      final identityToken = appleCredential.identityToken;
+      if (identityToken == null || identityToken.isEmpty) {
+        debugPrint('Apple Sign-In: identityToken is null — aborting');
+        return const AuthResult.failed(code: 'missing-identity-token');
+      }
+
       final oauthCredential = OAuthProvider('apple.com').credential(
-        idToken: appleCredential.identityToken,
+        idToken: identityToken,
         rawNonce: rawNonce,
       );
 
@@ -243,6 +271,14 @@ class AuthService {
       // operation-not-allowed means Apple is not enabled in the Firebase
       // console, which the App ID capability alone does not cover.
       debugPrint('Apple Sign-In FirebaseAuthException: ${e.code} ${e.message}');
+      return AuthResult.failed(code: e.code, message: e.message);
+    } on PlatformException catch (e) {
+      // The Google path has caught this since it was written; this one fell
+      // through to the generic handler below, which reports
+      // `PlatformException(code, message, ...)` as one unsplittable blob.
+      // A bare code is what the person holding the device can actually read
+      // back off a screenshot.
+      debugPrint('Apple Sign-In PlatformException: ${e.code} - ${e.message}');
       return AuthResult.failed(code: e.code, message: e.message);
     } catch (e) {
       debugPrint('Apple Sign-In ERROR: $e');

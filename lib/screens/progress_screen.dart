@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -30,6 +32,9 @@ class _ProgressScreenState extends State<ProgressScreen>
   List<Map<String, dynamic>> _recentActivity = [];
   bool _loading = true;
 
+  StreamSubscription<Map<String, dynamic>>? _statsSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _progressSub;
+
   @override
   void initState() {
     super.initState();
@@ -48,7 +53,11 @@ class _ProgressScreenState extends State<ProgressScreen>
   }
 
   Future<void> _loadAll() async {
-    await Future.wait([_loadCourses(), _loadUserData()]);
+    // Courses are a one-shot read: the catalogue does not change while the app
+    // is open. Everything user-scoped is a live subscription — see
+    // [_subscribeToUserData] for why that distinction is load-bearing here.
+    _subscribeToUserData();
+    await _loadCourses();
     if (mounted) setState(() => _loading = false);
   }
 
@@ -69,64 +78,79 @@ class _ProgressScreenState extends State<ProgressScreen>
     } catch (_) {}
   }
 
-  Future<void> _loadUserData() async {
+  /// Subscribe to everything user-scoped, rather than reading it once.
+  ///
+  /// This screen used to do a single `Future.wait` of three one-shot reads in
+  /// initState. MainNavigation holds the tabs in an IndexedStack, which builds
+  /// every tab at app launch — so those reads ran before the user had done
+  /// anything, saw zeros, and never ran again. The result was a Progress tab
+  /// reporting "0 lessons completed / 0 badges earned / 0 day streak" while the
+  /// Home tab, on the same account at the same moment, correctly showed a
+  /// 1-day streak, 30 points and two earned badges. Home was right because it
+  /// listens to `StreakService.statsStream()`; this screen was simply frozen at
+  /// launch.
+  ///
+  /// Both subscriptions are cancelled in dispose().
+  void _subscribeToUserData() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    try {
-      // Load user doc and streak/badge data in parallel
-      final results = await Future.wait([
-        FirebaseFirestore.instance.collection('users').doc(uid).get(),
-        FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .collection('progress')
-            .get(),
-        StreakService.fetchAll(),
-      ]);
+    _statsSub = StreakService.statsStream().listen(
+      _onStatsUpdate,
+      onError: (Object e) => debugPrint('ProgressScreen stats stream error: $e'),
+    );
 
-      final userSnap = results[0] as DocumentSnapshot;
-      final progressSnap = results[1] as QuerySnapshot;
-      final streakData = results[2]
-          as ({StreakData streak, DailyGoalData goal, List<BadgeData> badges});
-
-      final userData = userSnap.data() as Map<String, dynamic>? ?? {};
-
-      // Per-user course progress
-      final progressMap = <String, double>{};
-      for (final doc in progressSnap.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        progressMap[doc.id] =
-            ((data['progress'] as num?) ?? 0.0).toDouble();
-      }
-
-      // Recent activity from completedLessons
-      final raw = List<Map<String, dynamic>>.from(
-        (userData['completedLessons'] as List<dynamic>?)
-                ?.map((e) => Map<String, dynamic>.from(e as Map)) ??
-            [],
-      );
-      // Most recent first, limit to 5
-      final activity = raw.reversed.take(5).toList();
-
-      if (mounted) {
+    _progressSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('progress')
+        .snapshots()
+        .listen(
+      (snap) {
+        if (!mounted) return;
         setState(() {
-          _userProgress = progressMap;
-          _lessonsCompleted =
-              ((userData['lessonsCompleted'] as num?) ?? 0).toInt();
-          _streak = streakData.streak.current;
-          _badges = streakData.badges;
-          _badgeCount = streakData.badges.where((b) => b.isEarned).length;
-          _recentActivity = activity;
+          _userProgress = {
+            for (final doc in snap.docs)
+              doc.id: ((doc.data()['progress'] as num?) ?? 0.0).toDouble(),
+          };
         });
-      }
-    } catch (e) {
-      debugPrint('ProgressScreen._loadUserData error: $e');
-    }
+      },
+      onError: (Object e) =>
+          debugPrint('ProgressScreen progress stream error: $e'),
+    );
+  }
+
+  void _onStatsUpdate(Map<String, dynamic> data) {
+    if (!mounted) return;
+
+    final badges = StreakService.badgesFrom(data);
+
+    // Recent activity from completedLessons, most recent first, limited to 5.
+    final raw = List<Map<String, dynamic>>.from(
+      (data['completedLessons'] as List<dynamic>?)
+              ?.map((e) => Map<String, dynamic>.from(e as Map)) ??
+          [],
+    );
+
+    setState(() {
+      // Counted from `completedLessons`, the same field the Home tab counts,
+      // rather than from the separate `lessonsCompleted` counter this screen
+      // used to read. Both are written together by
+      // ProgressService.completeModule, but two screens reading two fields can
+      // only ever agree by coincidence — and disagreeing is exactly what a user
+      // notices.
+      _lessonsCompleted = raw.length;
+      _streak = StreakService.streakFrom(data).current;
+      _badges = badges;
+      _badgeCount = badges.where((b) => b.isEarned).length;
+      _recentActivity = raw.reversed.take(5).toList();
+    });
   }
 
   @override
   void dispose() {
+    _statsSub?.cancel();
+    _progressSub?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -156,6 +180,8 @@ class _ProgressScreenState extends State<ProgressScreen>
         return CupertinoIcons.cloud_fill;
       case 'Binary Cloud Pro':
         return CupertinoIcons.cloud_upload_fill;
+      case 'Binary AI':
+        return CupertinoIcons.sparkles;
       default:
         return CupertinoIcons.book_fill;
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'app_theme.dart';
+import 'restore_result.dart';
 import 'subscription_service.dart';
 
 /// Restore Purchases button — REQUIRED by Apple App Review Guideline 3.1.1
@@ -31,34 +32,28 @@ class _RestorePurchasesButtonState extends State<RestorePurchasesButton> {
     setState(() => _loading = true);
 
     try {
-      final hasActive = await SubscriptionService.restore();
+      final result = await SubscriptionService.restore();
       if (!mounted) return;
-
-      _showResult(
-        success: hasActive,
-        message: hasActive
-            ? 'Your purchases have been restored.'
-            : 'No previous purchases found on this Apple ID.',
-      );
+      // Every outcome is reported, including the one where the store confirms
+      // the purchase but the account has not activated it yet. That case used
+      // to be indistinguishable from success.
+      _showResult(result);
     } catch (e) {
       if (!mounted) return;
-      _showResult(
-        success: false,
-        message: 'Could not restore purchases. Please try again.',
-      );
+      _showResult(RestoreResult.failed(message: e.toString()));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  void _showResult({required bool success, required String message}) {
+  void _showResult(RestoreResult result) {
     showCupertinoDialog(
       context: context,
       builder: (_) => CupertinoAlertDialog(
-        title: Text(success ? 'Purchases Restored' : 'Notice'),
+        title: Text(result.title),
         content: Padding(
           padding: const EdgeInsets.only(top: 8),
-          child: Text(message),
+          child: Text(result.displayMessage),
         ),
         actions: [
           CupertinoDialogAction(

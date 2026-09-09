@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'restore_result.dart';
 
 import 'service_backend.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -149,8 +152,11 @@ class SubscriptionService {
       }
       if (err.contains('alreadypurchased') || err.contains('already')) {
         debugPrint('RevenueCat: already purchased — restoring');
-        await restore();
-        return true;
+        final result = await restore();
+        if (result.isApplied) return true;
+        // Do not claim success for a restore that did not actually grant
+        // access; say what happened so the user is not left on a locked screen.
+        throw result.displayMessage;
       }
       debugPrint('RevenueCat purchase error: $e');
       throw 'Purchase failed. Please try again or restore purchases.';
@@ -158,21 +164,39 @@ class SubscriptionService {
   }
 
   /// Restore previously purchased non-consumables.
-  static Future<bool> restore() async {
-    if (kIsWeb) return false;
+  ///
+  /// Returns a [RestoreResult] rather than a bool, because four different
+  /// things can happen and three of them used to be indistinguishable. See
+  /// restore_result.dart for why that mattered.
+  static Future<RestoreResult> restore() async {
+    if (kIsWeb) {
+      return const RestoreResult.failed(
+        message: 'Purchases can only be restored in the iOS app.',
+      );
+    }
     try {
       debugPrint('RevenueCat: restoring purchases');
       // Restoring re-associates the store receipt with this RevenueCat user,
       // which triggers a TRANSFER/RENEWAL webhook. The server writes the
       // entitlement; we just wait for it to arrive.
       final info = await Purchases.restorePurchases();
-      final hasActive = info.entitlements.active.isNotEmpty;
-      if (hasActive) await _awaitEntitlement();
-      debugPrint('RevenueCat: restore complete — hasActive=$hasActive');
-      return hasActive;
+      if (info.entitlements.active.isEmpty) {
+        debugPrint('RevenueCat: restore found no active entitlement');
+        return const RestoreResult.nothing();
+      }
+      // The store says they own it. Whether they can USE it depends on the
+      // webhook having written the plan, which is a separate question.
+      final applied = await _awaitEntitlement();
+      debugPrint('RevenueCat: restore complete — applied=$applied');
+      return applied
+          ? const RestoreResult.applied()
+          : const RestoreResult.pending();
+    } on PlatformException catch (e) {
+      debugPrint('RevenueCat restore PlatformException: ${e.code} ${e.message}');
+      return RestoreResult.failed(code: e.code, message: e.message);
     } catch (e) {
       debugPrint('RevenueCat restore failed: $e');
-      return false;
+      return RestoreResult.failed(message: e.toString());
     }
   }
 
@@ -181,11 +205,16 @@ class SubscriptionService {
   /// Webhook delivery is typically sub-second but is not synchronous with the
   /// StoreKit callback, so without this the paywall can close before the plan
   /// lands and the user sees a locked screen for a course they just bought.
-  static Future<void> _awaitEntitlement({
+  ///
+  /// Returns true if the plan landed, false if the wait timed out. Callers
+  /// MUST distinguish those: a store purchase that never becomes a Firestore
+  /// plan leaves the user locked out of what they just paid for, and reporting
+  /// it as success is what hid that.
+  static Future<bool> _awaitEntitlement({
     Duration timeout = const Duration(seconds: 12),
   }) async {
     final uid = _uid;
-    if (uid == null) return;
+    if (uid == null) return false;
 
     final deadline = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(deadline)) {
@@ -194,7 +223,7 @@ class SubscriptionService {
         final plan = snap.data()?['subscriptionPlan'] as String? ?? 'none';
         if (plan != 'none') {
           debugPrint('_awaitEntitlement: plan="$plan" landed');
-          return;
+          return true;
         }
       } catch (e) {
         debugPrint('_awaitEntitlement read failed: $e');
@@ -202,6 +231,7 @@ class SubscriptionService {
       await Future<void>.delayed(const Duration(milliseconds: 600));
     }
     debugPrint('_awaitEntitlement: timed out — webhook may be delayed');
+    return false;
   }
 
   /// Tell the server which course(s) the imminent purchase is for.

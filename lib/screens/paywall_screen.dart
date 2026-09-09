@@ -3,7 +3,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'restore_result.dart';
 import 'subscription_service.dart';
+import '../app_links.dart';
 import 'app_theme.dart';
 import '../course_catalog.dart';
 
@@ -15,7 +17,17 @@ final List<Map<String, String>> _kAllCourses = [
 ];
 
 class PaywallScreen extends StatefulWidget {
-  final String courseId;
+  /// The course the user arrived from, or null when the paywall was opened
+  /// from a generic entry point such as "Plans & Pricing" or the upgrade
+  /// banner.
+  ///
+  /// This used to be non-nullable, and the three generic entry points each
+  /// passed the literal `'itil-v4'` to satisfy it. That was not a placeholder:
+  /// picking the Single plan from any of them bought IT Service Management
+  /// Foundations, whatever course the user actually wanted, with no picker and
+  /// nothing on screen naming what was about to be charged for. Null now means
+  /// "no course chosen yet", and [_buildSinglePicker] makes the user choose.
+  final String? courseId;
   final String courseTitle;
   final Color  courseColor;
   /// When true, the All Courses plan is pre-selected instead of Single.
@@ -25,7 +37,7 @@ class PaywallScreen extends StatefulWidget {
 
   const PaywallScreen({
     super.key,
-    required this.courseId,
+    this.courseId,
     required this.courseTitle,
     required this.courseColor,
     this.defaultToAllPlans = false,
@@ -57,12 +69,33 @@ class _PaywallScreenState extends State<PaywallScreen> {
   // Pre-seed with the course they came from so it is already ticked.
   late Set<String> _bundle4Selection;
 
+  /// Single: which course the one-course purchase is for.
+  ///
+  /// Seeded from [PaywallScreen.courseId] when the paywall was opened from a
+  /// specific locked course, and left null otherwise so the user has to pick.
+  late String? _singleSelection;
+
   @override
   void initState() {
     super.initState();
     _selected = widget.defaultToAllPlans ? _Plan.all : _Plan.single;
-    _bundle4Selection = {widget.courseId};
+    final from = widget.courseId;
+    _bundle4Selection = from != null ? {from} : <String>{};
+    _singleSelection = from;
     _loadPackages();
+  }
+
+  /// The title shown for whatever single course is currently chosen.
+  ///
+  /// The catalogue name wins, because that is the trademark-safe one. It falls
+  /// back to the title the paywall was opened with rather than to
+  /// [displayTitle]'s raw-id fallback, so a course that is not catalogued yet
+  /// reads as its name instead of as `binary-something-pro`.
+  String get _singleTitle {
+    final id = _singleSelection;
+    if (id == null) return 'Single course';
+    return courseInfo(id)?.title ??
+        (id == widget.courseId ? widget.courseTitle : id);
   }
 
   Package? _packageFor(_Plan plan) {
@@ -131,6 +164,14 @@ class _PaywallScreenState extends State<PaywallScreen> {
       return;
     }
 
+    // Single validation: the user must have chosen WHICH course. Without this
+    // the purchase silently attaches to whatever course the paywall happened
+    // to be opened from.
+    if (_selected == _Plan.single && _singleSelection == null) {
+      _showError('Please choose which course you want to unlock.');
+      return;
+    }
+
     // Bundle-4 validation: user must pick exactly 4 courses before buying.
     if (_selected == _Plan.bundle4 && _bundle4Selection.length != 4) {
       _showError(
@@ -155,8 +196,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
     try {
       final success = await SubscriptionService.purchase(
         package,
-        // Single: pass the course the user arrived from.
-        courseId: _selected == _Plan.single ? widget.courseId : null,
+        // Single: pass the course the user actually chose, which is only the
+        // one they arrived from when they arrived from one.
+        courseId: _selected == _Plan.single ? _singleSelection : null,
         // Bundle-4: pass the set of chosen courses as a list.
         selectedCourseIds: _selected == _Plan.bundle4
             ? _bundle4Selection.toList()
@@ -181,22 +223,45 @@ class _PaywallScreenState extends State<PaywallScreen> {
     HapticFeedback.selectionClick();
     setState(() => _purchasing = true);
     try {
-      final restored = await SubscriptionService.restore();
+      final result = await SubscriptionService.restore();
       if (!mounted) return;
-      if (restored) {
+      if (result.isApplied) {
         HapticFeedback.heavyImpact();
         Navigator.pop(context, true);
       } else {
-        _showError(
-          'No previous purchases found for this Apple ID. '
-          'If you believe this is an error, contact support.',
-        );
+        // Closing the paywall here would drop the user back onto content they
+        // still cannot open. Stay put and say what actually happened.
+        _showRestoreNotice(result);
       }
-    } catch (_) {
-      if (mounted) _showError('Could not restore purchases. Please try again.');
+    } catch (e) {
+      if (mounted) {
+        _showRestoreNotice(RestoreResult.failed(message: e.toString()));
+      }
     } finally {
       if (mounted) setState(() => _purchasing = false);
     }
+  }
+
+  /// Restore feedback. Separate from [_showError] because "we found your
+  /// purchase but it has not activated yet" is not an error and must not be
+  /// titled like one.
+  void _showRestoreNotice(RestoreResult result) {
+    showCupertinoDialog(
+      context: context,
+      builder: (_) => CupertinoAlertDialog(
+        title: Text(result.title),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(result.displayMessage),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('OK'),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showError(String message) {
@@ -230,7 +295,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
     if (_purchasing) return 'Processing…';
     switch (_selected) {
       case _Plan.single:
-        return 'Unlock for ${_priceFor(_Plan.single, fallback: '\$14.99')}';
+        if (_singleSelection == null) return 'Choose a course';
+        return 'Unlock $_singleTitle · '
+            '${_priceFor(_Plan.single, fallback: '\$14.99')}';
       case _Plan.bundle4:
         return _bundle4Selection.length == 4
             ? 'Unlock 4 Courses · ${_priceFor(_Plan.bundle4, fallback: '\$49.99')}'
@@ -243,7 +310,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
   String get _planNotice {
     switch (_selected) {
       case _Plan.single:
-        return 'One-time payment of ${_priceFor(_Plan.single, fallback: '\$14.99')}. Lifetime access to this course.';
+        if (_singleSelection == null) {
+          return 'One-time payment of ${_priceFor(_Plan.single, fallback: '\$14.99')}. Choose the course you want below.';
+        }
+        return 'One-time payment of ${_priceFor(_Plan.single, fallback: '\$14.99')}. Lifetime access to $_singleTitle.';
       case _Plan.bundle4:
         return 'One-time payment of ${_priceFor(_Plan.bundle4, fallback: '\$49.99')}. Choose any 4 courses. Yours forever.';
       case _Plan.all:
@@ -284,8 +354,11 @@ class _PaywallScreenState extends State<PaywallScreen> {
                             const SizedBox(height: 20),
                           ],
                           _buildPlanSection(theme),
-                          // Bundle-4 course picker — only shown when
-                          // the bundle4 plan is selected.
+                          // Course pickers — each only shown for its own plan.
+                          if (_selected == _Plan.single) ...[
+                            const SizedBox(height: 20),
+                            _buildSinglePicker(theme),
+                          ],
                           if (_selected == _Plan.bundle4) ...[
                             const SizedBox(height: 20),
                             _buildBundle4Picker(theme),
@@ -405,7 +478,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
         const SizedBox(height: 12),
         _buildPlanTile(
           plan: _Plan.single,
-          title: widget.courseTitle,
+          title: _singleTitle,
           subtitle: '1 course · One-time purchase',
           price: _priceFor(_Plan.single, fallback: '\$14.99'),
           badge: 'STARTER',
@@ -438,6 +511,122 @@ class _PaywallScreenState extends State<PaywallScreen> {
           theme: theme,
           unavailable: _packageFor(_Plan.all) == null,
         ),
+      ],
+    );
+  }
+
+  /// Course picker shown when the Single plan is selected.
+  ///
+  /// Always shown, even when the paywall was opened from a specific course, so
+  /// the user can both SEE which course they are about to buy and change their
+  /// mind. Single-select: tapping a row replaces the choice rather than adding
+  /// to it, which is what distinguishes this from the bundle-4 picker.
+  Widget _buildSinglePicker(ThemeNotifier theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'WHICH COURSE?',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: theme.subtext,
+                  letterSpacing: 1.2),
+            ),
+            const Spacer(),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: _singleSelection != null
+                    ? AppColors.green.withValues(alpha: 0.12)
+                    : AppColors.amber.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                _singleSelection != null ? 'Selected ✓' : 'Pick one',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: _singleSelection != null
+                      ? AppColors.green
+                      : AppColors.amber,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ..._kAllCourses.map((course) {
+          final id = course['id']!;
+          final title = course['title']!;
+          final isChecked = _singleSelection == id;
+
+          return GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              setState(() => _singleSelection = id);
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              decoration: BoxDecoration(
+                color: isChecked
+                    ? widget.courseColor.withValues(alpha: 0.08)
+                    : theme.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isChecked
+                      ? widget.courseColor.withValues(alpha: 0.35)
+                      : theme.border,
+                  width: isChecked ? 1.5 : 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Radio — round, unlike the bundle picker's square checkbox,
+                  // because exactly one may be chosen.
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: isChecked
+                          ? widget.courseColor
+                          : Colors.transparent,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color:
+                            isChecked ? widget.courseColor : theme.subtext,
+                        width: 2,
+                      ),
+                    ),
+                    child: isChecked
+                        ? const Icon(Icons.check_rounded,
+                            size: 14, color: Colors.white)
+                        : null,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight:
+                            isChecked ? FontWeight.w600 : FontWeight.w400,
+                        color: isChecked ? theme.text : theme.subtext,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
       ],
     );
   }
@@ -605,11 +794,14 @@ class _PaywallScreenState extends State<PaywallScreen> {
   }
 
   Widget _buildCta(ThemeNotifier theme) {
-    // CTA is disabled when bundle-4 is selected but fewer than 4 chosen, or
+    // CTA is disabled when the current plan's course choice is incomplete, or
     // when the store returned no packages to buy.
+    final singleIncomplete =
+        _selected == _Plan.single && _singleSelection == null;
     final bundle4Incomplete =
         _selected == _Plan.bundle4 && _bundle4Selection.length < 4;
-    final ctaDisabled = bundle4Incomplete || _productsUnavailable;
+    final ctaDisabled =
+        singleIncomplete || bundle4Incomplete || _productsUnavailable;
     final ctaColor = ctaDisabled
         ? widget.courseColor.withValues(alpha: 0.4)
         : widget.courseColor;
@@ -671,7 +863,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               GestureDetector(
-                onTap: () => _openUrl('https://binaryapp.org/terms'),
+                onTap: () => _openUrl(kTermsUrl),
                 child: Text('Terms of Service',
                     style: TextStyle(
                         fontSize: 11,
@@ -685,7 +877,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     style: TextStyle(fontSize: 11, color: theme.subtext)),
               ),
               GestureDetector(
-                onTap: () => _openUrl('https://binaryapp.org/privacy'),
+                onTap: () => _openUrl(kPrivacyUrl),
                 child: Text('Privacy Policy',
                     style: TextStyle(
                         fontSize: 11,

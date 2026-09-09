@@ -39,11 +39,20 @@ class CourseInfo {
   /// Null where the course maps to no specific external exam.
   final String? preparesFor;
 
+  /// Short, stable code used inside a completion credential ID.
+  ///
+  /// It appears on the certificate a learner shares publicly, so it has to be
+  /// readable and it has to never change: a credential that changes is not a
+  /// credential. Like [id] and [tag], this is NOT to be renamed once shipped —
+  /// doing so invalidates every certificate already issued for the course.
+  final String code;
+
   const CourseInfo({
     required this.id,
     required this.tag,
     required this.title,
     required this.blurb,
+    required this.code,
     this.preparesFor,
   });
 }
@@ -51,6 +60,7 @@ class CourseInfo {
 const List<CourseInfo> kCourseCatalog = [
   CourseInfo(
     id: 'itil-v4',
+    code: 'ITSM',
     tag: 'ITIL V4',
     title: 'IT Service Management Foundations',
     blurb:
@@ -64,6 +74,7 @@ const List<CourseInfo> kCourseCatalog = [
   ),
   CourseInfo(
     id: 'csm',
+    code: 'SCRM',
     tag: 'CSM',
     title: 'Agile & Scrum Foundations',
     blurb:
@@ -77,6 +88,7 @@ const List<CourseInfo> kCourseCatalog = [
   ),
   CourseInfo(
     id: 'binary-network-professional',
+    code: 'NETP',
     tag: 'Binary Network Pro',
     title: 'Network Professional',
     blurb:
@@ -90,6 +102,7 @@ const List<CourseInfo> kCourseCatalog = [
   ),
   CourseInfo(
     id: 'binary-cybersecurity-professional',
+    code: 'SECP',
     tag: 'Binary Cyber Pro',
     title: 'Cybersecurity Professional',
     blurb:
@@ -103,6 +116,7 @@ const List<CourseInfo> kCourseCatalog = [
   ),
   CourseInfo(
     id: 'binary-cloud-fundamentals',
+    code: 'CLDF',
     tag: 'Binary Cloud',
     title: 'Cloud Fundamentals',
     blurb:
@@ -111,11 +125,26 @@ const List<CourseInfo> kCourseCatalog = [
   ),
   CourseInfo(
     id: 'binary-cloud-professional',
+    code: 'CLDA',
     tag: 'Binary Cloud Pro',
     title: 'Cloud Architecture',
     blurb:
         'Designing for the cloud — availability, scaling, networking, '
         'identity, and well-architected trade-offs.',
+  ),
+  // Deliberately has no `preparesFor`. The AI certification landscape is
+  // young and vendor-specific, and claiming alignment with somebody's exam
+  // would mean describing a syllabus we have no licence to. The content is
+  // original explanation of publicly established concepts and maps to no
+  // external exam, so it claims none.
+  CourseInfo(
+    id: 'binary-ai-fundamentals',
+    code: 'AIML',
+    tag: 'Binary AI',
+    title: 'AI & Machine Learning Foundations',
+    blurb:
+        'How modern AI actually works — machine learning, neural networks, '
+        'language models, prompting, model quality, and responsible use.',
   ),
 ];
 

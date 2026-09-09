@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../app_links.dart';
 import 'app_theme.dart';
 
 class LegalScreen extends StatelessWidget {
@@ -191,7 +192,7 @@ class LegalScreen extends StatelessWidget {
                     subtitle: 'How we collect and use your data',
                     color: const Color(0xFF6366F1),
                     theme: theme,
-                    onTap: () => _open('https://binaryapp.org/privacy'),
+                    onTap: () => _open(kPrivacyUrl),
                   ),
                   const SizedBox(height: 10),
                   _LegalTile(
@@ -200,7 +201,7 @@ class LegalScreen extends StatelessWidget {
                     subtitle: 'Rules for using Binary Academy',
                     color: const Color(0xFF8B5CF6),
                     theme: theme,
-                    onTap: () => _open('https://binaryapp.org/terms'),
+                    onTap: () => _open(kTermsUrl),
                   ),
                   const SizedBox(height: 10),
                   _LegalTile(
@@ -210,7 +211,7 @@ class LegalScreen extends StatelessWidget {
                     color: const Color(0xFF10B981),
                     theme: theme,
                     onTap: () => _open(
-                        'https://binaryapp.org/terms#in-app-purchases'),
+                        kPurchaseTermsUrl),
                   ),
                   const SizedBox(height: 10),
                   _LegalTile(

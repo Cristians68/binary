@@ -8,6 +8,7 @@ import 'package:in_app_review/in_app_review.dart';
 import 'auth_service.dart';
 import 'welcome_screen.dart';
 import 'badges_screen.dart';
+import 'certificates_screen.dart';
 import 'offline_downloads_screen.dart';
 import 'delete_account_screen.dart';
 import 'legal_screen.dart';
@@ -15,6 +16,7 @@ import 'restore_purchases_button.dart';
 import 'paywall_screen.dart';
 import 'app_router.dart';
 import 'streak_service.dart';
+import '../app_links.dart';
 import 'app_theme.dart';
 import 'notification_prefs_service.dart';
 import 'notification_settings_sheet.dart';
@@ -125,7 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   // ── Help Center — opens support page in Safari ────────────────────────────
   Future<void> _openHelpCenter() async {
     HapticFeedback.selectionClick();
-    final uri = Uri.parse('https://binaryapp.org/support');
+    final uri = Uri.parse(kSupportUrl);
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
@@ -671,10 +673,24 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ? null
                     : () async {
                         setModal(() => loading = true);
+                        final user = FirebaseAuth.instance.currentUser;
+                        final email = user?.email;
+                        // Defence in depth: the row above is hidden for these
+                        // accounts, but `user!.email!` crashed rather than
+                        // failing, so it does not get to rely on that.
+                        if (user == null ||
+                            email == null ||
+                            !AuthService.hasPasswordProvider) {
+                          setModal(() {
+                            error = 'This account signs in without a password, '
+                                'so there is nothing to change here.';
+                            loading = false;
+                          });
+                          return;
+                        }
                         try {
-                          final user = FirebaseAuth.instance.currentUser;
                           final cred = EmailAuthProvider.credential(
-                            email: user!.email!,
+                            email: email,
                             password: currentController.text,
                           );
                           await user.reauthenticateWithCredential(cred);
@@ -682,9 +698,25 @@ class _ProfileScreenState extends State<ProfileScreen>
                           if (ctx.mounted) Navigator.pop(ctx);
                         } on FirebaseAuthException catch (e) {
                           setModal(() {
-                            error = e.code == 'wrong-password'
-                                ? 'Current password is incorrect.'
-                                : 'Something went wrong. Try again.';
+                            // The provider's own code is appended for the same
+                            // reason AuthResult does it: nobody can read a
+                            // debug log off a TestFlight build.
+                            error = switch (e.code) {
+                              'wrong-password' || 'invalid-credential' =>
+                                'Current password is incorrect.',
+                              'weak-password' =>
+                                'That new password is too weak. Use at least '
+                                    '6 characters.',
+                              'requires-recent-login' =>
+                                'Please sign out and back in, then try again.',
+                              _ => 'Could not change your password. (${e.code})',
+                            };
+                            loading = false;
+                          });
+                        } catch (e) {
+                          setModal(() {
+                            error = 'Could not change your password. Please '
+                                'try again.';
                             loading = false;
                           });
                         }
@@ -946,9 +978,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                         : _notificationsEnabled
                             ? _badge('On', AppColors.green)
                             : _badge('Off', theme.subtext)),
-                _buildItem(CupertinoIcons.lock_fill, 'Change password',
-                    AppColors.primary, theme,
-                    onTap: _showChangePasswordSheet),
+                // Only for accounts that actually have a password. A guest
+                // has no email at all, and a Google/Apple account has no
+                // password credential to re-authenticate against — this row
+                // could not work for either, and crashed for the first.
+                if (AuthService.hasPasswordProvider)
+                  _buildItem(CupertinoIcons.lock_fill, 'Change password',
+                      AppColors.primary, theme,
+                      onTap: _showChangePasswordSheet),
                 _buildThemeToggle(theme),
               ]),
 
@@ -961,6 +998,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                     AppColors.green, theme,
                     onTap: () => Navigator.push(
                         context, AppRouter.push(const BadgesScreen()))),
+                // A certificate used to exist only in the seconds after the
+                // final quiz. Backing out of that screen lost it for good.
+                _buildItem(CupertinoIcons.doc_text_fill, 'My certificates',
+                    AppColors.green, theme,
+                    subtitle: 'Every course you have completed',
+                    onTap: () => Navigator.push(context,
+                        AppRouter.push(const CertificatesScreen()))),
                 _buildItem(
                     CupertinoIcons.arrow_down_circle_fill,
                     'Download for offline',
@@ -998,7 +1042,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                           context,
                           CupertinoPageRoute(
                             builder: (_) => const PaywallScreen(
-                              courseId: 'itil-v4',
                               courseTitle: 'Binary Academy',
                               courseColor: AppColors.primary,
                               defaultToAllPlans: true,

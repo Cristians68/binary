@@ -200,6 +200,7 @@ void main() {
           'binary-cybersecurity-professional',
           'binary-cloud-fundamentals',
           'binary-cloud-professional',
+          'binary-ai-fundamentals',
         },
       );
     });
