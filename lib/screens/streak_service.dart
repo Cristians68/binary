@@ -457,6 +457,34 @@ class StreakService {
   static DailyGoalData goalFrom(Map<String, dynamic> data) =>
       DailyGoalData.fromMap(_safeMap(data['dailyGoal']));
 
+  /// Ids of the courses a raw user document records as enrolled.
+  ///
+  /// The value is only ever `true` or `false` — unenrolling writes `false`
+  /// rather than deleting the key — so only a real `true` counts. On web the
+  /// nested map arrives as a `JsLinkedHashMap`, so it goes through _safeMap
+  /// rather than a cast: a throw inside a stream listener is how a screen
+  /// ends up frozen.
+  static Set<String> enrolledCourseIdsFrom(Map<String, dynamic> data) {
+    final enrolments = _safeMap(data['enrolments']);
+    return enrolments.entries
+        .where((e) => e.value == true)
+        .map((e) => e.key)
+        .toSet();
+  }
+
+  /// The catalogue entries [enrolledIds] refers to, in catalogue order.
+  ///
+  /// Home and the Courses tab both need this join and each used to do it its
+  /// own way off its own one-shot read. Order comes from the catalogue, never
+  /// from the Set, so the cards do not reshuffle between launches. An id with
+  /// no matching course is dropped rather than drawn as a blank card.
+  static List<Map<String, dynamic>> enrolledCoursesFrom(
+    List<Map<String, dynamic>> catalogue,
+    Set<String> enrolledIds,
+  ) {
+    return catalogue.where((c) => enrolledIds.contains(c['id'])).toList();
+  }
+
   // ── Update daily goal target ──────────────────────────────────────────────
   static Future<void> setDailyTarget(int target) async {
     final doc = _userDoc;

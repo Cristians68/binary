@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -9,6 +11,7 @@ import 'paywall_screen.dart';
 import 'app_router.dart';
 import 'app_theme.dart';
 import '../course_catalog.dart';
+import 'streak_service.dart';
 
 class CoursesScreen extends StatefulWidget {
   const CoursesScreen({super.key});
@@ -23,47 +26,53 @@ class _CoursesScreenState extends State<CoursesScreen> {
   bool _loading = true;
   bool _hasFullAccess = false;
 
+  StreamSubscription<Map<String, dynamic>>? _statsSub;
+
   @override
   void initState() {
     super.initState();
-    _load();
+    _loadCatalogue();
+    _statsSub = StreakService.statsStream().listen(_onStatsUpdate);
   }
 
-  Future<void> _load() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+  @override
+  void dispose() {
+    _statsSub?.cancel();
+    super.dispose();
+  }
+
+  /// Read the course catalogue once. Enrolment and plan come from the stream.
+  ///
+  /// This used to read the user document in the same one-shot, which ran once
+  /// in initState and never again — so an enrolment made here was invisible to
+  /// Home until a cold start, and on that start the read could land while
+  /// ServerClock's lastSeenAt write was still pending and see a document with
+  /// no enrolments in it at all.
+  Future<void> _loadCatalogue() async {
     try {
       final coursesSnap = await FirebaseFirestore.instance
           .collection('courses')
           .orderBy('order')
           .get();
 
-      Set<String> enrolled = {};
-      bool fullAccess = false;
-      if (uid != null) {
-        final userSnap =
-            await FirebaseFirestore.instance.collection('users').doc(uid).get();
-        final data = userSnap.data() ?? {};
-        final enrollments = (data['enrolments'] as Map<String, dynamic>?) ?? {};
-        enrolled = enrollments.entries
-            .where((e) => e.value == true)
-            .map((e) => e.key)
-            .toSet();
-        final plan = (data['subscriptionPlan'] as String?) ?? 'none';
-        fullAccess = plan == 'all';
-      }
-
       if (mounted) {
         setState(() {
           _courses =
               coursesSnap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
-          _enrolledIds = enrolled;
-          _hasFullAccess = fullAccess;
           _loading = false;
         });
       }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _onStatsUpdate(Map<String, dynamic> data) {
+    if (!mounted) return;
+    setState(() {
+      _enrolledIds = StreakService.enrolledCourseIdsFrom(data);
+      _hasFullAccess = (data['subscriptionPlan'] as String?) == 'all';
+    });
   }
 
   Future<void> _toggleEnrollment(String courseId) async {

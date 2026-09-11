@@ -37,8 +37,18 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Map<String, dynamic>> _enrolledCourses = [];
+  /// Every course, in catalogue order. Static content, so it is read once.
+  List<Map<String, dynamic>> _allCourses = [];
+
+  /// Which of them this user is in. Comes from the live user document, so
+  /// enrolling on the Courses tab shows up here without a relaunch.
+  Set<String> _enrolledIds = {};
   bool _loadingCourses = true;
+
+  /// Derived, never stored: one join, shared with the Courses tab, so the two
+  /// cannot drift apart again.
+  List<Map<String, dynamic>> get _enrolledCourses =>
+      StreakService.enrolledCoursesFrom(_allCourses, _enrolledIds);
 
   int _streak = 0;
   int _badgeCount = 0;
@@ -59,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _initStreak();
-    _loadEnrolledCourses();
+    _loadCatalogue();
     _loadReviewQueue();
     _statsSub = StreakService.statsStream().listen(_onStatsUpdate);
   }
@@ -74,32 +84,27 @@ class _HomeScreenState extends State<HomeScreen> {
     await StreakService.checkAndUpdateStreak();
   }
 
-  Future<void> _loadEnrolledCourses() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
-      if (mounted) setState(() => _loadingCourses = false);
-      return;
-    }
-
+  /// Read the course catalogue once.
+  ///
+  /// This deliberately does NOT read the user document. It used to, in the
+  /// same one-shot: that read ran once in initState, and because
+  /// MainNavigation builds every tab in an IndexedStack at launch it ran
+  /// before the user had done anything and never ran again. Enrolling on the
+  /// Courses tab left Home saying "No courses yet" until the next cold start,
+  /// and on that start the read could race ServerClock's lastSeenAt write and
+  /// come back with a document holding nothing else. Enrolments now arrive on
+  /// the stream instead; only the catalogue is fetched here.
+  Future<void> _loadCatalogue() async {
     try {
       final coursesSnap = await FirebaseFirestore.instance
           .collection('courses')
           .orderBy('order')
           .get();
 
-      final userSnap =
-          await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      final userData = userSnap.data() ?? {};
-      final enrolments = _toMap(userData['enrolments']);
-
-      final enrolled = coursesSnap.docs
-          .map((d) => {'id': d.id, ...d.data()})
-          .where((c) => enrolments[c['id']] == true)
-          .toList();
-
       if (mounted) {
         setState(() {
-          _enrolledCourses = enrolled;
+          _allCourses =
+              coursesSnap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
           _loadingCourses = false;
         });
       }
@@ -138,6 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     setState(() {
+      _enrolledIds = StreakService.enrolledCourseIdsFrom(data);
       _streak = (streakMap['current'] as num?)?.toInt() ?? 0;
       // Only badges the grid can display — see knownEarnedBadges.
       _badgeCount =

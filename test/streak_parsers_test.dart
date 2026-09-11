@@ -123,6 +123,61 @@ void main() {
     });
   });
 
+  group('enrolledCourseIdsFrom', () {
+    // Home's "My courses" and the Courses tab's Enrolled state both come from
+    // `enrolments`. Each parsed it its own way, from a one-shot read that ran
+    // once at launch: enrol on the Courses tab, go Home, and it still said
+    // "No courses yet" — and after a relaunch, both reads could land while
+    // ServerClock's launch write was pending and see a document with no
+    // enrolments at all. Both screens now listen to statsStream() and read
+    // the field through this one function.
+    test('lists every course marked true', () {
+      final data = <String, dynamic>{
+        'enrolments': {'binary-network-professional': true, 'csm': true},
+      };
+      expect(StreakService.enrolledCourseIdsFrom(data),
+          {'binary-network-professional', 'csm'});
+    });
+
+    test('leaves out a course that was unenrolled', () {
+      // Unenrolling writes false rather than deleting the key.
+      final data = <String, dynamic>{
+        'enrolments': {'csm': true, 'itil-v4': false},
+      };
+      expect(StreakService.enrolledCourseIdsFrom(data), {'csm'});
+    });
+
+    test('is empty for a document that has never enrolled', () {
+      expect(StreakService.enrolledCourseIdsFrom(<String, dynamic>{}), isEmpty);
+      expect(
+          StreakService.enrolledCourseIdsFrom(
+              <String, dynamic>{'enrolments': null}),
+          isEmpty);
+    });
+
+    test('does not depend on the static type of the nested map', () {
+      final data = <String, dynamic>{
+        'enrolments': <Object?, Object?>{'csm': true},
+      };
+      expect(StreakService.enrolledCourseIdsFrom(data), {'csm'});
+    });
+
+    test('is empty, not a throw, when enrolments is the wrong type', () {
+      // A throw inside a stream listener is how a screen ends up frozen.
+      expect(
+          StreakService.enrolledCourseIdsFrom(
+              <String, dynamic>{'enrolments': 'csm'}),
+          isEmpty);
+    });
+
+    test('only a real true counts', () {
+      final data = <String, dynamic>{
+        'enrolments': <String, dynamic>{'csm': 'true', 'itil-v4': 1},
+      };
+      expect(StreakService.enrolledCourseIdsFrom(data), isEmpty);
+    });
+  });
+
   group('the two tabs read one document the same way', () {
     test('a realistic document parses to the numbers Home showed', () {
       // The exact account state from the bug report: a 1-day streak, 30 points
@@ -145,6 +200,55 @@ void main() {
       expect(StreakService.badgesFrom(document).where((b) => b.isEarned).length, 2);
       expect((document['completedLessons'] as List).length, 1,
           reason: 'both tabs now count lessons from this same field');
+    });
+  });
+
+  group('enrolledCoursesFrom', () {
+    // Home and the Courses tab both answer "which courses is this user in?"
+    // and each did it its own way: Home read `enrolments[id] == true` off the
+    // raw map, Courses built a Set and asked `.contains`. Two parses of one
+    // field is how the two tabs came to disagree. This is the single join.
+    final catalogue = <Map<String, dynamic>>[
+      {'id': 'itil-v4', 'title': 'Service Management'},
+      {'id': 'csm', 'title': 'Scrum'},
+      {'id': 'binary-network-professional', 'title': 'Networking'},
+    ];
+
+    test('keeps only the enrolled courses', () {
+      final result = StreakService.enrolledCoursesFrom(
+          catalogue, {'csm', 'binary-network-professional'});
+      expect(result.map((c) => c['id']).toList(),
+          ['csm', 'binary-network-professional']);
+    });
+
+    test('keeps the catalogue order, not the order of the id set', () {
+      // The ids arrive from a Set, which has no meaningful order. Cards must
+      // still appear in the catalogue's `order`, or Home reshuffles itself
+      // between launches.
+      final result = StreakService.enrolledCoursesFrom(
+          catalogue, {'binary-network-professional', 'itil-v4'});
+      expect(result.map((c) => c['id']).toList(),
+          ['itil-v4', 'binary-network-professional']);
+    });
+
+    test('is empty when the user is enrolled in nothing', () {
+      expect(StreakService.enrolledCoursesFrom(catalogue, <String>{}), isEmpty);
+    });
+
+    test('ignores an enrolled id that is not in the catalogue', () {
+      // `courses/networking` and other legacy docs can be unenrolled from or
+      // removed; a stale id must not invent a blank card.
+      expect(
+          StreakService.enrolledCoursesFrom(catalogue, {'gone', 'csm'})
+              .map((c) => c['id'])
+              .toList(),
+          ['csm']);
+    });
+
+    test('skips a catalogue entry with no id rather than throwing', () {
+      final result = StreakService.enrolledCoursesFrom(
+          [<String, dynamic>{'title': 'No id here'}, ...catalogue], {'csm'});
+      expect(result.map((c) => c['id']).toList(), ['csm']);
     });
   });
 }

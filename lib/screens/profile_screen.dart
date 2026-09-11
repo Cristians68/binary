@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
@@ -50,6 +52,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool _notificationsEnabled = true;
   bool _loadingNotifPref = true;
 
+  StreamSubscription<Map<String, dynamic>>? _statsSub;
+
   @override
   void initState() {
     super.initState();
@@ -60,18 +64,25 @@ class _ProfileScreenState extends State<ProfileScreen>
         .animate(
             CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
-    _loadStats();
+    _statsSub = StreakService.statsStream().listen(_onStatsUpdate);
     _loadNotifPref();
   }
 
   @override
   void dispose() {
+    _statsSub?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _loadStats() async {
-    final data = await StreakService.getStats();
+  /// Stats for the header row.
+  ///
+  /// This was a one-shot getStats() in initState. MainNavigation builds every
+  /// tab in an IndexedStack at launch, so it ran before the user had done
+  /// anything and never ran again: finish a lesson, open Profile, and it still
+  /// read 0. Home already listened to this same stream, which is how the two
+  /// tabs came to show different numbers for one account.
+  void _onStatsUpdate(Map<String, dynamic> data) {
     if (!mounted) return;
     // Only ids the badges grid displays — see knownEarnedBadges.
     final badges =
@@ -506,7 +517,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
     if (!mounted) return;
     setState(() {});
-    await _loadStats();
+    // Resubscribe rather than re-read: statsStream() binds to the uid it saw
+    // when it was created. The email path links the credential to the same
+    // anonymous uid, but a path that signs in as a different account would
+    // leave the old subscription feeding this screen someone else's stats.
+    _statsSub?.cancel();
+    _statsSub = StreakService.statsStream().listen(_onStatsUpdate);
   }
 
   void _showNotificationsSheet() {
