@@ -240,4 +240,75 @@ void main() {
       expect(await SubscriptionService.isInActiveTrial(), isFalse);
     });
   });
+
+  group('planGrantsAccess — the decision both branches share', () {
+    // canAccessCourse checks the plan properly on the Firestore path, then
+    // throws all of it away on the RevenueCat fallback path, which ended with:
+    //
+    //     return (retry...['subscriptionPlan'] ?? 'none') != 'none';
+    //
+    // Any plan that was not 'none' unlocked whatever course had been asked
+    // for. Buy one single course, hit the reinstall path, get the catalogue.
+    // That branch cannot be reached from a test (see the SCOPE NOTE above),
+    // which is exactly why the decision now lives in one pure function that
+    // both branches call.
+    test('the all plan unlocks any course', () {
+      final data = <String, dynamic>{'subscriptionPlan': 'all'};
+      expect(SubscriptionService.planGrantsAccess(data, 'csm'), isTrue);
+      expect(SubscriptionService.planGrantsAccess(data, 'itil-v4'), isTrue);
+    });
+
+    test('a single purchase unlocks only the course that was bought', () {
+      final data = <String, dynamic>{
+        'subscriptionPlan': 'single',
+        'subscribedCourseId': 'csm',
+      };
+      expect(SubscriptionService.planGrantsAccess(data, 'csm'), isTrue);
+      expect(SubscriptionService.planGrantsAccess(data, 'itil-v4'), isFalse,
+          reason: 'this is the bypass: one purchase must not unlock another course');
+    });
+
+    test('a single purchase with no recorded course unlocks nothing', () {
+      // setPendingPurchase can fail and be swallowed, leaving a plan with no
+      // course attached. That must deny, not grant.
+      final data = <String, dynamic>{'subscriptionPlan': 'single'};
+      expect(SubscriptionService.planGrantsAccess(data, 'csm'), isFalse);
+    });
+
+    test('a bundle unlocks only the four courses it names', () {
+      final data = <String, dynamic>{
+        'subscriptionPlan': 'bundle4',
+        'bundleCourseIds': ['csm', 'itil-v4', 'binary-cloud-fundamentals',
+                            'binary-network-professional'],
+      };
+      expect(SubscriptionService.planGrantsAccess(data, 'itil-v4'), isTrue);
+      expect(
+          SubscriptionService.planGrantsAccess(
+              data, 'binary-cybersecurity-professional'),
+          isFalse);
+    });
+
+    test('a bundle with no course list unlocks nothing', () {
+      final data = <String, dynamic>{'subscriptionPlan': 'bundle4'};
+      expect(SubscriptionService.planGrantsAccess(data, 'csm'), isFalse);
+    });
+
+    test('no plan grants nothing', () {
+      expect(SubscriptionService.planGrantsAccess(<String, dynamic>{}, 'csm'),
+          isFalse);
+      expect(
+          SubscriptionService.planGrantsAccess(
+              <String, dynamic>{'subscriptionPlan': 'none'}, 'csm'),
+          isFalse);
+    });
+
+    test('an unrecognised plan name grants nothing', () {
+      // A future plan the server knows about and this build does not must fail
+      // closed, never open.
+      expect(
+          SubscriptionService.planGrantsAccess(
+              <String, dynamic>{'subscriptionPlan': 'lifetime-pro'}, 'csm'),
+          isFalse);
+    });
+  });
 }

@@ -262,6 +262,35 @@ class SubscriptionService {
   /// purchase/restore). Falls back to a live RevenueCat call only if the
   /// Firestore document has no recognised plan — e.g. fresh install with a
   /// previous purchase that hasn't been synced yet.
+  /// Does the plan recorded on [data] unlock [courseId]?
+  ///
+  /// The single place that answers this. It used to be answered twice:
+  /// properly on the Firestore path, and on the RevenueCat fallback path as
+  /// `subscriptionPlan != 'none'` — which unlocked whatever course had been
+  /// asked for, so one single-course purchase opened the whole catalogue to
+  /// anyone who went through a reinstall. That branch cannot be reached from
+  /// a test, so the decision was moved out of it rather than fixed inside it.
+  ///
+  /// Unknown plan names fail CLOSED. A plan this build does not recognise is
+  /// one the server added later, and guessing in the user's favour is how a
+  /// paywall opens by accident.
+  ///
+  /// Trials are deliberately not considered here — they are time-bound and
+  /// handled separately by the caller.
+  static bool planGrantsAccess(Map<String, dynamic> data, String courseId) {
+    switch (data['subscriptionPlan'] as String? ?? 'none') {
+      case 'all':
+        return true;
+      case 'bundle4':
+        final courses = data['bundleCourseIds'];
+        return courses is List && courses.contains(courseId);
+      case 'single':
+        return data['subscribedCourseId'] == courseId;
+      default:
+        return false;
+    }
+  }
+
   static Future<bool> canAccessCourse(String courseId) async {
     // NOTE: web deliberately does NOT short-circuit to `true`. It used to,
     // which made the entire paid catalogue free on the Firebase Hosting build.
@@ -278,17 +307,7 @@ class SubscriptionService {
 
       debugPrint('canAccessCourse($courseId): Firestore plan=$planString');
 
-      if (planString == 'all') return true;
-
-      if (planString == 'bundle4') {
-        final List<dynamic> courses =
-            (data['bundleCourseIds'] as List<dynamic>?) ?? [];
-        return courses.contains(courseId);
-      }
-
-      if (planString == 'single') {
-        return data['subscribedCourseId'] == courseId;
-      }
+      if (planString != 'none') return planGrantsAccess(data, courseId);
 
       // ── 2. Trial check ─────────────────────────────────────────────────
       final trialCourseId = data['trialCourseId']  as String?;
@@ -314,8 +333,10 @@ class SubscriptionService {
       await Purchases.restorePurchases();
       await _awaitEntitlement(timeout: const Duration(seconds: 8));
 
+      // Re-apply the same decision. Asking only whether SOME plan now exists
+      // is what turned one single-course purchase into catalogue-wide access.
       final retry = await _db.collection('users').doc(uid).get();
-      return (retry.data()?['subscriptionPlan'] as String? ?? 'none') != 'none';
+      return planGrantsAccess(retry.data() ?? {}, courseId);
     } catch (e) {
       debugPrint('canAccessCourse error: $e');
       return false;
