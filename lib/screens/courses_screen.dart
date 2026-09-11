@@ -57,8 +57,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
       if (mounted) {
         setState(() {
-          _courses =
-              coursesSnap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+          _courses = knownCourses(
+              coursesSnap.docs.map((d) => {'id': d.id, ...d.data()}).toList());
           _loading = false;
         });
       }

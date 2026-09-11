@@ -69,10 +69,10 @@ class _ProgressScreenState extends State<ProgressScreen>
           .get();
       if (mounted) {
         setState(() {
-          _courses = snapshot.docs
+          _courses = knownCourses(snapshot.docs
               .where((d) => !(d.data()['isComingSoon'] ?? false))
               .map((d) => {'id': d.id, ...d.data()})
-              .toList();
+              .toList());
         });
       }
     } catch (_) {}

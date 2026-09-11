@@ -167,6 +167,26 @@ CourseInfo? courseInfo(String idOrTag) =>
 String displayTitle(String idOrTag) =>
     courseInfo(idOrTag)?.title ?? idOrTag;
 
+/// The subset of Firestore course documents that the app is allowed to show.
+///
+/// The catalogue is an ALLOW-LIST, not a lookup table with a fallback. Every
+/// other helper here degrades gracefully — [displayTitle] returns its input so
+/// a newly seeded course still renders something. That fallback is exactly the
+/// hole: an uncatalogued course displays whatever title sits in Firestore, and
+/// the catalogue's whole job is to stop a certification mark being used as a
+/// product name (Guideline 5.2.1). `courses/networking` is a live example — a
+/// legacy document that rendered as a lowercase "networking" card.
+///
+/// So a course nobody has given a trademark-safe name is not shown at all.
+/// The cost is deliberate: seeding a new course now requires adding it here
+/// too, which is the point — naming it is part of shipping it.
+List<Map<String, dynamic>> knownCourses(List<Map<String, dynamic>> docs) {
+  return docs.where((d) {
+    final id = d['id'];
+    return id is String && courseInfo(id) != null;
+  }).toList();
+}
+
 /// Short description for cards and paywall rows.
 String displayBlurb(String idOrTag) => courseInfo(idOrTag)?.blurb ?? '';
 

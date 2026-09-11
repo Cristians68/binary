@@ -103,8 +103,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (mounted) {
         setState(() {
-          _allCourses =
-              coursesSnap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+          _allCourses = knownCourses(
+              coursesSnap.docs.map((d) => {'id': d.id, ...d.data()}).toList());
           _loadingCourses = false;
         });
       }

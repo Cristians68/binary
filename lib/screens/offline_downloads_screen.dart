@@ -34,10 +34,10 @@ class _OfflineDownloadsScreenState extends State<OfflineDownloadsScreen> {
           .orderBy('order')
           .get();
 
-      final courses = snap.docs
+      final courses = knownCourses(snap.docs
           .where((d) => !(d.data()['isComingSoon'] ?? false))
           .map((d) => {'id': d.id, ...d.data()})
-          .toList();
+          .toList());
 
       final downloaded = await OfflineService.getDownloadedCourses();
 

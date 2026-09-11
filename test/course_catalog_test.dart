@@ -205,4 +205,61 @@ void main() {
       );
     });
   });
+
+  group('only catalogued courses may be shown', () {
+    // displayTitle() falls back to its input, so a Firestore course with no
+    // catalogue entry renders its RAW stored title. `courses/networking` is a
+    // legacy doc and showed up as a lowercase "networking" card on both the
+    // Courses and Progress tabs.
+    //
+    // The real problem is not the ugly card. The catalogue is what keeps a
+    // certification mark from being used as a product name (5.2.1), and an
+    // uncatalogued course walks straight past it — whatever title sits in
+    // Firestore is what the user sees. So the catalogue is an ALLOW-LIST:
+    // a course nobody has given a safe name is not shown at all.
+    List<Map<String, dynamic>> docs(List<String> ids) =>
+        [for (final id in ids) <String, dynamic>{'id': id, 'title': id}];
+
+    test('keeps a course that is in the catalogue', () {
+      expect(knownCourses(docs(['csm'])).map((c) => c['id']), ['csm']);
+    });
+
+    test('drops the legacy networking course', () {
+      expect(knownCourses(docs(['networking'])), isEmpty);
+    });
+
+    test('drops a course whose title is a bare trademark', () {
+      // The exact shape this guards: a seeded doc the scrub never reached.
+      final leaked = [
+        <String, dynamic>{'id': 'itil-foundation-v4', 'title': 'ITIL V4 Foundation'},
+      ];
+      expect(knownCourses(leaked), isEmpty);
+    });
+
+    test('keeps catalogue order and drops only the unknown ones', () {
+      final mixed = docs([
+        'binary-network-professional',
+        'networking',
+        'csm',
+      ]);
+      expect(knownCourses(mixed).map((c) => c['id']).toList(),
+          ['binary-network-professional', 'csm']);
+    });
+
+    test('drops a document with no id at all', () {
+      expect(knownCourses([<String, dynamic>{'title': 'Orphan'}]), isEmpty);
+    });
+
+    test('accepts an internal tag as well as an id', () {
+      // courseInfo() resolves either, and seed scripts have used both.
+      expect(knownCourses(docs(['Binary Network Pro'])).length,
+          courseInfo('Binary Network Pro') == null ? 0 : 1);
+    });
+
+    test('every catalogued course survives the filter', () {
+      final all = docs(kCourseCatalog.map((c) => c.id).toList());
+      expect(knownCourses(all).length, kCourseCatalog.length,
+          reason: 'the allow-list must never hide a real course');
+    });
+  });
 }
