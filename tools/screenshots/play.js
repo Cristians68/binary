@@ -31,13 +31,18 @@ async function nodes(page) {
       .filter((n) => n.label && n.w > 0 && n.h > 0 && n.h < 260));
 }
 
-async function tap(page, text, { exact = false, wait = 2500, optional = false } = {}) {
+async function tap(page, text, { exact = false, wait = 2500, optional = false, widest = false } = {}) {
   const all = await nodes(page);
   const l = text.toLowerCase();
   let hits = all.filter((n) => n.label.toLowerCase() === l);
+  // Profile renders "Badges" twice: the stat tile caption (a narrow, inert
+  // Text) and the menu row that actually navigates. Taking the first in DOM
+  // order hit the caption, so 11-badges.png was really the Profile screen.
+  // The tappable row is the full-width one.
+  if (widest) hits.sort((a, b) => b.w * b.h - a.w * a.h);
   if (!hits.length && !exact) {
     hits = all.filter((n) => n.label.toLowerCase().includes(l))
-              .sort((a, b) => a.w * a.h - b.w * b.h);
+              .sort((a, b) => (widest ? b.w * b.h - a.w * a.h : a.w * a.h - b.w * b.h));
   }
   if (!hits.length) {
     if (optional) return false;
@@ -120,8 +125,12 @@ async function labels(page, note) {
   console.log("badges");
   await relaunch();
   await tap(page, "Profile", { exact: true, wait: 3500 });
-  await tap(page, "Badges", { wait: 4000 });
+  await tap(page, "Badges", { wait: 4000, widest: true });
   await labels(page, "badges");
+  const onBadges = (await nodes(page)).map((n) => n.label).join(" ~ ");
+  if (/Lessons ~ Badges ~ Streak|Avg score/i.test(onBadges)) {
+    throw new Error("still on Profile — the Badges tap hit the stat caption again");
+  }
   await shot(page, "11-badges");
 
   await browser.close();

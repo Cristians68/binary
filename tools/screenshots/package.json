@@ -1,0 +1,9 @@
+{
+  "name": "b1nary-screenshots",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Drives the built web app in headless Chrome to capture App Store screenshots and verify behaviour that no unit test can reach.",
+  "dependencies": {
+    "puppeteer-core": "^24.0.0"
+  }
+}

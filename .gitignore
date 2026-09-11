@@ -81,3 +81,8 @@ key.properties
 node_modules/
 functions/node_modules/
 /public/
+
+# Verification captures from tools/screenshots/verify_live_tabs.js. Regenerated
+# on every run and only meaningful next to the run that produced them; the
+# tracked shots/ PNGs are the App Store ones.
+tools/screenshots/shots/verify/
