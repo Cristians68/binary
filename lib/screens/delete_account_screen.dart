@@ -4,8 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'account_deletion.dart';
 import 'app_theme.dart';
 import 'app_router.dart';
+import 'auth_service.dart';
 import 'review_service.dart';
 import 'welcome_screen.dart';
 
@@ -24,8 +26,9 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
 
   User? get _user => FirebaseAuth.instance.currentUser;
 
-  bool get _isGoogleUser =>
-      _user?.providerData.any((p) => p.providerId == 'google.com') ?? false;
+  /// How this account re-confirms before deletion. See account_deletion.dart.
+  DeletionReauth get _reauth => deletionReauthFor(
+      _user?.providerData.map((p) => p.providerId) ?? const <String>[]);
 
   @override
   void dispose() {
@@ -69,40 +72,79 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      // Re-authenticate before deletion
-      if (_isGoogleUser) {
-        // Use GoogleSignIn directly — works on all Firebase SDK versions
-        final googleSignIn = GoogleSignIn();
-        final googleUser = await googleSignIn.signIn();
-        if (googleUser == null) {
-          setState(() {
-            _error = 'Google sign-in was cancelled.';
-            _loading = false;
-          });
-          return;
+      // Re-confirm with whatever this account actually signs in with. The old
+      // split was "Google, or type a password", which asked guests and Apple
+      // accounts for a password they do not have. See account_deletion.dart.
+      String? appleAuthorizationCode;
+      switch (_reauth) {
+        case DeletionReauth.google:
+          {
+            // Use GoogleSignIn directly — works on all Firebase SDK versions
+            final googleSignIn = GoogleSignIn();
+            final googleUser = await googleSignIn.signIn();
+            if (googleUser == null) {
+              setState(() {
+                _error = 'Google sign-in was cancelled.';
+                _loading = false;
+              });
+              return;
+            }
+            final googleAuth = await googleUser.authentication;
+            final credential = GoogleAuthProvider.credential(
+              accessToken: googleAuth.accessToken,
+              idToken: googleAuth.idToken,
+            );
+            await user.reauthenticateWithCredential(credential);
+          }
+        case DeletionReauth.password:
+          {
+            // Never trim passwords — spaces may be intentional
+            final password = _passwordController.text;
+            if (password.isEmpty) {
+              setState(() {
+                _error = 'Please enter your password to confirm.';
+                _loading = false;
+              });
+              return;
+            }
+            final credential = EmailAuthProvider.credential(
+              email: user.email ?? '',
+              password: password,
+            );
+            _passwordController.clear();
+            await user.reauthenticateWithCredential(credential);
+          }
+        case DeletionReauth.apple:
+          {
+            final apple = await AuthService.reauthenticateWithApple();
+            if (!apple.result.isSuccess) {
+              setState(() {
+                _error = apple.result.isCancelled
+                    ? 'Apple sign-in was cancelled.'
+                    : apple.result.displayMessage('Apple');
+                _loading = false;
+              });
+              return;
+            }
+            appleAuthorizationCode = apple.authorizationCode;
+          }
+        case DeletionReauth.none:
+          // A guest has nothing to re-enter. deleteAccount acts on this
+          // session's verified ID token, which only this device holds.
+          break;
+      }
+
+      // Apple requires an account's Sign in with Apple token to be revoked
+      // when the account is deleted. Revoke first, while the Firebase user
+      // still exists, which is the order Firebase documents. A failed
+      // revocation does not block the deletion the person asked for.
+      if (appleAuthorizationCode != null) {
+        try {
+          await FirebaseAuth.instance
+              .revokeTokenWithAuthorizationCode(appleAuthorizationCode);
+        } catch (e) {
+          debugPrint('Apple token revocation failed: $e');
         }
-        final googleAuth = await googleUser.authentication;
-        final credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
-        );
-        await user.reauthenticateWithCredential(credential);
-      } else {
-        // Never trim passwords — spaces may be intentional
-        final password = _passwordController.text;
-        if (password.isEmpty) {
-          setState(() {
-            _error = 'Please enter your password to confirm.';
-            _loading = false;
-          });
-          return;
-        }
-        final credential = EmailAuthProvider.credential(
-          email: user.email ?? '',
-          password: password,
-        );
-        _passwordController.clear();
-        await user.reauthenticateWithCredential(credential);
       }
 
       // Firestore denies client-side deletes on /users/{uid} (see
@@ -131,6 +173,14 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
           (route) => false,
         );
       }
+    } on FirebaseFunctionsException catch (e) {
+      // `not-found` means deleteAccount is not deployed. Show the code, so a
+      // failure on a device can be read back instead of guessed at.
+      setState(() {
+        _error =
+            'Could not delete your account (${e.code}). Please try again.';
+        _loading = false;
+      });
     } on FirebaseAuthException catch (e) {
       setState(() {
         _error = switch (e.code) {
@@ -262,7 +312,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
 
               const SizedBox(height: 28),
 
-              if (!_isGoogleUser) ...[
+              if (_reauth == DeletionReauth.password) ...[
                 Text('Enter your password to confirm',
                     style: TextStyle(
                         fontSize: 13,
@@ -301,7 +351,9 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                 const SizedBox(height: 16),
               ],
 
-              if (_isGoogleUser) ...[
+              // Every other account is told how it will confirm, so a guest
+              // or an Apple account is never left looking for a password.
+              if (_reauth != DeletionReauth.password) ...[
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
@@ -315,7 +367,16 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                          'You signed in with Google. You\'ll be asked to re-authenticate before deletion.',
+                          switch (_reauth) {
+                            DeletionReauth.google =>
+                              'You signed in with Google. You\'ll be asked to re-authenticate before deletion.',
+                            DeletionReauth.apple =>
+                              'You signed in with Apple. You\'ll be asked to confirm with Apple before deletion.',
+                            DeletionReauth.none =>
+                              'No password is needed. Deleting removes this account and everything saved in it.',
+                            // Excluded by the `if` above.
+                            DeletionReauth.password => '',
+                          },
                           style: TextStyle(
                               fontSize: 13,
                               color: theme.subtext,

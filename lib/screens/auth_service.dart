@@ -176,13 +176,18 @@ class AuthService {
     }
   }
 
-  /// Apple through Firebase's own OAuth flow.
+  /// Apple through FlutterFire's own `signInWithProvider`.
   ///
-  /// This does NOT use ASAuthorizationAppleIDProvider, so it needs no
-  /// `com.apple.developer.applesignin` entitlement and no Sign In with Apple
-  /// capability on the provisioning profile. That is exactly why it is worth
-  /// having as a fallback: the native flow's most likely failure is a signing
-  /// or capability problem, and this path cannot hit one.
+  /// This does NOT avoid ASAuthorizationAppleIDProvider, and so does NOT avoid
+  /// the entitlement. FlutterFire's iOS plugin special-cases `apple.com`
+  /// (FLTFirebaseAuthPlugin.m: `signInWithProviderApp` calls
+  /// `launchAppleSignInRequest`) and raises the same native Apple sheet, so a
+  /// missing entitlement or profile capability breaks this path as well.
+  ///
+  /// What differs is everything after the sheet: FlutterFire generates the
+  /// nonce and builds the Firebase credential itself. So this routes around a
+  /// mistake in our own nonce or credential handling, and when both paths
+  /// fail, the second code still says which layer broke.
   static Future<AuthResult> _appleViaFirebaseProvider() async {
     try {
       final provider = AppleAuthProvider()
@@ -344,10 +349,10 @@ class AuthService {
   /// diagnosis: every inspectable piece of configuration is correct (Apple
   /// enabled in Firebase, the entitlement declared in all three build
   /// configurations, the capability present on a regenerated provisioning
-  /// profile, the nonce hashed correctly). The Firebase OAuth flow does not
-  /// touch ASAuthorizationAppleIDProvider at all, so it cannot be affected by
-  /// an entitlement or profile problem — whatever is wrong with the native
-  /// path, this one routes around it.
+  /// profile, the nonce hashed correctly). It is NOT an independent route:
+  /// FlutterFire raises the same ASAuthorization sheet (see
+  /// [_appleViaFirebaseProvider]), so it only helps if the fault is in our own
+  /// nonce or credential handling. An entitlement or profile fault fails both.
   ///
   /// When both fail, BOTH codes are reported, because which one matters
   /// depends on which layer actually broke.
@@ -365,6 +370,128 @@ class AuthService {
           '${viaProvider.code ?? 'provider-failed'}',
       message: viaProvider.message ?? native.message,
     );
+  }
+
+  /// Re-confirms an Apple account before it is deleted, and returns the
+  /// authorization code that revoking its Apple token needs.
+  ///
+  /// Apple requires an app offering Sign in with Apple to revoke the user's
+  /// token when their account is deleted. Revocation takes an authorization
+  /// code, and only a fresh Apple sign-in produces one, so this doubles as the
+  /// re-authentication step.
+  ///
+  /// Same chain as [signInWithApple]: the native sheet first, then Firebase's
+  /// own Apple flow if that fails for anything other than the user backing
+  /// out. `user-mismatch` also ends the chain — the sheet worked and the
+  /// person chose a different Apple ID, which a second sheet would not change.
+  static Future<({AuthResult result, String? authorizationCode})>
+      reauthenticateWithApple() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return (
+        result: const AuthResult.failed(code: 'no-current-user'),
+        authorizationCode: null,
+      );
+    }
+
+    final native = await _appleReauthViaNativeSdk(user);
+    if (native.result.isSuccess ||
+        native.result.isCancelled ||
+        native.result.code == 'user-mismatch') {
+      return native;
+    }
+
+    debugPrint('Apple native re-auth failed (${native.result.code}) — trying '
+        'the Firebase provider flow');
+    final nativeCode = native.result.code ?? 'native-failed';
+    try {
+      final credential =
+          await user.reauthenticateWithProvider(AppleAuthProvider());
+      return (
+        result: const AuthResult.success(),
+        authorizationCode: credential.additionalUserInfo?.authorizationCode,
+      );
+    } on FirebaseAuthException catch (e) {
+      if (_isCancellation(e.code)) {
+        return (result: const AuthResult.cancelled(), authorizationCode: null);
+      }
+      return (
+        result: AuthResult.failed(
+            code: '$nativeCode then ${e.code}', message: e.message),
+        authorizationCode: null,
+      );
+    } on PlatformException catch (e) {
+      if (_isCancellation(e.code)) {
+        return (result: const AuthResult.cancelled(), authorizationCode: null);
+      }
+      return (
+        result: AuthResult.failed(
+            code: '$nativeCode then ${e.code}', message: e.message),
+        authorizationCode: null,
+      );
+    } catch (e) {
+      return (
+        result: AuthResult.failed(
+            code: '$nativeCode then provider-failed', message: e.toString()),
+        authorizationCode: null,
+      );
+    }
+  }
+
+  static Future<({AuthResult result, String? authorizationCode})>
+      _appleReauthViaNativeSdk(User user) async {
+    try {
+      final rawNonce = _generateNonce();
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        // No scopes: Apple only sends name and email on the first
+        // authorisation, and confirming identity needs neither.
+        scopes: const [],
+        nonce: _sha256ofString(rawNonce),
+      );
+      final identityToken = appleCredential.identityToken;
+      if (identityToken == null || identityToken.isEmpty) {
+        return (
+          result: const AuthResult.failed(code: 'missing-identity-token'),
+          authorizationCode: null,
+        );
+      }
+      await user.reauthenticateWithCredential(
+        OAuthProvider('apple.com').credential(
+          idToken: identityToken,
+          rawNonce: rawNonce,
+        ),
+      );
+      return (
+        result: const AuthResult.success(),
+        authorizationCode: appleCredential.authorizationCode,
+      );
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        return (result: const AuthResult.cancelled(), authorizationCode: null);
+      }
+      return (
+        result: AuthResult.failed(code: e.code.name, message: e.message),
+        authorizationCode: null,
+      );
+    } on FirebaseAuthException catch (e) {
+      return (
+        result: AuthResult.failed(code: e.code, message: e.message),
+        authorizationCode: null,
+      );
+    } on PlatformException catch (e) {
+      if (_isCancellation(e.code)) {
+        return (result: const AuthResult.cancelled(), authorizationCode: null);
+      }
+      return (
+        result: AuthResult.failed(code: e.code, message: e.message),
+        authorizationCode: null,
+      );
+    } catch (e) {
+      return (
+        result: AuthResult.failed(message: e.toString()),
+        authorizationCode: null,
+      );
+    }
   }
 
   static Future<AuthResult> _appleViaNativeSdk() async {
