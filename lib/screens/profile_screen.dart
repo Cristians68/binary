@@ -8,7 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'auth_service.dart';
-import 'welcome_screen.dart';
+import 'sign_out.dart';
 import 'badges_screen.dart';
 import 'certificates_screen.dart';
 import 'offline_downloads_screen.dart';
@@ -64,7 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         .animate(
             CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
-    _statsSub = StreakService.statsStream().listen(_onStatsUpdate);
+    _listenToStats();
     _loadNotifPref();
   }
 
@@ -82,11 +82,17 @@ class _ProfileScreenState extends State<ProfileScreen>
   /// anything and never ran again: finish a lesson, open Profile, and it still
   /// read 0. Home already listened to this same stream, which is how the two
   /// tabs came to show different numbers for one account.
+  void _listenToStats() {
+    _statsSub = StreakService.statsStream().listen(
+      _onStatsUpdate,
+      onError: (Object error) => debugPrint('Profile stats: $error'),
+    );
+  }
+
   void _onStatsUpdate(Map<String, dynamic> data) {
     if (!mounted) return;
     // Only ids the badges grid displays — see knownEarnedBadges.
-    final badges =
-        knownEarnedBadges(_toMap(data['badges']).keys).length;
+    final badges = knownEarnedBadges(_toMap(data['badges']).keys).length;
     final lessons = (data['completedLessons'] as List<dynamic>?)?.length ?? 0;
     final rawScores = data['quizScores'];
     List<Map<String, dynamic>> scores = [];
@@ -443,8 +449,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               if (error != null) ...[
                 const SizedBox(height: 10),
                 Text(error!,
-                    style:
-                        const TextStyle(fontSize: 13, color: AppColors.red)),
+                    style: const TextStyle(fontSize: 13, color: AppColors.red)),
               ],
               const SizedBox(height: 20),
               GestureDetector(
@@ -511,7 +516,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     // anonymous uid, but a path that signs in as a different account would
     // leave the old subscription feeding this screen someone else's stats.
     _statsSub?.cancel();
-    _statsSub = StreakService.statsStream().listen(_onStatsUpdate);
+    _listenToStats();
   }
 
   void _showNotificationsSheet() {
@@ -523,7 +528,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       },
     );
   }
-
 
   void _showMyStats() {
     final theme = AppTheme.of(context);
@@ -664,13 +668,11 @@ class _ProfileScreenState extends State<ProfileScreen>
               _buildModalTextField(
                   currentController, 'Current password', true, theme),
               const SizedBox(height: 12),
-              _buildModalTextField(
-                  newController, 'New password', true, theme),
+              _buildModalTextField(newController, 'New password', true, theme),
               if (error != null) ...[
                 const SizedBox(height: 12),
                 Text(error!,
-                    style:
-                        const TextStyle(fontSize: 13, color: AppColors.red)),
+                    style: const TextStyle(fontSize: 13, color: AppColors.red)),
               ],
               const SizedBox(height: 20),
               GestureDetector(
@@ -707,14 +709,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                             // reason AuthResult does it: nobody can read a
                             // debug log off a TestFlight build.
                             error = switch (e.code) {
-                              'wrong-password' || 'invalid-credential' =>
+                              'wrong-password' ||
+                              'invalid-credential' =>
                                 'Current password is incorrect.',
                               'weak-password' =>
                                 'That new password is too weak. Use at least '
                                     '6 characters.',
                               'requires-recent-login' =>
                                 'Please sign out and back in, then try again.',
-                              _ => 'Could not change your password. (${e.code})',
+                              _ =>
+                                'Could not change your password. (${e.code})',
                             };
                             loading = false;
                           });
@@ -811,14 +815,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               onTap: () async {
                 HapticFeedback.mediumImpact();
                 Navigator.pop(sheetContext);
-                await AuthService.signOut();
-                if (mounted) {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    AppRouter.fade(const WelcomeScreen()),
-                    (r) => false,
-                  );
-                }
+                await signOutToWelcome(context);
               },
               child: Container(
                 width: double.infinity,
@@ -826,8 +823,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 decoration: BoxDecoration(
                   color: AppColors.red.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: AppColors.red.withValues(alpha: 0.25)),
+                  border:
+                      Border.all(color: AppColors.red.withValues(alpha: 0.25)),
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -953,170 +950,164 @@ class _ProfileScreenState extends State<ProfileScreen>
           child: WebContentBounds(
             maxWidth: 720,
             child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              _buildHeader(theme),
-              _buildStatsRow(theme),
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                _buildHeader(theme),
+                _buildStatsRow(theme),
 
-              // ── Account ───────────────────────────────────────────────────
-              _buildSection('Account', theme, [
-                // Guest mode shipped with no way out of it: `isGuest` existed
-                // but nothing in the UI read it, so a guest who studied for a
-                // week could never turn that into a real account, and losing
-                // the device lost the lot. Signing up from here links the
-                // credential to the same uid, so the streak and progress
-                // survive the upgrade.
-                if (AuthService.isGuest)
-                  _buildItem(CupertinoIcons.person_badge_plus_fill,
-                      'Create an account', AppColors.green, theme,
-                      subtitle: 'Save your streak and progress',
-                      onTap: _upgradeGuest),
-                if (!AuthService.isGuest)
-                  _buildItem(CupertinoIcons.person_fill, 'Edit profile',
+                // ── Account ───────────────────────────────────────────────────
+                _buildSection('Account', theme, [
+                  // Guest mode shipped with no way out of it: `isGuest` existed
+                  // but nothing in the UI read it, so a guest who studied for a
+                  // week could never turn that into a real account, and losing
+                  // the device lost the lot. Signing up from here links the
+                  // credential to the same uid, so the streak and progress
+                  // survive the upgrade.
+                  if (AuthService.isGuest)
+                    _buildItem(CupertinoIcons.person_badge_plus_fill,
+                        'Create an account', AppColors.green, theme,
+                        subtitle: 'Save your streak and progress',
+                        onTap: _upgradeGuest),
+                  if (!AuthService.isGuest)
+                    _buildItem(CupertinoIcons.person_fill, 'Edit profile',
+                        AppColors.primary, theme,
+                        onTap: _showEditProfile),
+                  _buildItem(CupertinoIcons.bell_fill, 'Notifications',
                       AppColors.primary, theme,
-                      onTap: _showEditProfile),
-                _buildItem(CupertinoIcons.bell_fill, 'Notifications',
-                    AppColors.primary, theme,
-                    onTap: _showNotificationsSheet,
-                    trailing: _loadingNotifPref
-                        ? null
-                        : _notificationsEnabled
-                            ? _badge('On', AppColors.green)
-                            : _badge('Off', theme.subtext)),
-                // Only for accounts that actually have a password. A guest
-                // has no email at all, and a Google/Apple account has no
-                // password credential to re-authenticate against — this row
-                // could not work for either, and crashed for the first.
-                if (AuthService.hasPasswordProvider)
-                  _buildItem(CupertinoIcons.lock_fill, 'Change password',
+                      onTap: _showNotificationsSheet,
+                      trailing: _loadingNotifPref
+                          ? null
+                          : _notificationsEnabled
+                              ? _badge('On', AppColors.green)
+                              : _badge('Off', theme.subtext)),
+                  // Only for accounts that actually have a password. A guest
+                  // has no email at all, and a Google/Apple account has no
+                  // password credential to re-authenticate against — this row
+                  // could not work for either, and crashed for the first.
+                  if (AuthService.hasPasswordProvider)
+                    _buildItem(CupertinoIcons.lock_fill, 'Change password',
+                        AppColors.primary, theme,
+                        onTap: _showChangePasswordSheet),
+                  _buildThemeToggle(theme),
+                ]),
+
+                // ── Learning ──────────────────────────────────────────────────
+                _buildSection('Learning', theme, [
+                  _buildItem(CupertinoIcons.graph_square_fill, 'My stats',
+                      AppColors.green, theme,
+                      onTap: _showMyStats),
+                  _buildItem(
+                      CupertinoIcons.rosette, 'Badges', AppColors.green, theme,
+                      onTap: () => Navigator.push(
+                          context, AppRouter.push(const BadgesScreen()))),
+                  // A certificate used to exist only in the seconds after the
+                  // final quiz. Backing out of that screen lost it for good.
+                  _buildItem(CupertinoIcons.doc_text_fill, 'My certificates',
+                      AppColors.green, theme,
+                      subtitle: 'Every course you have completed',
+                      onTap: () => Navigator.push(
+                          context, AppRouter.push(const CertificatesScreen()))),
+                  _buildItem(CupertinoIcons.arrow_down_circle_fill,
+                      'Download for offline', AppColors.green, theme,
+                      onTap: () => Navigator.push(context,
+                          AppRouter.push(const OfflineDownloadsScreen())),
+                      isLast: true),
+                ]),
+
+                // ── Support ───────────────────────────────────────────────────
+                _buildSection('Support', theme, [
+                  _buildItem(CupertinoIcons.question_circle_fill, 'Help center',
+                      AppColors.amber, theme,
+                      onTap: _openHelpCenter),
+                  _buildItem(CupertinoIcons.chat_bubble_text_fill,
+                      'Send feedback', AppColors.amber, theme,
+                      onTap: _showFeedbackSheet),
+                  _buildItem(CupertinoIcons.info_circle_fill, 'About B1nary',
+                      AppColors.amber, theme,
+                      onTap: _showAboutSheet, isLast: true),
+                ]),
+
+                // ── Legal & Purchases ─────────────────────────────────────────
+                _buildSection('Legal & Purchases', theme, [
+                  _buildItem(CupertinoIcons.rocket_fill, 'Plans & Pricing',
                       AppColors.primary, theme,
-                      onTap: _showChangePasswordSheet),
-                _buildThemeToggle(theme),
-              ]),
-
-              // ── Learning ──────────────────────────────────────────────────
-              _buildSection('Learning', theme, [
-                _buildItem(CupertinoIcons.graph_square_fill, 'My stats',
-                    AppColors.green, theme,
-                    onTap: _showMyStats),
-                _buildItem(CupertinoIcons.rosette, 'Badges',
-                    AppColors.green, theme,
-                    onTap: () => Navigator.push(
-                        context, AppRouter.push(const BadgesScreen()))),
-                // A certificate used to exist only in the seconds after the
-                // final quiz. Backing out of that screen lost it for good.
-                _buildItem(CupertinoIcons.doc_text_fill, 'My certificates',
-                    AppColors.green, theme,
-                    subtitle: 'Every course you have completed',
-                    onTap: () => Navigator.push(context,
-                        AppRouter.push(const CertificatesScreen()))),
-                _buildItem(
-                    CupertinoIcons.arrow_down_circle_fill,
-                    'Download for offline',
-                    AppColors.green,
-                    theme,
-                    onTap: () => Navigator.push(context,
-                        AppRouter.push(const OfflineDownloadsScreen())),
-                    isLast: true),
-              ]),
-
-              // ── Support ───────────────────────────────────────────────────
-              _buildSection('Support', theme, [
-                _buildItem(CupertinoIcons.question_circle_fill, 'Help center',
-                    AppColors.amber, theme,
-                    onTap: _openHelpCenter),
-                _buildItem(CupertinoIcons.chat_bubble_text_fill,
-                    'Send feedback', AppColors.amber, theme,
-                    onTap: _showFeedbackSheet),
-                _buildItem(CupertinoIcons.info_circle_fill, 'About B1nary',
-                    AppColors.amber, theme,
-                    onTap: _showAboutSheet, isLast: true),
-              ]),
-
-              // ── Legal & Purchases ─────────────────────────────────────────
-              _buildSection('Legal & Purchases', theme, [
-                _buildItem(
-                    CupertinoIcons.rocket_fill,
-                    'Plans & Pricing',
-                    AppColors.primary,
-                    theme,
-                    onTap: () => Navigator.push(
-                          context,
-                          CupertinoPageRoute(
-                            builder: (_) => const PaywallScreen(
-                              courseTitle: 'B1nary',
-                              courseColor: AppColors.primary,
-                              defaultToAllPlans: true,
+                      onTap: () => Navigator.push(
+                            context,
+                            CupertinoPageRoute(
+                              builder: (_) => const PaywallScreen(
+                                courseTitle: 'B1nary',
+                                courseColor: AppColors.primary,
+                                defaultToAllPlans: true,
+                              ),
+                              fullscreenDialog: true,
                             ),
-                            fullscreenDialog: true,
-                          ),
-                        )),
-                _buildItem(CupertinoIcons.doc_text_fill,
-                    'Privacy Policy & Terms', const Color(0xFF8B5CF6), theme,
-                    onTap: () => Navigator.push(
-                        context, AppRouter.push(const LegalScreen()))),
-                // Restore Purchases — REQUIRED by Apple App Review (3.1.1)
-                _buildRestorePurchasesItem(theme),
-              ]),
+                          )),
+                  _buildItem(CupertinoIcons.doc_text_fill,
+                      'Privacy Policy & Terms', const Color(0xFF8B5CF6), theme,
+                      onTap: () => Navigator.push(
+                          context, AppRouter.push(const LegalScreen()))),
+                  // Restore Purchases — REQUIRED by Apple App Review (3.1.1)
+                  _buildRestorePurchasesItem(theme),
+                ]),
 
-              // ── Sign out ──────────────────────────────────────────────────
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-                  child: GestureDetector(
-                    onTap: _signOut,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: AppColors.red.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                            color: AppColors.red.withValues(alpha: 0.2)),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(CupertinoIcons.square_arrow_left,
-                              color: AppColors.red, size: 18),
-                          SizedBox(width: 8),
-                          Text('Sign out',
-                              style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.red,
-                                  letterSpacing: -0.2)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              // ── Delete account ────────────────────────────────────────────
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 48),
-                  child: GestureDetector(
-                    onTap: () => Navigator.push(context,
-                        AppRouter.push(const DeleteAccountScreen())),
-                    child: Center(
-                      child: Text(
-                        'Delete account',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: theme.subtext.withValues(alpha: 0.6),
-                          decoration: TextDecoration.underline,
-                          decorationColor:
-                              theme.subtext.withValues(alpha: 0.4),
+                // ── Sign out ──────────────────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+                    child: GestureDetector(
+                      onTap: _signOut,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: AppColors.red.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                              color: AppColors.red.withValues(alpha: 0.2)),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(CupertinoIcons.square_arrow_left,
+                                color: AppColors.red, size: 18),
+                            SizedBox(width: 8),
+                            Text('Sign out',
+                                style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.red,
+                                    letterSpacing: -0.2)),
+                          ],
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
+
+                // ── Delete account ────────────────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 48),
+                    child: GestureDetector(
+                      onTap: () => Navigator.push(
+                          context, AppRouter.push(const DeleteAccountScreen())),
+                      child: Center(
+                        child: Text(
+                          'Delete account',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: theme.subtext.withValues(alpha: 0.6),
+                            decoration: TextDecoration.underline,
+                            decorationColor:
+                                theme.subtext.withValues(alpha: 0.4),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1235,8 +1226,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ),
                     if (i < stats.length - 1)
-                      Container(
-                          width: 0.5, height: 30, color: theme.border),
+                      Container(width: 0.5, height: 30, color: theme.border),
                   ],
                 ),
               );
@@ -1247,8 +1237,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildSection(
-      String title, ThemeNotifier theme, List<Widget> items) {
+  Widget _buildSection(String title, ThemeNotifier theme, List<Widget> items) {
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
@@ -1359,9 +1348,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          border: isLast
-              ? null
-              : Border(bottom: BorderSide(color: theme.border)),
+          border:
+              isLast ? null : Border(bottom: BorderSide(color: theme.border)),
         ),
         child: Row(
           children: [
@@ -1392,8 +1380,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
             ),
             if (trailing != null) ...[trailing, const SizedBox(width: 8)],
-            Icon(CupertinoIcons.chevron_right,
-                size: 13, color: theme.subtext),
+            Icon(CupertinoIcons.chevron_right, size: 13, color: theme.subtext),
           ],
         ),
       ),

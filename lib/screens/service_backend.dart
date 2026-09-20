@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'user_streams.dart';
 
 /// The single seam between the static services and Firebase.
 ///
@@ -18,12 +19,27 @@ class ServiceBackend {
 
   static FirebaseFirestore? _dbOverride;
   static String? Function()? _uidOverride;
+  static final userStreams = UserStreams();
 
   static FirebaseFirestore get db => _dbOverride ?? FirebaseFirestore.instance;
 
   static String? get uid => _uidOverride != null
       ? _uidOverride!()
       : FirebaseAuth.instance.currentUser?.uid;
+
+  static Stream<DocumentSnapshot<Map<String, dynamic>>> watchUser() {
+    final userId = uid;
+    if (userId == null) return const Stream.empty();
+    return userStreams.bind(db.collection('users').doc(userId).snapshots());
+  }
+
+  static Stream<QuerySnapshot<Map<String, dynamic>>> watchProgress() {
+    final userId = uid;
+    if (userId == null) return const Stream.empty();
+    return userStreams.bind(
+      db.collection('users').doc(userId).collection('progress').snapshots(),
+    );
+  }
 
   @visibleForTesting
   static void useFake(FirebaseFirestore firestore, {String? uid}) {

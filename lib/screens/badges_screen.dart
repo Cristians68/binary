@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'app_theme.dart';
 import 'streak_logic.dart';
+import 'service_backend.dart';
 
 class BadgesScreen extends StatelessWidget {
   const BadgesScreen({super.key});
@@ -79,7 +79,7 @@ class BadgesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = ServiceBackend.uid;
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -97,10 +97,7 @@ class BadgesScreen extends StatelessWidget {
                       ),
                     )
                   : StreamBuilder<DocumentSnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(uid)
-                          .snapshots(),
+                      stream: ServiceBackend.watchUser(),
                       builder: (context, snap) {
                         final data =
                             snap.data?.data() as Map<String, dynamic>? ?? {};
@@ -175,10 +172,7 @@ class BadgesScreen extends StatelessWidget {
           const Spacer(),
           // Earned count badge
           StreamBuilder<DocumentSnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('users')
-                .doc(FirebaseAuth.instance.currentUser?.uid ?? '')
-                .snapshots(),
+            stream: ServiceBackend.watchUser(),
             builder: (context, snap) {
               final data =
                   snap.data?.data() as Map<String, dynamic>? ?? {};

@@ -17,7 +17,17 @@ import 'screens/notification_service.dart';
 import 'screens/main_navigation.dart';
 import 'security_service.dart';
 
-void main() async {
+void main() {
+  // Last-resort handling for uncaught Dart/plugin futures. The binding and
+  // runApp must share this zone. Account listeners are cancelled separately
+  // before sign-out; a Dart zone cannot catch a native iOS process crash.
+  runZonedGuarded(_bootstrap, (error, stack) {
+    debugPrint('Uncaught async error: $error');
+    debugPrint('$stack');
+  });
+}
+
+Future<void> _bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inter ships in the bundle (see pubspec `google_fonts/`), so no launch

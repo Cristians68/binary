@@ -194,13 +194,7 @@ class StreakService {
 
   // ── Real-time stream — used by HomeScreen StreamBuilder ───────────────────
   static Stream<Map<String, dynamic>> statsStream() {
-    final uid = _uid;
-    if (uid == null) return const Stream.empty();
-    return _db
-        .collection('users')
-        .doc(uid)
-        .snapshots()
-        .map((snap) => snap.data() ?? {});
+    return ServiceBackend.watchUser().map((snap) => snap.data() ?? {});
   }
 
   // ── One-shot fetch ────────────────────────────────────────────────────────

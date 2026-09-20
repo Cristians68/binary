@@ -388,7 +388,7 @@ class SubscriptionService {
     if (kIsWeb) return Stream.value(SubscriptionPlan.none);
     final uid = _uid;
     if (uid == null) return const Stream.empty();
-    return _db.collection('users').doc(uid).snapshots().map((snap) {
+    return ServiceBackend.watchUser().map((snap) {
       final data = snap.data() ?? {};
       switch (data['subscriptionPlan'] as String? ?? 'none') {
         case 'all':

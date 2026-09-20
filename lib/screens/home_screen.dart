@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'auth_service.dart';
-import 'welcome_screen.dart';
 import 'course_detail_screen.dart';
 import 'app_router.dart';
 import 'badges_screen.dart';
@@ -21,6 +20,7 @@ import 'app_theme.dart';
 import 'learning_widgets.dart';
 import 'courses_screen.dart';
 import 'service_backend.dart';
+import 'sign_out.dart';
 import '../course_catalog.dart';
 
 // Safely cast a Firestore value to Map<String, dynamic>.
@@ -81,15 +81,13 @@ class _HomeScreenState extends State<HomeScreen> {
     _initStreak();
     _loadCatalogue();
     _loadReviewQueue();
-    _statsSub = StreakService.statsStream().listen(_onStatsUpdate);
+    _statsSub = StreakService.statsStream().listen(
+      _onStatsUpdate,
+      onError: (Object error) => debugPrint('Home stats: $error'),
+    );
     final uid = ServiceBackend.uid;
     if (uid != null) {
-      _progressSub = ServiceBackend.db
-          .collection('users')
-          .doc(uid)
-          .collection('progress')
-          .snapshots()
-          .listen((snapshot) {
+      _progressSub = ServiceBackend.watchProgress().listen((snapshot) {
         if (!mounted) return;
         setState(() => _courseProgress = {
               for (final doc in snapshot.docs)
@@ -275,14 +273,7 @@ class _HomeScreenState extends State<HomeScreen> {
             GestureDetector(
               onTap: () async {
                 Navigator.pop(sheetContext);
-                await AuthService.signOut();
-                if (mounted) {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    AppRouter.fade(const WelcomeScreen()),
-                    (r) => false,
-                  );
-                }
+                await signOutToWelcome(context);
               },
               child: Container(
                 width: double.infinity,

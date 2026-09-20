@@ -10,21 +10,29 @@ import 'auth_result.dart';
 import 'subscription_service.dart';
 import 'user_document.dart';
 import 'native_apple_auth.dart';
+import 'native_google_auth.dart';
+import 'service_backend.dart';
 
 class AuthService {
   static final _auth = FirebaseAuth.instance;
 
-  static final _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+  static final _googleSignIn = NativeGoogleAuth();
 
   /// See [isCancellationCode] in auth_result.dart for why this matters to the
   /// fallback chains below.
   static bool _isCancellation(String? code) => isCancellationCode(code);
 
   static Future<void> signOut() async {
-    try {
-      await _googleSignIn.signOut();
-    } catch (_) {}
-    await _auth.signOut();
+    await ServiceBackend.userStreams.transition(() async {
+      if (!kIsWeb) {
+        try {
+          await _googleSignIn.signOut();
+        } catch (e) {
+          debugPrint('Google sign-out cleanup failed: $e');
+        }
+      }
+      await _auth.signOut();
+    });
   }
 
   static Future<AuthResult> signInWithGoogle() async {
@@ -60,46 +68,14 @@ class AuthService {
     // iOS and Android. The generic provider redirect added another sheet and
     // depended on different OAuth configuration.
     try {
-      // signOut, NOT disconnect.
-      //
-      // disconnect() REVOKES the OAuth grant, and it throws when nobody is
-      // signed in — which was swallowed here. The plugin then kept its cached
-      // account and signIn() completed silently against it, so there was no
-      // way to pick a different Google account: the chooser never appeared.
-      // signOut() clears the cached selection without revoking, which is
-      // exactly what makes the next signIn() present the account list.
-      try {
-        await _googleSignIn.signOut();
-      } catch (e) {
-        debugPrint('Google signOut before sign-in failed (ignored): $e');
-      }
-
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        debugPrint('Google Sign-In: cancelled by user');
-        return const AuthResult.cancelled();
-      }
-      debugPrint('Google Sign-In: got user ${googleUser.email}');
-
-      final googleAuth = await googleUser.authentication;
-      final accessToken = googleAuth.accessToken;
-      final idToken = googleAuth.idToken;
-
-      if (idToken == null) {
-        debugPrint('Google Sign-In: idToken is null — aborting');
-        return const AuthResult.failed(code: 'missing-id-token');
-      }
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: accessToken,
-        idToken: idToken,
-      );
-
+      final credential = await _googleSignIn.credential();
       final userCredential = await _signInOrLink(credential);
       debugPrint(
           'Google Sign-In: Firebase success uid=${userCredential.user?.uid}');
       await _onSignInSuccess();
       return const AuthResult.success();
+    } on GoogleSignInException catch (e) {
+      return googleAuthFailure(e);
     } on PlatformException catch (e) {
       if (_isCancellation(e.code)) return const AuthResult.cancelled();
       debugPrint('Google Sign-In PlatformException: ${e.code} - ${e.message}');
@@ -112,6 +88,33 @@ class AuthService {
     } catch (e, stack) {
       debugPrint('Google Sign-In ERROR: $e');
       debugPrint('Stack: $stack');
+      return AuthResult.failed(message: e.toString());
+    }
+  }
+
+  static Future<AuthResult> reauthenticateWithGoogle() async {
+    final user = _auth.currentUser;
+    if (user == null) return const AuthResult.failed(code: 'no-current-user');
+    try {
+      if (kIsWeb) {
+        await user.reauthenticateWithPopup(
+          GoogleAuthProvider()
+            ..setCustomParameters({'prompt': 'select_account'}),
+        );
+      } else {
+        await user
+            .reauthenticateWithCredential(await _googleSignIn.credential());
+      }
+      return const AuthResult.success();
+    } on GoogleSignInException catch (e) {
+      return googleAuthFailure(e);
+    } on FirebaseAuthException catch (e) {
+      if (_isCancellation(e.code)) return const AuthResult.cancelled();
+      return AuthResult.failed(code: e.code, message: e.message);
+    } on PlatformException catch (e) {
+      if (_isCancellation(e.code)) return const AuthResult.cancelled();
+      return AuthResult.failed(code: e.code, message: e.message);
+    } catch (e) {
       return AuthResult.failed(message: e.toString());
     }
   }
@@ -178,9 +181,12 @@ class AuthService {
             'existing account instead');
       }
     }
-    return kIsWeb
+    Future<UserCredential> signIn() => kIsWeb
         ? _auth.signInWithPopup(provider)
         : _auth.signInWithProvider(provider);
+    return current == null
+        ? signIn()
+        : ServiceBackend.userStreams.transition(signIn);
   }
 
   /// Sign in with an OAuth credential, upgrading a guest session in place.
@@ -205,7 +211,10 @@ class AuthService {
             'existing account instead');
       }
     }
-    return _auth.signInWithCredential(credential);
+    return current == null
+        ? _auth.signInWithCredential(credential)
+        : ServiceBackend.userStreams
+            .transition(() => _auth.signInWithCredential(credential));
   }
 
   // ── Continue as a guest ───────────────────────────────────────────────────

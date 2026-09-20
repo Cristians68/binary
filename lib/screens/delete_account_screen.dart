@@ -3,7 +3,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'account_deletion.dart';
 import 'app_theme.dart';
 import 'app_router.dart';
@@ -80,22 +79,17 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
       switch (_reauth) {
         case DeletionReauth.google:
           {
-            // Use GoogleSignIn directly — works on all Firebase SDK versions
-            final googleSignIn = GoogleSignIn();
-            final googleUser = await googleSignIn.signIn();
-            if (googleUser == null) {
+            final google = await AuthService.reauthenticateWithGoogle();
+            if (!mounted) return;
+            if (!google.isSuccess) {
               setState(() {
-                _error = 'Google sign-in was cancelled.';
+                _error = google.isCancelled
+                    ? 'Google sign-in was cancelled.'
+                    : google.displayMessage('Google');
                 _loading = false;
               });
               return;
             }
-            final googleAuth = await googleUser.authentication;
-            final credential = GoogleAuthProvider.credential(
-              accessToken: googleAuth.accessToken,
-              idToken: googleAuth.idToken,
-            );
-            await user.reauthenticateWithCredential(credential);
           }
         case DeletionReauth.password:
           {
@@ -159,7 +153,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
 
       // The Auth record is gone server-side now; drop the local session too
       // so no stale cached user lingers on this device.
-      await FirebaseAuth.instance.signOut();
+      await AuthService.signOut();
 
       // The spaced-repetition queue lives in SharedPreferences, not Firestore,
       // so the server-side delete above does not touch it. Without this the

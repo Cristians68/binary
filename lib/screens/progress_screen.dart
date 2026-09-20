@@ -98,12 +98,7 @@ class _ProgressScreenState extends State<ProgressScreen>
           debugPrint('ProgressScreen stats stream error: $e'),
     );
 
-    _progressSub = ServiceBackend.db
-        .collection('users')
-        .doc(uid)
-        .collection('progress')
-        .snapshots()
-        .listen(
+    _progressSub = ServiceBackend.watchProgress().listen(
       (snap) {
         if (!mounted) return;
         setState(() {

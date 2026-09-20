@@ -43,7 +43,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
         _enrolledIds = StreakService.enrolledCourseIdsFrom(data);
         _hasFullAccess = data['subscriptionPlan'] == 'all';
       });
-    });
+    }, onError: (Object error) => debugPrint('Courses stats: $error'));
   }
 
   @override
