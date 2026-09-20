@@ -3,7 +3,7 @@
 IT certification study app — flashcard lessons, timed quizzes, streaks and
 badges — built in Flutter, shipping to iOS with a Firebase backend.
 
-Version `1.0.0+49`. Primary target is iOS; Android, web, macOS and Windows
+Version `1.0.0+52`. Primary target is iOS; Android, web, macOS and Windows
 targets exist and build, but only iOS and web are exercised.
 
 ---
@@ -27,6 +27,7 @@ admin/seed/                 One-shot Firestore content seed scripts
 docs/SECURITY.md            Security model and the mandatory deploy runbook
 docs/CONTENT.md             Content accuracy pass, seeding rules, validator
 docs/REVIEW.md              Spaced-repetition review feature
+docs/STUDY-FLOW.md          Content recovery, offline study, and quiz save behavior
 firestore.rules             Firestore authorization rules
 test/                       Flutter tests
 ```

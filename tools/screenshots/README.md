@@ -34,6 +34,44 @@ bounding box — the same tree a screen reader uses. Match labels EXACTLY where
 you can: a substring search for "Courses" hits the "MY COURSES" heading rather
 than the tab.
 
+## The design preview (`capture_ui.js`)
+
+`shoot.js` and `play.js` drive the **production** app and need a real sign-in.
+`capture_ui.js` does not: it renders `ui_preview.dart`, a fixture entrypoint
+backed by `FakeFirebaseFirestore` and a fictional learner, so it touches no
+account and writes nothing to production. Use it to review the UI.
+
+```
+flutter build web --no-pub --debug -t tools/screenshots/ui_preview.dart --output build/ui_preview
+node tools/screenshots/capture_ui.js            # all ten fixtures
+node tools/screenshots/capture_ui.js 08-quiz    # just one
+```
+
+Screenshots and the semantics-label dump for each land in
+`.dart_tool/ui-review/`.
+
+**`--debug` is not optional.** `fake_cloud_firestore` refuses to install its
+platform mocks in a release build, and `ui_preview.dart` says so at the top.
+
+**It is a gate, not just a camera.** The run collects `EXCEPTION CAUGHT` and
+`overflowed by` messages out of the browser console and exits non-zero at the
+end, so a layout overflow or a thrown build fails the run even though the
+screenshot still got written. Two real defects it caught on 2026-09-19:
+
+- `Random().nextInt(1 << 32)` for the quiz attempt id. `1 << 32` is 4294967296
+  on the VM and **0** on the web, because dart2js truncates any shift above 31
+  (`js_number.dart::_shlPositive`). `nextInt(0)` throws, and it was in a field
+  initialiser, so every quiz on web died before painting. `flutter test` cannot
+  reproduce this — the VM computes the bound correctly.
+- `AnimatedSize` inside `LearningHero`. The hero's Stack measures itself
+  against that subtree, so the AnimatedSize is never a relayout boundary and
+  re-dirtied itself inside its own `performLayout`.
+
+Both were invisible to the analyzer and to all 494 tests.
+
+**Regenerate the fixture** with `node tools/screenshots/export_content.js`.
+It strips quiz answers; check what it kept before committing it.
+
 ## Reading the backend
 
 `probe.js` takes the uid and ID token out of IndexedDB
