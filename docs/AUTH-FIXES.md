@@ -1,5 +1,9 @@
 # Authentication fixes — 1.0.1
 
+Follow-up: the [2026-09-20 iOS crash audit](IOS-GOOGLE-SIGNIN-AUDIT.md) found
+that this fix had not been pushed at the time of the audit and identified an
+additional Firebase callback configuration crash on remote `master`.
+
 ## iOS Google sign-in
 
 The previous lockfile used `google_sign_in_ios` 5.9.0. Its native code looked
