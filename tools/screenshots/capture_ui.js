@@ -41,12 +41,33 @@ async function tap(page, label) {
     });
     const page = await browser.newPage();
     const errors = [];
+    const engineFontFetches = new Set();
     page.on('pageerror', error => { errors.push(error.message); console.error('[pageerror]', error.message); });
     page.on('console', message => {
       const value = message.text();
       if (/exception|overflowed|error|failed/i.test(value)) {
         console.log('[browser]', value);
         if (/EXCEPTION CAUGHT|overflowed by/.test(value)) errors.push(value);
+      }
+    });
+    // A bundled font is a claim about the network, so check the network.
+    // google_fonts silently falls back to fonts.gstatic.com for any weight it
+    // cannot find locally, and that fallback is invisible on screen: the text
+    // still renders, just after a round trip that leaks the user's IP.
+    //
+    // Only Inter fails the run. Roboto and the Noto emoji faces are fetched
+    // from the same host here, but those are the Flutter web engine's own
+    // glyph fallbacks rather than google_fonts, nothing in this repository
+    // can stop them, and they do not exist on iOS — which is what ships.
+    // Failing on those would hold the gate permanently red for a condition
+    // the product does not have, so they are printed instead.
+    page.on('request', request => {
+      const url = request.url();
+      if (!/fonts\.(gstatic|googleapis)\.com/.test(url)) return;
+      if (/[/]inter[/]/i.test(url)) {
+        errors.push('Inter fetched at runtime instead of bundled: ' + url);
+      } else {
+        engineFontFetches.add(new URL(url).pathname.split('/')[2] || url);
       }
     });
     page.on('requestfailed', request => console.error('[request]', request.url(), request.failure()?.errorText));
@@ -79,6 +100,10 @@ async function tap(page, label) {
         .map(n => n.getAttribute('aria-label') || n.textContent).filter(Boolean));
       fs.writeFileSync(path.join(out, fixture.name + '.json'), JSON.stringify(labels, null, 2));
       console.log('Captured ' + fixture.name);
+    }
+    if (engineFontFetches.size) {
+      console.log('[web-only engine fallback fonts, not shipped on iOS] ' +
+        [...engineFontFetches].join(', '));
     }
     if (errors.length) throw new Error(errors.join('\n'));
     console.log('Preview screenshots: ' + out);

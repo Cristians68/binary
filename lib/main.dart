@@ -19,6 +19,19 @@ import 'security_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inter ships in the bundle (see pubspec `google_fonts/`), so no launch
+  // should ever fetch a font. Left at its default, google_fonts downloads any
+  // weight it cannot find locally from fonts.gstatic.com on first launch,
+  // which hands the user's IP address to a third party before they have
+  // agreed to anything, and leaves the app rendering fallback type until the
+  // request returns. Turning fetching off makes a missing weight a loud,
+  // local failure instead of a quiet network call.
+  GoogleFonts.config.allowRuntimeFetching = false;
+
+  // Keep the user's email and uid out of the release device log.
+  debugPrint = debugPrintFor(kReleaseMode);
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // RevenueCat must be configured before any purchase / entitlement check.
@@ -66,6 +79,23 @@ void main() async {
 /// signs out and back in, or switches accounts on their own phone, has already
 /// seen it.
 const String kOnboardingCompleteKey = 'onboardingComplete';
+
+/// The `debugPrint` implementation to install for a given build mode.
+///
+/// Flutter does NOT strip `debugPrint` from a release build — the name only
+/// describes where it is meant to be used, not where it runs. This app makes
+/// around a hundred such calls, and they are not harmless: several name the
+/// signed-in user, including `Google Sign-In: got user <email>` and
+/// `uid=<uid>`. On a release iOS build those reach the device log, where
+/// anything with the device attached, or any sysdiagnose the user is asked to
+/// send to some other vendor's support desk, can read them.
+///
+/// Returns a no-op in release and the normal throttled printer otherwise.
+/// This is a function rather than an `if` in `main()` so the choice can be
+/// asserted in a test — `kReleaseMode` is false under `flutter test`, so the
+/// release branch is unreachable there and would otherwise never be checked.
+DebugPrintCallback debugPrintFor(bool releaseMode) =>
+    releaseMode ? (String? message, {int? wrapWidth}) {} : debugPrintThrottled;
 
 class BinaryApp extends StatefulWidget {
   final bool initialIsDark;

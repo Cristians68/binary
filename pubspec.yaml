@@ -42,3 +42,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icons/
+    # Inter, bundled so google_fonts never reaches fonts.gstatic.com.
+    # See lib/main.dart: allowRuntimeFetching is false, which turns a
+    # missing weight into a visible failure rather than a silent download.
+    - google_fonts/

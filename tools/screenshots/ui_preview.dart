@@ -23,6 +23,10 @@ import 'fixture_content.dart';
 
 Future<void> main() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
+  // Match main.dart: the preview must fail the same way production would
+  // if a weight is missing from the bundle, not quietly download it and
+  // render a screenshot that production could never produce.
+  GoogleFonts.config.allowRuntimeFetching = false;
   binding.ensureSemantics();
   SharedPreferences.setMockInitialValues({});
   final db = FakeFirebaseFirestore();
