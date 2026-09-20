@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'notification_service.dart';
+import 'quiz_logic.dart';
 import 'service_backend.dart';
 import 'streak_service.dart';
 
@@ -8,7 +9,8 @@ class ProgressService {
   static FirebaseFirestore get _db => ServiceBackend.db;
   static String? get _uid => ServiceBackend.uid;
 
-  // ── Call when a user passes a quiz (score >= 60%) ─────────────────────────
+  /// Commit a quiz pass atomically. A save retry with the same attempt ID is a
+  /// no-op; repeating a module never counts it as a second completed lesson.
   static Future<void> completeModule({
     required String courseId,
     required String moduleId,
@@ -16,139 +18,150 @@ class ProgressService {
     required String courseTag,
     required int score,
     required int total,
+    String? attemptId,
+    String? expectedUserId,
   }) async {
     final uid = _uid;
-    if (uid == null) return;
-
-    final userRef = _db.collection('users').doc(uid);
-
-    // ✅ User-specific progress paths — never touch shared courses/ collection
-    final userProgressRef = userRef.collection('progress').doc(courseId);
-    final userModuleRef = userProgressRef.collection('modules').doc(moduleId);
-
-    // 1. Mark this module as done for THIS user
-    await userModuleRef.set({
-      'status': 'done',
-      'completedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-
-    // 2. Count total modules from the shared courses collection (read-only)
-    final courseRef = _db.collection('courses').doc(courseId);
-    final modulesSnap = await courseRef.collection('modules').get();
-    final totalModules = modulesSnap.docs.length;
-
-    // 3. Count how many modules THIS user has completed
-    final userModulesSnap = await userProgressRef.collection('modules').get();
-    final doneModules = userModulesSnap.docs
-        .where((d) => (d.data()['status'] as String?) == 'done')
-        .length;
-
-    final progress =
-        totalModules > 0 ? doneModules / totalModules : 0.0;
-
-    // 4. Write per-user course progress
-    await userProgressRef.set({
-      'courseId': courseId,
-      'progress': progress,
-      'doneModules': doneModules,
-      'totalModules': totalModules,
-      'lastUpdated': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-
-    // 5. Unlock the next module FOR THIS USER.
-    //
-    // This used to write `status: 'active'` into the shared
-    // `courses/{id}/modules/{id}` document, which was wrong twice over.
-    //
-    // Globally: module status there is course-level metadata shared by every
-    // user, so one person finishing a module unlocked it for everybody.
-    //
-    // Practically: firestore.rules allows writes to that collection only for
-    // `isAdmin()`, and no admin documents exist, so the write always threw
-    // PERMISSION_DENIED. completeModule has no try/catch and its caller
-    // attaches no onError, so the exception was swallowed and *every step
-    // after it silently never ran* — the completed-lesson record, the quiz
-    // score, the course-completion check, and the streak and badge updates.
-    // Passing a quiz recorded nothing at all.
-    //
-    // `_moduleStatus` in course_detail_screen.dart already prefers the
-    // per-user status and only falls back to the shared one, so writing it
-    // under the user is both permitted and what the UI reads first.
-    final orderedModules = modulesSnap.docs
-      ..sort(
-        (a, b) => ((a.data()['order'] as int?) ?? 0)
-            .compareTo((b.data()['order'] as int?) ?? 0),
-      );
-    final currentIndex =
-        orderedModules.indexWhere((d) => d.id == moduleId);
-    if (currentIndex != -1 && currentIndex + 1 < orderedModules.length) {
-      final nextModule = orderedModules[currentIndex + 1];
-      final nextUserModule =
-          userProgressRef.collection('modules').doc(nextModule.id);
-      final alreadyDone =
-          (await nextUserModule.get()).data()?['status'] == 'done';
-      if (!alreadyDone) {
-        await nextUserModule.set(
-          {'status': 'active'},
-          SetOptions(merge: true),
-        );
+    if (uid == null || (expectedUserId != null && expectedUserId != uid)) {
+      throw StateError('Sign back in to the account that started this quiz');
+    }
+    if (!quizPassed(score, total) || score > total) {
+      throw ArgumentError('Only a valid passing quiz can complete a module');
+    }
+    final db = _db;
+    final modules = (await db
+            .collection('courses')
+            .doc(courseId)
+            .collection('modules')
+            .get())
+        .docs
+        .toList()
+      ..sort((a, b) => ((a.data()['order'] as num?) ?? 0)
+          .compareTo((b.data()['order'] as num?) ?? 0));
+    if (!modules.any((module) => module.id == moduleId)) {
+      throw StateError('This module is no longer part of the course');
+    }
+    final userRef = db.collection('users').doc(uid);
+    final progressRef = userRef.collection('progress').doc(courseId);
+    final moduleRef = progressRef.collection('modules').doc(moduleId);
+    final attemptRef = attemptId == null
+        ? null
+        : moduleRef.collection('attempts').doc(attemptId);
+    final result = await db
+        .runTransaction<({bool saved, bool courseCompleted})>((tx) async {
+      if (_uid != uid) throw StateError('Account changed while saving');
+      // Keep a receipt for each attempt. Remembering only the latest attempt
+      // lets a delayed retry count again after a newer retake has been saved.
+      if (attemptRef != null && (await tx.get(attemptRef)).exists) {
+        return (saved: false, courseCompleted: false);
       }
-    }
-
-    // 6. Record completed lesson and quiz score in user doc.
-    // serverTimestamp() inside arrayUnion is not supported by Firestore —
-    // use Timestamp.now() for array entries (client time is acceptable here
-    // since these are display timestamps, not security-critical audit fields).
-    final now = Timestamp.now();
-
-    await userRef.set({
-      'completedLessons': FieldValue.arrayUnion([
-        {
-          'courseId': courseId,
-          'courseTag': courseTag,
-          'moduleId': moduleId,
-          'moduleTitle': moduleTitle,
-          'score': score,
-          'total': total,
-          'percent': total > 0 ? ((score / total) * 100).toInt() : 0,
-          'completedAt': now,
-        },
-      ]),
-      'lessonsCompleted': FieldValue.increment(1),
-    }, SetOptions(merge: true));
-
-    await userRef.set({
-      'quizScores': FieldValue.arrayUnion([
-        {
-          'courseId': courseId,
-          'moduleId': moduleId,
-          'quizTitle': moduleTitle,
-          'course': courseTag,
-          'score': total > 0 ? ((score / total) * 100).toInt() : 0,
-          'takenAt': now,
-        },
-      ]),
-    }, SetOptions(merge: true));
-
-    // 7. Check if entire course is now complete for this user
-    if (doneModules == totalModules && totalModules > 0) {
-      await _markCourseComplete(
-        uid: uid,
-        courseId: courseId,
-        courseTag: courseTag,
-        userRef: userRef,
-        userProgressRef: userProgressRef,
-      );
-    }
-
-    // 8. Streak, points and badges all belong to StreakService.
-    //
-    // This used to call a private _updateStreak() that reimplemented the
-    // same day-diff against the same fields. Two writers agreeing by
-    // coincidence is not agreement, and only one of them had the
-    // server-clock and DST fixes.
+      final user = (await tx.get(userRef)).data() ?? {};
+      final previousProgress = (await tx.get(progressRef)).data() ?? {};
+      final states = <String, Map<String, dynamic>>{};
+      for (final module in modules) {
+        states[module.id] =
+            (await tx.get(progressRef.collection('modules').doc(module.id)))
+                    .data() ??
+                {};
+      }
+      if (_uid != uid) throw StateError('Account changed while saving');
+      final previous = states[moduleId]!;
+      if (attemptId != null && previous['lastAttemptId'] == attemptId) {
+        return (saved: false, courseCompleted: false);
+      }
+      final done = states.entries
+          .where((entry) => entry.value['status'] == 'done')
+          .map((entry) => entry.key)
+          .toSet()
+        ..add(moduleId);
+      final complete = done.length == modules.length;
+      final newlyComplete = complete && previousProgress['completed'] != true;
+      final percent = quizScorePercent(score, total);
+      final now = Timestamp.now();
+      final lessons = <String, Map<String, dynamic>>{};
+      for (final entry
+          in (user['completedLessons'] as List? ?? []).whereType<Map>()) {
+        final lesson = Map<String, dynamic>.from(entry);
+        lessons['${lesson['courseId']}|${lesson['moduleId']}'] = lesson;
+      }
+      lessons['$courseId|$moduleId'] = {
+        'courseId': courseId,
+        'courseTag': courseTag,
+        'moduleId': moduleId,
+        'moduleTitle': moduleTitle,
+        'score': score,
+        'total': total,
+        'percent': percent,
+        'completedAt': now,
+      };
+      final scores = List<dynamic>.from(user['quizScores'] as List? ?? []);
+      scores.add({
+        'courseId': courseId,
+        'moduleId': moduleId,
+        'quizTitle': moduleTitle,
+        'course': courseTag,
+        'score': percent,
+        'takenAt': now,
+        if (attemptId != null) 'attemptId': attemptId,
+      });
+      tx.set(
+          moduleRef,
+          {
+            'status': 'done',
+            'completedAt': previous['completedAt'] ?? now,
+            'bestScorePercent':
+                percent > ((previous['bestScorePercent'] as num?) ?? 0)
+                    ? percent
+                    : previous['bestScorePercent'],
+            if (attemptId != null) 'lastAttemptId': attemptId,
+          },
+          SetOptions(merge: true));
+      final index = modules.indexWhere((m) => m.id == moduleId);
+      if (index + 1 < modules.length) {
+        final nextId = modules[index + 1].id;
+        if (!done.contains(nextId)) {
+          tx.set(progressRef.collection('modules').doc(nextId),
+              {'status': 'active'}, SetOptions(merge: true));
+        }
+      }
+      tx.set(
+          progressRef,
+          {
+            ...previousProgress,
+            'courseId': courseId,
+            'progress': done.length / modules.length,
+            'doneModules': done.length,
+            'totalModules': modules.length,
+            'lastUpdated': FieldValue.serverTimestamp(),
+            if (complete) 'completed': true,
+            if (newlyComplete) 'completedAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true));
+      tx.set(
+          userRef,
+          {
+            'completedLessons': lessons.values.toList(),
+            'lessonsCompleted': lessons.length,
+            'quizScores': scores.length > 100
+                ? scores.sublist(scores.length - 100)
+                : scores,
+            if (complete) 'completedCourses': FieldValue.arrayUnion([courseId]),
+          },
+          SetOptions(merge: true));
+      if (attemptRef != null) {
+        tx.set(attemptRef, {'savedAt': FieldValue.serverTimestamp()});
+      }
+      return (saved: true, courseCompleted: newlyComplete);
+    });
+    // Optional rewards must never turn a successful save into a failed quiz.
+    if (!result.saved || _uid != uid) return;
     await StreakService.recordLogin();
+    if (_uid != uid) return;
     await StreakService.recordQuizPass(score: score, total: total);
+    if (result.courseCompleted && _uid == uid) {
+      await StreakService.recordCourseComplete();
+      await NotificationService.showCourseCompleteNotification(courseTag);
+    }
   }
 
   // ── Check if a course is fully complete for this user ─────────────────────
@@ -157,16 +170,14 @@ class ProgressService {
     if (uid == null) return false;
     try {
       // Check user-specific progress
-      final userProgressRef = _db
-          .collection('users')
-          .doc(uid)
-          .collection('progress')
-          .doc(courseId);
+      final userProgressRef =
+          _db.collection('users').doc(uid).collection('progress').doc(courseId);
       final snap = await userProgressRef.get();
       final data = snap.data() ?? {};
       return data['progress'] == 1.0 ||
           (data['doneModules'] != null &&
-              data['totalModules'] != null &&
+              data['totalModules'] is num &&
+              (data['totalModules'] as num) > 0 &&
               data['doneModules'] == data['totalModules']);
     } catch (_) {
       return false;
@@ -195,11 +206,8 @@ class ProgressService {
     final uid = _uid;
     if (uid == null) return {};
     try {
-      final snap = await _db
-          .collection('users')
-          .doc(uid)
-          .collection('progress')
-          .get();
+      final snap =
+          await _db.collection('users').doc(uid).collection('progress').get();
       return Map.fromEntries(
         snap.docs.map((d) => MapEntry(
               d.id,
@@ -210,36 +218,4 @@ class ProgressService {
       return {};
     }
   }
-
-  // ── Internal: mark course complete, award badge ───────────────────────────
-  static Future<void> _markCourseComplete({
-    required String uid,
-    required String courseId,
-    required String courseTag,
-    required DocumentReference userRef,
-    required DocumentReference userProgressRef,
-  }) async {
-    // Mark complete in user's progress sub-collection
-    await userProgressRef.set({
-      'completed': true,
-      'completedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-
-    // Record the completion itself. This array is the real data; the course
-    // badges are derived from its length.
-    //
-    // It used to also write `badges.complete_<courseId>` -- an id in neither
-    // badge list, so it incremented the "N / 9" counter on the badges and
-    // profile screens while lighting nothing up in the grid. Existing accounts
-    // keep credit because StreakService.completedCourseIds still reads the old
-    // keys; nothing writes new ones.
-    await safeUpdate(
-      userRef as DocumentReference<Map<String, dynamic>>,
-      {'completedCourses': FieldValue.arrayUnion([courseId])},
-    );
-
-    await StreakService.recordCourseComplete();
-    await NotificationService.showCourseCompleteNotification(courseTag);
-  }
-
 }

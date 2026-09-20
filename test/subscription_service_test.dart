@@ -126,7 +126,8 @@ void main() {
       expect(await SubscriptionService.canAccessCourse('net-pro'), isFalse);
     });
 
-    test('a self-granted plan value the server never writes is denied', () async {
+    test('a self-granted plan value the server never writes is denied',
+        () async {
       // Defence in depth. firestore.rules is what actually stops the client
       // writing this field; if a value ever did land, an unrecognised plan
       // string must not be treated as access.
@@ -159,7 +160,8 @@ void main() {
       // user hit a paywall on the very first tap.
       expect(SubscriptionService.isFreePreviewModule('module-1'), isTrue);
       expect(SubscriptionService.isFreePreviewModule('module-01'), isTrue);
-      expect(SubscriptionService.isFreePreviewModule('module-001'), isTrue);
+      expect(SubscriptionService.isFreePreviewModule('module-001'), isFalse,
+          reason: 'Firestore only permits module-1 and module-01 previews');
     });
 
     test('does not free any later module', () {
@@ -265,7 +267,8 @@ void main() {
       };
       expect(SubscriptionService.planGrantsAccess(data, 'csm'), isTrue);
       expect(SubscriptionService.planGrantsAccess(data, 'itil-v4'), isFalse,
-          reason: 'this is the bypass: one purchase must not unlock another course');
+          reason:
+              'this is the bypass: one purchase must not unlock another course');
     });
 
     test('a single purchase with no recorded course unlocks nothing', () {
@@ -278,8 +281,12 @@ void main() {
     test('a bundle unlocks only the four courses it names', () {
       final data = <String, dynamic>{
         'subscriptionPlan': 'bundle4',
-        'bundleCourseIds': ['csm', 'itil-v4', 'binary-cloud-fundamentals',
-                            'binary-network-professional'],
+        'bundleCourseIds': [
+          'csm',
+          'itil-v4',
+          'binary-cloud-fundamentals',
+          'binary-network-professional'
+        ],
       };
       expect(SubscriptionService.planGrantsAccess(data, 'itil-v4'), isTrue);
       expect(

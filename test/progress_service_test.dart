@@ -33,7 +33,8 @@ void main() {
 
   /// Seed a course with [count] modules, all locked except the first.
   Future<void> seedCourse({int count = 4}) async {
-    final modules = db.collection('courses').doc(courseId).collection('modules');
+    final modules =
+        db.collection('courses').doc(courseId).collection('modules');
     for (var i = 1; i <= count; i++) {
       await modules.doc('module-$i').set({
         'order': i,
@@ -58,13 +59,13 @@ void main() {
 
   Future<Map<String, dynamic>> courseProgress() async =>
       (await db
-                  .collection('users')
-                  .doc(uid)
-                  .collection('progress')
-                  .doc(courseId)
-                  .get())
-              .data() ??
-          {};
+              .collection('users')
+              .doc(uid)
+              .collection('progress')
+              .doc(courseId)
+              .get())
+          .data() ??
+      {};
 
   /// The status as the UI resolves it: the per-user value, which
   /// `course_detail_screen._moduleStatus` prefers, falling back to the shared
@@ -188,13 +189,91 @@ void main() {
       expect(quiz['course'], 'NET');
     });
 
-    test('a zero-length quiz scores 0 rather than dividing by zero', () async {
+    test('an empty quiz cannot earn a module completion', () async {
       await seedCourse();
-      await complete('module-1', score: 0, total: 0);
+      await expectLater(
+          complete('module-1', score: 0, total: 0), throwsArgumentError);
+      expect(await userData(), isEmpty);
+      expect(await courseProgress(), isEmpty);
+    });
 
-      final data = await userData();
-      expect((data['completedLessons'] as List).single['percent'], 0);
-      expect((data['quizScores'] as List).single['score'], 0);
+    test('save retries with one attempt ID do not duplicate history or points',
+        () async {
+      await seedCourse();
+      Future<void> save() => ProgressService.completeModule(
+            courseId: courseId,
+            moduleId: 'module-1',
+            moduleTitle: 'First',
+            courseTag: 'NET',
+            score: 8,
+            total: 10,
+            attemptId: 'one-attempt',
+          );
+      await save();
+      final before = await userData();
+      await save();
+      final after = await userData();
+      expect((after['quizScores'] as List).length, 1);
+      expect(after['lessonsCompleted'], 1);
+      expect(after['quizzesPassed'], before['quizzesPassed']);
+      expect(after['dailyGoal'], before['dailyGoal']);
+    });
+
+    test('retakes keep distinct lessons and their best score', () async {
+      await seedCourse();
+      await complete('module-1', score: 10);
+      await complete('module-1', score: 7);
+      expect((await userData())['lessonsCompleted'], 1);
+      expect(((await userData())['completedLessons'] as List).length, 1);
+      expect(((await userData())['quizScores'] as List).length, 2);
+      final module =
+          await db.doc('users/$uid/progress/$courseId/modules/module-1').get();
+      expect(module.data()?['bestScorePercent'], 100);
+    });
+
+    test('a delayed save retry cannot count again after a newer retake',
+        () async {
+      await seedCourse();
+      Future<void> save(String attempt) => ProgressService.completeModule(
+            courseId: courseId,
+            moduleId: 'module-1',
+            moduleTitle: 'Names',
+            courseTag: 'NET',
+            score: 8,
+            total: 10,
+            attemptId: attempt,
+          );
+      await save('first');
+      await save('second');
+      final before = await userData();
+      await save('first');
+      expect(await userData(), before);
+    });
+
+    test('unknown modules are rejected before anything is written', () async {
+      await seedCourse();
+      await expectLater(complete('missing-module'), throwsStateError);
+      expect(await userData(), isEmpty);
+      expect(await courseProgress(), isEmpty);
+    });
+
+    test('stale completions cannot push course progress above 100 percent',
+        () async {
+      await seedCourse(count: 1);
+      await db
+          .doc('users/$uid/progress/$courseId/modules/removed-module')
+          .set({'status': 'done'});
+      await complete('module-1');
+      expect((await courseProgress())['doneModules'], 1);
+      expect((await courseProgress())['progress'], 1.0);
+    });
+
+    test('course completion timestamp survives later retakes', () async {
+      await seedCourse(count: 1);
+      await complete('module-1');
+      final completedAt = (await courseProgress())['completedAt'];
+      await complete('module-1');
+      expect((await courseProgress())['completedAt'], completedAt);
     });
 
     test('starts the streak even though the document did not exist', () async {
@@ -276,8 +355,7 @@ void main() {
       await seedCourse();
       await complete('module-1', score: 9, total: 10);
 
-      final user =
-          (await db.collection('users').doc(uid).get()).data() ?? {};
+      final user = (await db.collection('users').doc(uid).get()).data() ?? {};
       // Everything below the old throwing write. Each of these was silently
       // lost on every quiz pass in production.
       expect(user['lessonsCompleted'], 1);
@@ -340,8 +418,12 @@ void main() {
       await seedCourse(count: 2);
       await complete('module-1');
 
-      await db.collection('courses').doc('cloud').collection('modules')
-          .doc('module-1').set({'order': 1, 'status': 'active'});
+      await db
+          .collection('courses')
+          .doc('cloud')
+          .collection('modules')
+          .doc('module-1')
+          .set({'order': 1, 'status': 'active'});
       await ProgressService.completeModule(
         courseId: 'cloud',
         moduleId: 'module-1',
@@ -362,10 +444,11 @@ void main() {
   });
 
   group('signed out', () {
-    test('completeModule writes nothing', () async {
+    test('completeModule reports an unsaved score and writes nothing',
+        () async {
       await seedCourse();
       ServiceBackend.useFake(db, uid: null);
-      await complete('module-1');
+      await expectLater(complete('module-1'), throwsStateError);
 
       expect((await db.collection('users').doc(uid).get()).exists, isFalse);
       expect(await moduleStatus('module-2'), 'locked');

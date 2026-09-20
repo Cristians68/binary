@@ -9,8 +9,8 @@ import 'service_backend.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 // ── Product identifiers ──────────────────────────────────────────────────────
-const String kProductSingle    = 'binary_course_single';
-const String kProductBundle4   = 'binary_bundle_4';
+const String kProductSingle = 'binary_course_single';
+const String kProductBundle4 = 'binary_bundle_4';
 const String kProductBundleAll = 'binary_bundle_all';
 
 // ── Entitlement ───────────────────────────────────────────────────────────────
@@ -25,8 +25,8 @@ const String kRevenueCatApiKey = String.fromEnvironment(
 enum SubscriptionPlan { none, single, bundle4, all, trial }
 
 class SubscriptionService {
-  static FirebaseFirestore get _db  => ServiceBackend.db;
-  static String?           get _uid => ServiceBackend.uid;
+  static FirebaseFirestore get _db => ServiceBackend.db;
+  static String? get _uid => ServiceBackend.uid;
 
   // ─────────────────────────────────────────────────────────────────────────
   // Lifecycle
@@ -70,7 +70,7 @@ class SubscriptionService {
   /// Called on app launch / sign-in to sync RevenueCat → Firestore.
   /// This is the only place we hit the RevenueCat network on launch.
   static Future<bool> syncEntitlementsOnLaunch() async {
-    if (kIsWeb)    return false;
+    if (kIsWeb) return false;
     if (_uid == null) return false;
     try {
       // Read-only. Entitlements are written by the RevenueCat webhook; if the
@@ -82,7 +82,8 @@ class SubscriptionService {
         final snap = await _db.collection('users').doc(_uid).get();
         final plan = snap.data()?['subscriptionPlan'] as String? ?? 'none';
         if (plan == 'none') {
-          debugPrint('Store has entitlement but Firestore does not — restoring');
+          debugPrint(
+              'Store has entitlement but Firestore does not — restoring');
           await Purchases.restorePurchases();
           await _awaitEntitlement(timeout: const Duration(seconds: 8));
         }
@@ -102,7 +103,7 @@ class SubscriptionService {
     if (kIsWeb) return [];
     try {
       final offerings = await Purchases.getOfferings();
-      final packages  = offerings.current?.availablePackages ?? [];
+      final packages = offerings.current?.availablePackages ?? [];
       debugPrint('RevenueCat: loaded ${packages.length} packages');
       for (final p in packages) {
         debugPrint('  → ${p.storeProduct.identifier} ${p.storeProduct.price}');
@@ -123,7 +124,7 @@ class SubscriptionService {
   /// Throws a user-facing string on any other error.
   static Future<bool> purchase(
     Package package, {
-    String?       courseId,
+    String? courseId,
     List<String>? selectedCourseIds,
   }) async {
     if (kIsWeb) return false;
@@ -192,7 +193,8 @@ class SubscriptionService {
           ? const RestoreResult.applied()
           : const RestoreResult.pending();
     } on PlatformException catch (e) {
-      debugPrint('RevenueCat restore PlatformException: ${e.code} ${e.message}');
+      debugPrint(
+          'RevenueCat restore PlatformException: ${e.code} ${e.message}');
       return RestoreResult.failed(code: e.code, message: e.message);
     } catch (e) {
       debugPrint('RevenueCat restore failed: $e');
@@ -291,7 +293,8 @@ class SubscriptionService {
     }
   }
 
-  static Future<bool> canAccessCourse(String courseId) async {
+  static Future<bool> canAccessCourse(String courseId,
+      {bool cachedOnly = false}) async {
     // NOTE: web deliberately does NOT short-circuit to `true`. It used to,
     // which made the entire paid catalogue free on the Firebase Hosting build.
     // Web has no StoreKit, so it cannot *sell* — but it can still read the
@@ -301,7 +304,9 @@ class SubscriptionService {
 
     try {
       // ── 1. Read Firestore (fast, offline-capable) ──────────────────────
-      final snap = await _db.collection('users').doc(uid).get();
+      final snap = await _db.collection('users').doc(uid).get(GetOptions(
+          source: cachedOnly ? Source.cache : Source.serverAndCache));
+      if (_uid != uid) return false;
       final data = snap.data() ?? {};
       final planString = data['subscriptionPlan'] as String? ?? 'none';
 
@@ -310,8 +315,8 @@ class SubscriptionService {
       if (planString != 'none') return planGrantsAccess(data, courseId);
 
       // ── 2. Trial check ─────────────────────────────────────────────────
-      final trialCourseId = data['trialCourseId']  as String?;
-      final trialExpiry   = data['trialExpiry']    as Timestamp?;
+      final trialCourseId = data['trialCourseId'] as String?;
+      final trialExpiry = data['trialExpiry'] as Timestamp?;
       if (trialCourseId == courseId && trialExpiry != null) {
         return trialExpiry.toDate().isAfter(DateTime.now());
       }
@@ -320,7 +325,7 @@ class SubscriptionService {
       // This handles the edge case where the user has a valid purchase but
       // the entitlement webhook hasn't landed yet (e.g. reinstall, new device).
       // There is no RevenueCat SDK on web, so Firestore is final there.
-      if (kIsWeb) return false;
+      if (kIsWeb || cachedOnly) return false;
 
       debugPrint(
           'canAccessCourse: Firestore has no plan — checking RevenueCat live');
@@ -351,11 +356,8 @@ class SubscriptionService {
   /// paywall on the first tap. Matching both is the safe fix; normalising the
   /// data can follow without re-breaking the funnel.
   static bool isFreePreviewModule(String moduleId) {
-    final normalised = moduleId.replaceFirst(
-      RegExp(r'^module-0*'),
-      'module-',
-    );
-    return normalised == 'module-1';
+    // Keep the preview aligned with the IDs allowed by firestore.rules.
+    return moduleId == 'module-1' || moduleId == 'module-01';
   }
 
   /// Whether the user can access a specific module.
@@ -363,9 +365,10 @@ class SubscriptionService {
   static Future<bool> canAccessModule({
     required String courseId,
     required String moduleId,
+    bool cachedOnly = false,
   }) async {
     if (isFreePreviewModule(moduleId)) return true;
-    return canAccessCourse(courseId);
+    return canAccessCourse(courseId, cachedOnly: cachedOnly);
   }
 
   static Future<SubscriptionPlan> getCurrentPlan() async {
@@ -388,10 +391,14 @@ class SubscriptionService {
     return _db.collection('users').doc(uid).snapshots().map((snap) {
       final data = snap.data() ?? {};
       switch (data['subscriptionPlan'] as String? ?? 'none') {
-        case 'all':     return SubscriptionPlan.all;
-        case 'bundle4': return SubscriptionPlan.bundle4;
-        case 'single':  return SubscriptionPlan.single;
-        default:        return SubscriptionPlan.none;
+        case 'all':
+          return SubscriptionPlan.all;
+        case 'bundle4':
+          return SubscriptionPlan.bundle4;
+        case 'single':
+          return SubscriptionPlan.single;
+        default:
+          return SubscriptionPlan.none;
       }
     });
   }
@@ -442,7 +449,7 @@ class SubscriptionService {
       final uid = _uid;
       if (uid == null) return false;
       final snap = await _db.collection('users').doc(uid).get();
-      final data   = snap.data() ?? {};
+      final data = snap.data() ?? {};
       final expiry = data['trialExpiry'] as Timestamp?;
       if (expiry == null) return false;
       return expiry.toDate().isAfter(DateTime.now());
@@ -464,8 +471,8 @@ class SubscriptionService {
     debugPrint('RC active product: $productId');
 
     if (productId == kProductBundleAll) return SubscriptionPlan.all;
-    if (productId == kProductBundle4)   return SubscriptionPlan.bundle4;
-    if (productId == kProductSingle)    return SubscriptionPlan.single;
+    if (productId == kProductBundle4) return SubscriptionPlan.bundle4;
+    if (productId == kProductSingle) return SubscriptionPlan.single;
 
     return SubscriptionPlan.single; // unknown product → fail-safe to single
   }

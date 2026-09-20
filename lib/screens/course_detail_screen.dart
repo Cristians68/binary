@@ -1,10 +1,11 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../course_catalog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'service_backend.dart';
+import 'offline_service.dart';
 import 'lesson_screen.dart';
 import 'subscription_service.dart';
 import 'paywall_screen.dart';
@@ -18,6 +19,7 @@ class CourseDetailScreen extends StatefulWidget {
   final double progress;
   final Color color;
   final String tag;
+  final bool downloadedOnly;
 
   const CourseDetailScreen({
     super.key,
@@ -27,6 +29,7 @@ class CourseDetailScreen extends StatefulWidget {
     required this.progress,
     required this.color,
     required this.tag,
+    this.downloadedOnly = false,
   });
 
   @override
@@ -45,6 +48,13 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
   Map<String, String> _userModuleStatus = {};
   bool _loading = true;
   bool _hasPaidAccess = false;
+  bool _loadFailed = false;
+  double get _progress => _modules.isEmpty
+      ? 0
+      : _modules
+              .where((module) => _userModuleStatus[module['id']] == 'done')
+              .length /
+          _modules.length;
 
   @override
   void initState() {
@@ -71,37 +81,44 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
 
   // ── Data loading ─────────────────────────────────────────────────────────────
   Future<void> _load() async {
+    setState(() => _loading = true);
     await Future.wait([_loadModules(), _checkAccess()]);
     if (mounted) setState(() => _loading = false);
   }
 
   Future<void> _loadModules() async {
     try {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final uid = ServiceBackend.uid;
 
-      // Load shared module list from courses collection
-      final modulesSnap = await FirebaseFirestore.instance
-          .collection('courses')
-          .doc(widget.courseId)
-          .collection('modules')
-          .orderBy('order')
-          .get();
-
-      final modules = modulesSnap.docs
-          .map((d) => {'id': d.id, ...d.data()})
-          .toList();
+      // The downloads entry point reads its local manifest without a network wait.
+      final modules = widget.downloadedOnly
+          ? await OfflineService.loadCachedModules(widget.courseId)
+          : (await ServiceBackend.db
+                  .collection('courses')
+                  .doc(widget.courseId)
+                  .collection('modules')
+                  .orderBy('order')
+                  .get()
+                  .timeout(const Duration(seconds: 12)))
+              .docs
+              .map((d) => {'id': d.id, ...d.data()})
+              .toList();
 
       // Load per-user module completion status
       Map<String, String> userStatus = {};
       if (uid != null) {
         try {
-          final userModulesSnap = await FirebaseFirestore.instance
+          final userModulesSnap = await ServiceBackend.db
               .collection('users')
               .doc(uid)
               .collection('progress')
               .doc(widget.courseId)
               .collection('modules')
-              .get();
+              .get(GetOptions(
+                  source: widget.downloadedOnly
+                      ? Source.cache
+                      : Source.serverAndCache))
+              .timeout(const Duration(seconds: 12));
           for (final doc in userModulesSnap.docs) {
             final data = doc.data();
             userStatus[doc.id] = (data['status'] as String?) ?? 'locked';
@@ -109,21 +126,29 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
         } catch (_) {}
       }
 
-      if (mounted) {
+      if (mounted && ServiceBackend.uid == uid) {
         setState(() {
           _modules = modules;
           _userModuleStatus = userStatus;
+          _loadFailed = widget.downloadedOnly && modules.isEmpty;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _modules = []);
+      final cached = await OfflineService.loadCachedModules(widget.courseId);
+      if (mounted) {
+        setState(() {
+          _modules = cached;
+          _loadFailed = cached.isEmpty;
+        });
+      }
     }
   }
 
   Future<void> _checkAccess() async {
     try {
-      final hasAccess =
-          await SubscriptionService.canAccessCourse(widget.courseId);
+      final hasAccess = await SubscriptionService.canAccessCourse(
+          widget.courseId,
+          cachedOnly: widget.downloadedOnly);
       if (mounted) setState(() => _hasPaidAccess = hasAccess);
     } catch (_) {}
   }
@@ -139,16 +164,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
     return (module['status'] as String?) ?? 'locked';
   }
 
-  bool _isFirstUnlocked(int index) {
-    // The first module is always accessible regardless of purchase
-    return index == 0;
-  }
-
   bool _canAccessModule(Map<String, dynamic> module, int index) {
-    if (_hasPaidAccess) return true;
-    if (_isFirstUnlocked(index)) return true;
-    final status = _moduleStatus(module);
-    return status == 'active' || status == 'done';
+    // Progress is display state, never a purchase entitlement.
+    return _hasPaidAccess ||
+        SubscriptionService.isFreePreviewModule(module['id'] as String);
   }
 
   void _openModule(Map<String, dynamic> module, int index) {
@@ -167,9 +186,12 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
           color: widget.color,
           moduleId: module['id'] as String,
           courseId: widget.courseId,
+          downloadedOnly: widget.downloadedOnly,
         ),
       ),
-    );
+    ).then((_) {
+      if (mounted) _load();
+    });
   }
 
   void _showPaywall() {
@@ -293,7 +315,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                       const SizedBox(height: 20),
 
                       // Progress bar (only if the user has started)
-                      if (widget.progress > 0) ...[
+                      if (_progress > 0) ...[
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -305,7 +327,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                                   fontWeight: FontWeight.w500),
                             ),
                             Text(
-                              '${(widget.progress * 100).toInt()}%',
+                              '${(_progress * 100).toInt()}%',
                               style: TextStyle(
                                   fontSize: 12,
                                   color: widget.color,
@@ -317,7 +339,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                         ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
-                            value: widget.progress,
+                            value: _progress,
                             backgroundColor: theme.border,
                             valueColor:
                                 AlwaysStoppedAnimation<Color>(widget.color),
@@ -359,11 +381,12 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(CupertinoIcons.book_fill,
-                    size: 40, color: theme.subtext),
+                Icon(CupertinoIcons.book_fill, size: 40, color: theme.subtext),
                 const SizedBox(height: 16),
                 Text(
-                  'Modules coming soon',
+                  _loadFailed
+                      ? 'Could not load modules'
+                      : 'Modules coming soon',
                   style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -371,9 +394,19 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Check back shortly.',
+                  _loadFailed
+                      ? 'Check your connection and try again.'
+                      : 'Check back shortly.',
                   style: TextStyle(fontSize: 13, color: theme.subtext),
                 ),
+                if (_loadFailed) ...[
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: _load,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Try again'),
+                  ),
+                ],
               ],
             ),
           ),
@@ -514,7 +547,10 @@ class _ModuleCard extends StatelessWidget {
     final isDone = status == 'done';
     final isLocked = !canAccess;
     // Show FREE badge on the first module when user hasn't purchased
-    final showFreeBadge = index == 0 && !hasPaidAccess && !isDone;
+    final showFreeBadge =
+        SubscriptionService.isFreePreviewModule(module['id'] as String) &&
+            !hasPaidAccess &&
+            !isDone;
 
     Color statusColor;
     IconData statusIcon;
