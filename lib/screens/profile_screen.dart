@@ -146,17 +146,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  // ── Rate the app — native iOS prompt ──────────────────────────────────────
-  Future<void> _rateApp() async {
-    HapticFeedback.mediumImpact();
-    final inAppReview = InAppReview.instance;
-    if (await inAppReview.isAvailable()) {
-      await inAppReview.requestReview();
-    } else {
-      await inAppReview.openStoreListing(appStoreId: '6762030524');
-    }
-  }
-
   // ── Feedback sheet ─────────────────────────────────────────────────────────
   void _showFeedbackSheet() {
     final theme = AppTheme.of(context);
@@ -1036,9 +1025,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                 _buildItem(CupertinoIcons.question_circle_fill, 'Help center',
                     AppColors.amber, theme,
                     onTap: _openHelpCenter),
-                _buildItem(CupertinoIcons.star_fill, 'Rate B1nary',
-                    AppColors.amber, theme,
-                    onTap: _rateApp),
                 _buildItem(CupertinoIcons.chat_bubble_text_fill,
                     'Send feedback', AppColors.amber, theme,
                     onTap: _showFeedbackSheet),
