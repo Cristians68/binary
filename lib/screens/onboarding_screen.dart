@@ -306,10 +306,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 height: 1.2,
                 letterSpacing: -.7)),
         const SizedBox(height: 20),
-        AnimatedSize(
-            duration: MediaQuery.disableAnimationsOf(context)
-                ? Duration.zero
-                : const Duration(milliseconds: 200),
+        // NOT AnimatedSize, though the growing card is what it is for.
+        //
+        // This sits inside LearningHero, whose Stack takes its size from this
+        // subtree. A RenderAnimatedSize re-dirties itself from inside its own
+        // performLayout when the child's size changes, which is only legal
+        // when it is a relayout boundary — and it cannot be one while an
+        // ancestor is measuring itself against it. The capture pipeline
+        // caught it as four "RenderAnimatedSize was mutated in its own
+        // performLayout implementation" assertions on the first onboarding
+        // frame, before any tap. Reveal therefore resizes instantly.
+        Align(
             alignment: Alignment.topLeft,
             child: _revealed
                 ? Semantics(
