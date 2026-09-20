@@ -41,5 +41,18 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- url_launcher must be able to SEE a browser. Android 11+ package
+             visibility hides every other app unless it is declared here, and
+             with only PROCESS_TEXT declared canLaunchUrl answered false for
+             every https URL — which is why the Legal screen links did nothing
+             on Android. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="mailto"/>
+        </intent>
     </queries>
 </manifest>
