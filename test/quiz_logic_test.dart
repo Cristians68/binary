@@ -196,4 +196,46 @@ void main() {
       expect(quizScorePercent(-5, 12), 0);
     });
   });
+
+  group('newAttemptId', () {
+    // ⛔ THE BUG THIS PINS CANNOT BE REPRODUCED ON THE VM.
+    //
+    // The bound was written `1 << 32`, which the VM evaluates to 4294967296
+    // (valid) and dart2js evaluates to 0 (`nextInt(0)` throws RangeError).
+    // Every quiz on web crashed while the screen was being constructed;
+    // iOS and this test runner saw nothing wrong. So the assertion has to be
+    // about the bound's VALUE, which the VM can check, rather than about
+    // nextInt throwing, which it never will here.
+    test('uses a bound that is valid on the web as well as the VM', () {
+      expect(kAttemptIdRandomBound, greaterThan(0));
+      expect(
+        kAttemptIdRandomBound,
+        lessThanOrEqualTo(1 << 31),
+        reason: 'A shift above 31 is truncated to 0 by dart2js, so any bound '
+            'larger than 1 << 31 means nextInt(0) and a crash on web.',
+      );
+    });
+
+    test('changes between attempts so a retake cannot reuse a receipt', () {
+      final ids = {for (var i = 0; i < 500; i++) newAttemptId()};
+      expect(ids.length, greaterThan(1));
+    });
+
+    test('separates two attempts that share a microsecond', () {
+      // Same instant, different random halves: the timestamp alone is not
+      // enough to keep two receipts apart.
+      final first = newAttemptId(rng: Random(1));
+      final second = newAttemptId(rng: Random(2));
+      expect(first.split('-').last, isNot(second.split('-').last));
+    });
+
+    test('is a timestamp and a random suffix, both numeric', () {
+      final parts = newAttemptId(rng: Random(7)).split('-');
+      expect(parts, hasLength(2));
+      expect(int.tryParse(parts[0]), isNotNull);
+      final suffix = int.tryParse(parts[1]);
+      expect(suffix, isNotNull);
+      expect(suffix, inInclusiveRange(0, kAttemptIdRandomBound - 1));
+    });
+  });
 }

@@ -78,3 +78,37 @@ bool quizPassed(int score, int total) =>
 /// UnsupportedError rather than returning anything.
 int quizScorePercent(int score, int total) =>
     total <= 0 ? 0 : (score / total * 100).round().clamp(0, 100);
+
+/// Upper bound for the random half of an attempt id.
+///
+/// ⛔ THIS MUST STAY AT OR BELOW `1 << 31`, AND THE SHIFT MUST NOT BE 32.
+///
+/// `1 << 32` looks like the natural "full 32 bits of entropy" bound and is
+/// correct on the VM, where it is 4294967296. On the web it is **0**:
+/// dart2js compiles `<<` down to JavaScript's shift operator, which only reads
+/// the low 5 bits of the shift amount, and `js_number.dart::_shlPositive`
+/// returns 0 outright for any amount above 31. `Random().nextInt(0)` then
+/// throws `RangeError: max must be in range 0 < max ≤ 2^32, was 0`.
+///
+/// Because the id was built in a field initialiser, that threw while the quiz
+/// screen was being constructed — so every quiz on web died before painting,
+/// while iOS and the `flutter test` VM were completely unaffected. A unit test
+/// cannot reproduce it: the VM computes the bound correctly. That is why the
+/// bound is a named constant with a test asserting its VALUE is web-safe,
+/// rather than a literal expression at the call site.
+const int kAttemptIdRandomBound = 1 << 31;
+
+/// A fresh identifier for one quiz attempt.
+///
+/// Each attempt writes a receipt under `.../modules/{moduleId}/attempts/{id}`,
+/// and retrying the same attempt must not be able to add a second score — so
+/// the id has to change on every retake and never collide with a live one.
+/// The microsecond timestamp gives ordering and the random suffix separates
+/// two attempts that begin within the same microsecond.
+///
+/// Pass [rng] to make the id deterministic in tests.
+String newAttemptId({Random? rng}) {
+  final random = rng ?? Random();
+  return '${DateTime.now().microsecondsSinceEpoch}-'
+      '${random.nextInt(kAttemptIdRandomBound)}';
+}

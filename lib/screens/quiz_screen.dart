@@ -93,8 +93,7 @@ class _QuizScreenState extends State<QuizScreen> {
   ContentOrigin _origin = ContentOrigin.unavailable;
   bool _showingResults = false;
   bool _saving = false;
-  String _attemptId =
-      '${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 32)}';
+  String _attemptId = newAttemptId();
   bool get _isPractice =>
       widget.practiceOnly || _origin == ContentOrigin.substitute;
 
@@ -347,8 +346,7 @@ class _QuizScreenState extends State<QuizScreen> {
         _selectedAnswer = null;
         _answered = false;
         _score = 0;
-        _attemptId =
-            '${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(1 << 32)}';
+        _attemptId = newAttemptId();
         _questions = shuffleQuizQuestions(_questions);
         _showingResults = false;
       });
