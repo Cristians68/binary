@@ -25,6 +25,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   bool _googleLoading = false;
   bool _appleLoading = false;
   bool _guestLoading = false;
+  String? _authError;
+  bool get _busy => _googleLoading || _appleLoading || _guestLoading;
 
   @override
   void initState() {
@@ -37,8 +39,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     _slide = Tween<Offset>(
       begin: const Offset(0, 0.06),
       end: Offset.zero,
-    ).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
   }
 
@@ -55,8 +56,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       PageRouteBuilder(
         pageBuilder: (_, animation, __) => screen,
         transitionsBuilder: (_, animation, __, child) => FadeTransition(
-          opacity:
-              CurvedAnimation(parent: animation, curve: Curves.easeOut),
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
           child: SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(0, 0.03),
@@ -77,8 +77,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       PageRouteBuilder(
         pageBuilder: (_, animation, __) => const MainNavigation(),
         transitionsBuilder: (_, animation, __, child) => FadeTransition(
-          opacity:
-              CurvedAnimation(parent: animation, curve: Curves.easeOut),
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
           child: child,
         ),
         transitionDuration: const Duration(milliseconds: 500),
@@ -93,15 +92,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   /// is usually the only one who can see it: this app ships through
   /// TestFlight, where a debugPrint goes nowhere anybody can read.
   void _showAuthError(AuthResult result, String provider) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(result.displayMessage(provider)),
-        duration: const Duration(seconds: 8),
-        backgroundColor: Colors.white.withValues(alpha: 0.1),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+    setState(() => _authError = result.displayMessage(provider));
   }
 
   Future<void> _handleAuth(
@@ -109,9 +100,18 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     String provider,
     void Function(bool) setLoading,
   ) async {
+    if (_busy) return;
     HapticFeedback.selectionClick();
-    setState(() => setLoading(true));
-    final result = await signIn();
+    setState(() {
+      setLoading(true);
+      _authError = null;
+    });
+    AuthResult result;
+    try {
+      result = await signIn();
+    } catch (_) {
+      result = const AuthResult.failed(code: 'unexpected-error');
+    }
     if (!mounted) return;
     setState(() => setLoading(false));
 
@@ -148,8 +148,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);
-    final isWide = kIsWeb &&
-        MediaQuery.of(context).size.width >= 720;
+    final isWide = kIsWeb && MediaQuery.of(context).size.width >= 720;
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -158,9 +157,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           opacity: _fade,
           child: SlideTransition(
             position: _slide,
-            child: isWide
-                ? _buildWideLayout(theme)
-                : _buildNarrowLayout(theme),
+            child: isWide ? _buildWideLayout(theme) : _buildNarrowLayout(theme),
           ),
         ),
       ),
@@ -422,62 +419,100 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   Widget _buildButtons(ThemeNotifier theme) {
     return Column(
       children: [
-        _PressableButton(
-          onTap: () => _navigateTo(const SignupScreen()),
-          color: AppColors.primary,
-          label: 'Get started',
-          textColor: Colors.white,
-        ),
-        const SizedBox(height: 12),
-        _PressableButton(
-          onTap: () => _navigateTo(const LoginScreen()),
-          color: theme.surface,
-          label: 'I already have an account',
-          textColor: theme.text,
-          border: Border.all(color: theme.border),
-        ),
-        const SizedBox(height: 12),
-        // Guideline 5.1.1(v): do not force account creation to browse. This is
-        // also the reviewer's way in if demo credentials ever fail again.
-        _PressableButton(
-          onTap: _guestLoading ? () {} : _handleGuest,
-          color: Colors.transparent,
-          label: _guestLoading ? 'Please wait...' : 'Continue as guest',
-          textColor: theme.subtext,
-        ),
-        const SizedBox(height: 24),
-        Row(
-          children: [
-            Expanded(child: Divider(color: theme.border)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Text(
-                'or continue with',
-                style: TextStyle(fontSize: 12, color: theme.subtext),
+        if (_authError != null) ...[
+          Semantics(
+            liveRegion: true,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.red.withValues(alpha: 0.08),
+                border:
+                    Border.all(color: AppColors.red.withValues(alpha: 0.25)),
+                borderRadius: BorderRadius.circular(16),
               ),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_authError!,
+                        style: TextStyle(
+                            color: theme.text, fontSize: 13, height: 1.5)),
+                    TextButton.icon(
+                      onPressed: () async {
+                        await Clipboard.setData(
+                            ClipboardData(text: _authError!));
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Sign-in details copied.')),
+                        );
+                      },
+                      icon: const Icon(Icons.copy_rounded, size: 16),
+                      label: const Text('Copy details for support'),
+                    ),
+                  ]),
             ),
-            Expanded(child: Divider(color: theme.border)),
-          ],
-        ),
-        const SizedBox(height: 20),
-        // Sign in with Apple — must appear at least as prominently as
-        // other third-party sign-in options (Apple guideline 4.8).
-        _appleLoading
-            ? _AppleLoadingButton(isDark: theme.isDark)
-            : SignInWithAppleButton(
-                onPressed: _handleApple,
-                style: theme.isDark
-                    ? SignInWithAppleButtonStyle.white
-                    : SignInWithAppleButtonStyle.black,
-                borderRadius:
-                    const BorderRadius.all(Radius.circular(18)),
-                height: 54,
-              ),
-        const SizedBox(height: 12),
-        _GoogleButton(
-          isLoading: _googleLoading,
-          onTap: _handleGoogle,
-          theme: theme,
+          ),
+          const SizedBox(height: 16),
+        ],
+        AbsorbPointer(
+          absorbing: _busy,
+          child: Column(children: [
+            SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _busy ? null : _handleGuest,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    minimumSize: const Size.fromHeight(54),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18)),
+                  ),
+                  child: Text(_guestLoading
+                      ? 'Getting your lessons ready…'
+                      : 'Continue as guest'),
+                )),
+            const SizedBox(height: 8),
+            Text('Try a free first module. No card needed.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: theme.subtext)),
+            const SizedBox(height: 22),
+            _appleLoading
+                ? _AppleLoadingButton(isDark: theme.isDark)
+                : SignInWithAppleButton(
+                    onPressed: _handleApple,
+                    style: theme.isDark
+                        ? SignInWithAppleButtonStyle.white
+                        : SignInWithAppleButtonStyle.black,
+                    borderRadius: const BorderRadius.all(Radius.circular(18)),
+                    height: 54,
+                  ),
+            const SizedBox(height: 12),
+            _GoogleButton(
+                isLoading: _googleLoading, onTap: _handleGoogle, theme: theme),
+            const SizedBox(height: 20),
+            Row(children: [
+              Expanded(child: Divider(color: theme.border)),
+              Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text('or use email',
+                      style: TextStyle(fontSize: 12, color: theme.subtext))),
+              Expanded(child: Divider(color: theme.border)),
+            ]),
+            const SizedBox(height: 16),
+            _PressableButton(
+              onTap: () => _navigateTo(const SignupScreen()),
+              color: theme.surface,
+              label: 'Create an account',
+              textColor: theme.text,
+              border: Border.all(color: theme.border),
+            ),
+            const SizedBox(height: 6),
+            TextButton(
+              onPressed: () => _navigateTo(const LoginScreen()),
+              child: const Text('Already learning with us? Log in'),
+            ),
+          ]),
         ),
       ],
     );
@@ -514,8 +549,7 @@ class _AnimatedFeatureState extends State<_AnimatedFeature>
     _slide = Tween<Offset>(
       begin: const Offset(0, 0.05),
       end: Offset.zero,
-    ).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     Future.delayed(widget.delay, () {
       if (mounted) _controller.forward();
     });
@@ -569,8 +603,8 @@ class _PressableButtonState extends State<_PressableButton>
       vsync: this,
       duration: const Duration(milliseconds: 100),
     );
-    _scale = Tween<double>(begin: 1.0, end: 0.96).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _scale = Tween<double>(begin: 1.0, end: 0.96)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -676,8 +710,8 @@ class _GoogleButtonState extends State<_GoogleButton>
       vsync: this,
       duration: const Duration(milliseconds: 100),
     );
-    _scale = Tween<double>(begin: 1.0, end: 0.96).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _scale = Tween<double>(begin: 1.0, end: 0.96)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override

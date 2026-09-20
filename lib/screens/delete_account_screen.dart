@@ -9,6 +9,7 @@ import 'app_theme.dart';
 import 'app_router.dart';
 import 'auth_service.dart';
 import 'review_service.dart';
+import 'offline_service.dart';
 import 'welcome_screen.dart';
 
 class DeleteAccountScreen extends StatefulWidget {
@@ -164,7 +165,8 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
       // so the server-side delete above does not touch it. Without this the
       // next person to sign in on this device inherits the previous user's
       // missed questions.
-      await ReviewService.clear();
+      await ReviewService.clear(userId: user.uid);
+      await OfflineService.clearForUser(user.uid);
 
       if (mounted) {
         Navigator.pushAndRemoveUntil(

@@ -46,6 +46,22 @@ class AuthResult {
   /// Leads with the plain sentence and appends the code, so a screenshot of
   /// the snackbar is enough to diagnose it.
   String displayMessage(String provider) {
+    final guidance = switch (code) {
+      'network-request-failed' => 'Check your connection and try again.',
+      'popup-blocked' =>
+        'Allow the sign-in popup in your browser, then try again.',
+      'operation-not-allowed' ||
+      'operation-not-supported-in-this-environment' ||
+      'unauthorized-domain' ||
+      'invalid-oauth-client-id' =>
+        'This sign-in option is unavailable right now. You can continue with email or as a guest.',
+      'account-exists-with-different-credential' =>
+        'Use the sign-in method you originally chose for this email address.',
+      'too-many-requests' => 'Please wait a moment before trying again.',
+      'no-active-window' => 'Return to B1nary and try again.',
+      _ => null,
+    };
+    if (guidance != null) return '$provider sign-in failed. $guidance ($code)';
     final detail = [
       if (message != null && message!.isNotEmpty) message,
       if (code != null && code!.isNotEmpty) '($code)',
@@ -81,6 +97,8 @@ const Set<String> kCancellationCodes = {
   'popup-closed-by-user',
   'cancelled-popup-request',
   'ERROR_ABORTED_BY_USER',
+  'sign_in_canceled',
+  'sign_in_cancelled',
 };
 
 /// Whether [code] is a provider's way of saying "the user backed out".

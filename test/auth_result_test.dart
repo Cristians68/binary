@@ -39,13 +39,12 @@ void main() {
 
       expect(msg, contains('Apple'));
       expect(msg, contains('operation-not-allowed'));
-      expect(msg, contains('not enabled'));
+      expect(msg, contains('email or as a guest'));
     });
 
     test('names the provider that failed', () {
       expect(
-        const AuthResult.failed(code: 'network-error')
-            .displayMessage('Google'),
+        const AuthResult.failed(code: 'network-error').displayMessage('Google'),
         startsWith('Google sign-in failed'),
       );
     });
@@ -58,15 +57,14 @@ void main() {
     });
 
     test('a message with no code still reaches the user', () {
-      final msg =
-          const AuthResult.failed(message: 'Network unreachable')
-              .displayMessage('Google');
+      final msg = const AuthResult.failed(message: 'Network unreachable')
+          .displayMessage('Google');
       expect(msg, contains('Network unreachable'));
     });
 
     test('an empty code is treated as absent, not printed as ()', () {
-      final msg =
-          const AuthResult.failed(code: '', message: '').displayMessage('Apple');
+      final msg = const AuthResult.failed(code: '', message: '')
+          .displayMessage('Apple');
       expect(msg, 'Apple sign-in failed. Please try again.');
       expect(msg, isNot(contains('()')));
     });

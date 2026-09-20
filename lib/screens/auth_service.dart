@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'auth_result.dart';
 import 'subscription_service.dart';
 import 'user_document.dart';
+import 'native_apple_auth.dart';
 
 class AuthService {
   static final _auth = FirebaseAuth.instance;
@@ -36,7 +37,7 @@ class AuthService {
           // Forces the account chooser instead of silently reusing whichever
           // Google account the browser last used.
           ..setCustomParameters({'prompt': 'select_account'});
-        final result = await _auth.signInWithPopup(provider);
+        final result = await _signInOrLinkProvider(provider);
         if (result.user != null) {
           await _onSignInSuccess();
         }
@@ -55,39 +56,9 @@ class AuthService {
       }
     }
 
-    // ── iOS — Firebase provider flow, so the account chooser appears ──────
-    //
-    // The native Google SDK cannot ask for one. `google_sign_in` 6.3.0 exposes
-    // `hostedDomain`, `forceAccountName` and `forceCodeForRefreshToken` and
-    // nothing else — there is no way to send `prompt=select_account` through
-    // it. On iOS it signs in through a session that shares Safari's cookies,
-    // so when exactly one Google account is signed in to the browser, Google's
-    // OAuth endpoint picks it and never shows a chooser. Somebody signed in to
-    // a work account in Safari therefore gets that work account every single
-    // time, with no way to choose.
-    //
-    // `_googleSignIn.signOut()` does not help, and the comment below claiming
-    // it does was wrong for iOS: it clears the PLUGIN's cached user, not the
-    // browser's cookie jar, so the next sign-in sails straight through on the
-    // same browser session.
-    //
-    // `signInWithProvider` does send custom parameters — verified in the
-    // plugin's own iOS source, which calls `[FIROAuthProvider
-    // setCustomParameters:]` before requesting the credential.
-    //
-    // Android is deliberately left on the native SDK: there the plugin shows a
-    // real system account picker, so it does not have this problem.
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
-      final viaProvider = await _googleViaFirebaseProvider();
-      if (viaProvider.isSuccess || viaProvider.isCancelled) return viaProvider;
-      // Fall through rather than fail. The worst case is then exactly the
-      // behaviour that shipped before this: sign-in works, on the wrong
-      // account. Being unable to sign in at all would be a regression.
-      debugPrint('Google provider flow failed (${viaProvider.code}) — '
-          'falling back to the native sheet');
-    }
-
-    // ── Android, and the iOS fallback ─────────────────────────────────────
+    // Firebase documents the native Google SDK + OAuth credential flow for
+    // iOS and Android. The generic provider redirect added another sheet and
+    // depended on different OAuth configuration.
     try {
       // signOut, NOT disconnect.
       //
@@ -130,48 +101,17 @@ class AuthService {
       await _onSignInSuccess();
       return const AuthResult.success();
     } on PlatformException catch (e) {
+      if (_isCancellation(e.code)) return const AuthResult.cancelled();
       debugPrint('Google Sign-In PlatformException: ${e.code} - ${e.message}');
       return AuthResult.failed(code: e.code, message: e.message);
     } on FirebaseAuthException catch (e) {
+      if (_isCancellation(e.code)) return const AuthResult.cancelled();
       debugPrint(
           'Google Sign-In FirebaseAuthException: ${e.code} - ${e.message}');
       return AuthResult.failed(code: e.code, message: e.message);
     } catch (e, stack) {
       debugPrint('Google Sign-In ERROR: $e');
       debugPrint('Stack: $stack');
-      return AuthResult.failed(message: e.toString());
-    }
-  }
-
-  /// Google through Firebase's own OAuth flow, asking for the account chooser.
-  ///
-  /// Returns a cancellation when the user backs out, so the caller knows not to
-  /// fall back and re-prompt.
-  static Future<AuthResult> _googleViaFirebaseProvider() async {
-    try {
-      final provider = GoogleAuthProvider()
-        ..addScope('email')
-        ..addScope('profile')
-        // The entire reason this path exists.
-        ..setCustomParameters({'prompt': 'select_account'});
-
-      final userCredential = await _signInOrLinkProvider(provider);
-      debugPrint('Google provider flow: uid=${userCredential.user?.uid}');
-      await _onSignInSuccess();
-      return const AuthResult.success();
-    } on FirebaseAuthException catch (e) {
-      if (_isCancellation(e.code)) {
-        debugPrint('Google provider flow: cancelled by user');
-        return const AuthResult.cancelled();
-      }
-      debugPrint('Google provider FirebaseAuthException: ${e.code} ${e.message}');
-      return AuthResult.failed(code: e.code, message: e.message);
-    } on PlatformException catch (e) {
-      if (_isCancellation(e.code)) return const AuthResult.cancelled();
-      debugPrint('Google provider PlatformException: ${e.code} ${e.message}');
-      return AuthResult.failed(code: e.code, message: e.message);
-    } catch (e) {
-      debugPrint('Google provider ERROR: $e');
       return AuthResult.failed(message: e.toString());
     }
   }
@@ -203,7 +143,8 @@ class AuthService {
         debugPrint('Apple provider flow: cancelled by user');
         return const AuthResult.cancelled();
       }
-      debugPrint('Apple provider FirebaseAuthException: ${e.code} ${e.message}');
+      debugPrint(
+          'Apple provider FirebaseAuthException: ${e.code} ${e.message}');
       return AuthResult.failed(code: e.code, message: e.message);
     } on PlatformException catch (e) {
       if (_isCancellation(e.code)) return const AuthResult.cancelled();
@@ -225,7 +166,9 @@ class AuthService {
     final current = _auth.currentUser;
     if (current != null && current.isAnonymous) {
       try {
-        return await current.linkWithProvider(provider);
+        return kIsWeb
+            ? await current.linkWithPopup(provider)
+            : await current.linkWithProvider(provider);
       } on FirebaseAuthException catch (e) {
         if (e.code != 'credential-already-in-use' &&
             e.code != 'email-already-in-use') {
@@ -235,7 +178,9 @@ class AuthService {
             'existing account instead');
       }
     }
-    return _auth.signInWithProvider(provider);
+    return kIsWeb
+        ? _auth.signInWithPopup(provider)
+        : _auth.signInWithProvider(provider);
   }
 
   /// Sign in with an OAuth credential, upgrading a guest session in place.
@@ -320,8 +265,7 @@ class AuthService {
   /// There is only one honest answer to "can this account change its
   /// password", and it is this.
   static bool get hasPasswordProvider =>
-      _auth.currentUser?.providerData
-          .any((p) => p.providerId == 'password') ??
+      _auth.currentUser?.providerData.any((p) => p.providerId == 'password') ??
       false;
 
   // ── Sign in with Apple ────────────────────────────────────────────────────
@@ -330,8 +274,8 @@ class AuthService {
     const charset =
         '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
     final random = Random.secure();
-    return List.generate(
-        length, (_) => charset[random.nextInt(charset.length)]).join();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)])
+        .join();
   }
 
   static String _sha256ofString(String input) {
@@ -339,37 +283,13 @@ class AuthService {
     return sha256.convert(bytes).toString();
   }
 
-  /// Sign in with Apple.
-  ///
-  /// Native flow first, because it is the better experience — Face ID, no
-  /// password, no browser. If it fails for anything other than the user backing
-  /// out, [_appleViaFirebaseProvider] runs instead.
-  ///
-  /// That fallback exists because the native flow's failure has resisted
-  /// diagnosis: every inspectable piece of configuration is correct (Apple
-  /// enabled in Firebase, the entitlement declared in all three build
-  /// configurations, the capability present on a regenerated provisioning
-  /// profile, the nonce hashed correctly). It is NOT an independent route:
-  /// FlutterFire raises the same ASAuthorization sheet (see
-  /// [_appleViaFirebaseProvider]), so it only helps if the fault is in our own
-  /// nonce or credential handling. An entitlement or profile fault fails both.
-  ///
-  /// When both fail, BOTH codes are reported, because which one matters
-  /// depends on which layer actually broke.
+  /// Apple uses Firebase popups on web, the provider flow on Android, and
+  /// a scene-anchored native sheet on Apple platforms.
   static Future<AuthResult> signInWithApple() async {
-    final native = await _appleViaNativeSdk();
-    if (native.isSuccess || native.isCancelled) return native;
-
-    debugPrint('Apple native flow failed (${native.code}) — trying the '
-        'Firebase provider flow');
-    final viaProvider = await _appleViaFirebaseProvider();
-    if (viaProvider.isSuccess || viaProvider.isCancelled) return viaProvider;
-
-    return AuthResult.failed(
-      code: '${native.code ?? 'native-failed'} then '
-          '${viaProvider.code ?? 'provider-failed'}',
-      message: viaProvider.message ?? native.message,
-    );
+    if (kIsWeb || defaultTargetPlatform == TargetPlatform.android) {
+      return _appleViaFirebaseProvider();
+    }
+    return _appleViaNativeSdk();
   }
 
   /// Re-confirms an Apple account before it is deleted, and returns the
@@ -394,7 +314,12 @@ class AuthService {
       );
     }
 
-    final native = await _appleReauthViaNativeSdk(user);
+    final native = kIsWeb || defaultTargetPlatform == TargetPlatform.android
+        ? (
+            result: const AuthResult.failed(code: 'provider-required'),
+            authorizationCode: null
+          )
+        : await _appleReauthViaNativeSdk(user);
     if (native.result.isSuccess ||
         native.result.isCancelled ||
         native.result.code == 'user-mismatch') {
@@ -405,8 +330,9 @@ class AuthService {
         'the Firebase provider flow');
     final nativeCode = native.result.code ?? 'native-failed';
     try {
-      final credential =
-          await user.reauthenticateWithProvider(AppleAuthProvider());
+      final credential = kIsWeb
+          ? await user.reauthenticateWithPopup(AppleAuthProvider())
+          : await user.reauthenticateWithProvider(AppleAuthProvider());
       return (
         result: const AuthResult.success(),
         authorizationCode: credential.additionalUserInfo?.authorizationCode,
@@ -442,7 +368,7 @@ class AuthService {
       _appleReauthViaNativeSdk(User user) async {
     try {
       final rawNonce = _generateNonce();
-      final appleCredential = await SignInWithApple.getAppleIDCredential(
+      final appleCredential = await NativeAppleAuth.getCredential(
         // No scopes: Apple only sends name and email on the first
         // authorisation, and confirming identity needs neither.
         scopes: const [],
@@ -499,7 +425,7 @@ class AuthService {
       final rawNonce = _generateNonce();
       final nonce = _sha256ofString(rawNonce);
 
-      final appleCredential = await SignInWithApple.getAppleIDCredential(
+      final appleCredential = await NativeAppleAuth.getCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
@@ -529,11 +455,16 @@ class AuthService {
       final given = appleCredential.givenName;
       final family = appleCredential.familyName;
       if (given != null || family != null) {
-        final fullName = [given, family]
-            .where((s) => s != null && s.isNotEmpty)
-            .join(' ');
+        final fullName =
+            [given, family].where((s) => s != null && s.isNotEmpty).join(' ');
         if (fullName.isNotEmpty) {
-          await userCredential.user?.updateDisplayName(fullName);
+          try {
+            await userCredential.user
+                ?.updateDisplayName(fullName)
+                .timeout(const Duration(seconds: 8));
+          } catch (error) {
+            debugPrint('Apple profile name update deferred: $error');
+          }
         }
       }
 
@@ -548,7 +479,8 @@ class AuthService {
       // a missing com.apple.developer.applesignin entitlement in the signed
       // build, or a provisioning profile issued before the capability was
       // enabled on the App ID.
-      debugPrint('Apple Sign-In AuthorizationException: ${e.code} ${e.message}');
+      debugPrint(
+          'Apple Sign-In AuthorizationException: ${e.code} ${e.message}');
       return AuthResult.failed(
         code: e.code.name,
         message: e.message,
@@ -559,6 +491,7 @@ class AuthService {
       debugPrint('Apple Sign-In FirebaseAuthException: ${e.code} ${e.message}');
       return AuthResult.failed(code: e.code, message: e.message);
     } on PlatformException catch (e) {
+      if (_isCancellation(e.code)) return const AuthResult.cancelled();
       // The Google path has caught this since it was written; this one fell
       // through to the generic handler below, which reports
       // `PlatformException(code, message, ...)` as one unsplittable blob.
@@ -579,12 +512,13 @@ class AuthService {
     try {
       await ensureUserDocument(
         displayName: _auth.currentUser?.displayName,
-      );
+      ).timeout(const Duration(seconds: 8));
     } catch (e) {
       debugPrint('ensureUserDocument error: $e');
     }
     try {
-      await SubscriptionService.identifyUser();
+      await SubscriptionService.identifyUser()
+          .timeout(const Duration(seconds: 8));
     } catch (e) {
       debugPrint('identifyUser error: $e');
     }
