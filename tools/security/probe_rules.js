@@ -101,6 +101,23 @@ const patch = (tok, path, fields, mask) =>
         record('AB-7', 'reading PAID module content without entitlement refused', r.status, r.status === 403, `module ${lockedModule}`);
         r = await patch(a.token, `courses/${courseId}/modules/${lockedModule}`, { status: { stringValue: 'active' } }, ['status']);
         record('AB-8', 'writing status into SHARED module doc refused', r.status, r.status === 403, 'the 09-08 bug');
+
+        // AB-7 reads the SUBCOLLECTION, which the entitlement gate does cover.
+        // The lesson prose is not in it: it is a `content` FIELD on the module
+        // document, and that document has to stay readable or the course
+        // outline could not list locked modules. So AB-7 passing says nothing
+        // about the prose, and a 14/14 summary was being read as though it did.
+        //
+        // This is the case that actually fails while F-02 is open. Deploying
+        // the rules does not close it. Moving the body into a subcollection
+        // does — admin/migrate/2026-09-11-seal-lesson-prose.js.
+        r = await get(a.token, `courses/${courseId}/modules/${lockedModule}`);
+        const doc = r.ok ? await r.json() : {};
+        const prose = doc?.fields?.content?.stringValue || '';
+        record('AB-15', 'PAID lesson prose not readable off the module doc',
+          r.status, !prose,
+          prose ? `LEAKED ${prose.length} chars from ${lockedModule}`
+                : `module ${lockedModule}`);
       }
     }
     r = await get(a.token, 'admins');
