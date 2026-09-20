@@ -18,6 +18,9 @@ import 'streak_service.dart';
 import 'review_service.dart';
 import 'review_screen.dart';
 import 'app_theme.dart';
+import 'learning_widgets.dart';
+import 'courses_screen.dart';
+import 'service_backend.dart';
 import '../course_catalog.dart';
 
 // Safely cast a Firestore value to Map<String, dynamic>.
@@ -30,7 +33,9 @@ Map<String, dynamic> _toMap(dynamic value) {
 }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.onBrowseCourses, this.learnerName});
+  final VoidCallback? onBrowseCourses;
+  final String? learnerName;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -48,7 +53,10 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Derived, never stored: one join, shared with the Courses tab, so the two
   /// cannot drift apart again.
   List<Map<String, dynamic>> get _enrolledCourses =>
-      StreakService.enrolledCoursesFrom(_allCourses, _enrolledIds);
+      StreakService.enrolledCoursesFrom(_allCourses, _enrolledIds)
+          .map((course) =>
+              {...course, 'progress': _courseProgress[course['id']] ?? 0.0})
+          .toList();
 
   int _streak = 0;
   int _badgeCount = 0;
@@ -64,6 +72,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _reviewNextLabel;
 
   StreamSubscription<Map<String, dynamic>>? _statsSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _progressSub;
+  Map<String, double> _courseProgress = {};
 
   @override
   void initState() {
@@ -72,11 +82,29 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadCatalogue();
     _loadReviewQueue();
     _statsSub = StreakService.statsStream().listen(_onStatsUpdate);
+    final uid = ServiceBackend.uid;
+    if (uid != null) {
+      _progressSub = ServiceBackend.db
+          .collection('users')
+          .doc(uid)
+          .collection('progress')
+          .snapshots()
+          .listen((snapshot) {
+        if (!mounted) return;
+        setState(() => _courseProgress = {
+              for (final doc in snapshot.docs)
+                doc.id: ((doc.data()['progress'] as num?) ?? 0)
+                    .toDouble()
+                    .clamp(0.0, 1.0),
+            });
+      }, onError: (Object error) => debugPrint('Home progress: $error'));
+    }
   }
 
   @override
   void dispose() {
     _statsSub?.cancel();
+    _progressSub?.cancel();
     super.dispose();
   }
 
@@ -96,10 +124,8 @@ class _HomeScreenState extends State<HomeScreen> {
   /// the stream instead; only the catalogue is fetched here.
   Future<void> _loadCatalogue() async {
     try {
-      final coursesSnap = await FirebaseFirestore.instance
-          .collection('courses')
-          .orderBy('order')
-          .get();
+      final coursesSnap =
+          await ServiceBackend.db.collection('courses').orderBy('order').get();
 
       if (mounted) {
         setState(() {
@@ -166,6 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _getFirstName() {
+    if (widget.learnerName != null) return widget.learnerName!.split(' ').first;
     final user = FirebaseAuth.instance.currentUser;
     if (user?.displayName != null && user!.displayName!.isNotEmpty) {
       return user.displayName!.split(' ')[0];
@@ -315,8 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);
-    final isWide = kIsWeb &&
-        MediaQuery.of(context).size.width >= 720;
+    final isWide = kIsWeb && MediaQuery.of(context).size.width >= 720;
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -334,40 +360,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildHeader(theme),
-                    // Plans sit on the FIRST screen, not two taps away.
-                    //
-                    // App Review reported under 2.1(b) that they could not
-                    // locate the in-app purchases. The only entry points were
-                    // the Courses tab, a locked module inside a course, and
-                    // Profile — none of them visible on the screen the app
-                    // opens to. A reviewer who signs in and looks at Home saw
-                    // nothing purchasable at all.
-                    if (!_hasFullAccess) _buildUpgradeCard(theme),
-                    SizedBox(height: isWide ? 28 : 20),
-                    // Streak + daily goal: side-by-side on desktop
-                    if (isWide)
-                      IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(child: _buildStreakCard(theme)),
-                            const SizedBox(width: 16),
-                            Expanded(child: _buildDailyGoal(theme)),
-                          ],
-                        ),
-                      )
-                    else ...[
-                      _buildStreakCard(theme),
+                    const SizedBox(height: 24),
+                    _buildLearningHero(theme),
+                    if (!_hasFullAccess) ...[
                       const SizedBox(height: 16),
-                      _buildDailyGoal(theme),
+                      _buildUpgradeCard(theme),
                     ],
-                    SizedBox(height: isWide ? 36 : 28),
+                    const SizedBox(height: 24),
+                    _buildStudyPulse(theme),
+                    const SizedBox(height: 28),
                     _buildReviewCard(theme),
-                    _buildSectionTitle('My courses', theme),
+                    _buildSectionTitle('Your courses', theme),
                     const SizedBox(height: 12),
                     _buildEnrolledCourses(theme, isWide: isWide),
                     SizedBox(height: isWide ? 36 : 28),
-                    _buildSectionTitle('Stats', theme),
+                    _buildSectionTitle('Your progress', theme),
                     const SizedBox(height: 12),
                     _buildStatsRow(theme),
                     const SizedBox(height: 20),
@@ -411,79 +418,128 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildUpgradeCard(ThemeNotifier theme) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
-      child: GestureDetector(
-        onTap: _openPaywall,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppColors.primary.withValues(alpha: 0.25),
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(CupertinoIcons.lock_open_fill,
-                    color: AppColors.primary, size: 20),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Unlock every course',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: theme.text,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Module 1 is always free. One-time purchase, '
-                      'no subscription.',
-                      style: TextStyle(fontSize: 12, color: theme.subtext),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Text(
-                  'View Plans',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  void _browseCourses() {
+    if (widget.onBrowseCourses != null) {
+      widget.onBrowseCourses!();
+      return;
+    }
+    Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+            builder: (_) => Scaffold(
+                  appBar: AppBar(title: const Text('Course library')),
+                  body: const CoursesScreen(),
+                )));
   }
+
+  Widget _buildLearningHero(ThemeNotifier theme) {
+    final continuing = _enrolledCourses
+        .where((course) => course['progress'] < 1)
+        .toList()
+      ..sort((a, b) =>
+          (b['progress'] as double).compareTo(a['progress'] as double));
+    final course = continuing.isNotEmpty
+        ? continuing.first
+        : _allCourses.isNotEmpty
+            ? _allCourses.first
+            : null;
+    final progress =
+        course == null ? 0.0 : (_courseProgress[course['id']] ?? 0.0);
+    return LearningHero(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      StudyLabel(
+          continuing.isNotEmpty
+              ? 'PICK UP WHERE YOU LEFT OFF'
+              : 'YOUR NEXT CHAPTER',
+          onDark: true,
+          icon: Icons.auto_stories_rounded),
+      const SizedBox(height: 22),
+      Text(
+          course == null
+              ? 'Make room for\na new skill.'
+              : displayTitle(course['id'] as String),
+          style: const TextStyle(
+              color: Colors.white,
+              fontSize: 27,
+              fontWeight: FontWeight.w700,
+              height: 1.22,
+              letterSpacing: -.8)),
+      const SizedBox(height: 12),
+      Text(
+          continuing.isNotEmpty
+              ? 'Small steps add up. Your next lesson is waiting.'
+              : 'Start with a free module and see what you can learn.',
+          style: const TextStyle(
+              color: Color(0xFFC4D3EB), fontSize: 14, height: 1.5)),
+      if (continuing.isNotEmpty) ...[
+        const SizedBox(height: 22),
+        ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 5,
+                backgroundColor: Colors.white.withValues(alpha: .15),
+                valueColor: const AlwaysStoppedAnimation(AppColors.mint))),
+        const SizedBox(height: 8),
+        Text('${(progress * 100).round()}% of course completed',
+            style: const TextStyle(color: Color(0xFFC4D3EB), fontSize: 11)),
+      ],
+      const SizedBox(height: 22),
+      FilledButton(
+          onPressed: _loadingCourses
+              ? null
+              : course == null
+                  ? _browseCourses
+                  : () => _navigateToCourse(course),
+          style: FilledButton.styleFrom(
+              backgroundColor: AppColors.mint,
+              foregroundColor: AppColors.ink,
+              disabledBackgroundColor: Colors.white24,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14))),
+          child: Text(
+              _loadingCourses
+                  ? 'Loading your courses…'
+                  : continuing.isNotEmpty
+                      ? 'Continue learning'
+                      : course == null
+                          ? 'Explore courses'
+                          : 'Try a free lesson',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w700))),
+    ]));
+  }
+
+  Widget _buildUpgradeCard(ThemeNotifier theme) => Material(
+      color: theme.card,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: _openPaywall,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(children: [
+              const Icon(Icons.workspace_premium_outlined,
+                  color: AppColors.primary, size: 23),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: Text.rich(
+                      TextSpan(children: [
+                        TextSpan(
+                            text: 'Go further with B1nary\n',
+                            style: TextStyle(
+                                color: theme.text,
+                                fontWeight: FontWeight.w700)),
+                        TextSpan(
+                            text: 'View plans · One-time purchase',
+                            style:
+                                TextStyle(color: theme.subtext, fontSize: 12)),
+                      ]),
+                      style: const TextStyle(fontSize: 13, height: 1.5))),
+              Icon(Icons.arrow_forward_rounded, color: theme.subtext, size: 19),
+            ])),
+      ));
 
   Widget _buildReviewCard(ThemeNotifier theme) {
     if (_reviewNextLabel == null) return const SizedBox.shrink();
@@ -509,7 +565,9 @@ class _HomeScreenState extends State<HomeScreen> {
             color: theme.card,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: ready ? AppColors.indigo.withValues(alpha: 0.5) : theme.border,
+              color: ready
+                  ? AppColors.indigo.withValues(alpha: 0.5)
+                  : theme.border,
             ),
           ),
           child: Row(
@@ -560,205 +618,79 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeader(ThemeNotifier theme) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  _getGreeting(),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: theme.subtext,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Icon(CupertinoIcons.hand_raised_fill,
-                    size: 15, color: Color(0xFFF59E0B)),
-              ],
-            ),
-            Text(
-              _getFirstName(),
-              style: TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.w700,
+    final name = _getFirstName();
+    return Row(children: [
+      Expanded(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(_getGreeting(),
+            style: TextStyle(fontSize: 13, color: theme.subtext)),
+        const SizedBox(height: 5),
+        Text(
+            name == 'Welcome' || name == 'there'
+                ? 'Ready to learn?'
+                : 'Let’s learn, $name.',
+            style: TextStyle(
+                fontSize: 27,
+                fontWeight: FontWeight.w800,
                 color: theme.text,
-                letterSpacing: -1.0,
-                height: 1.1,
-              ),
-            ),
-          ],
-        ),
-        GestureDetector(
-          onTap: () => _showSignOutSheet(theme),
-          child: CircleAvatar(
-            radius: 22,
-            backgroundColor: AppColors.primary,
-            child: Text(
-              _getFirstName().isNotEmpty
-                  ? _getFirstName()[0].toUpperCase()
-                  : 'U',
+                letterSpacing: -1,
+                height: 1.2)),
+      ])),
+      const SizedBox(width: 12),
+      IconButton.filledTonal(
+          onPressed: () => _showSignOutSheet(theme),
+          tooltip: 'Account options',
+          style: IconButton.styleFrom(
+              backgroundColor: theme.card, minimumSize: const Size(48, 48)),
+          icon: Text(name.isNotEmpty ? name[0].toUpperCase() : 'B',
               style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600),
-            ),
-          ),
-        ),
-      ],
-    );
+                  color: AppColors.primary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700))),
+    ]);
   }
 
-  Widget _buildStreakCard(ThemeNotifier theme) {
-    final label = _streak == 1 ? '1 day streak!' : '$_streak day streak!';
-    final sub = _streak == 0
-        ? 'Start your streak today!'
-        : _streak < 3
-            ? 'Great start — keep going!'
-            : _streak < 7
-                ? 'You\'re building momentum!'
-                : 'You\'re on a roll!';
+  Widget _buildStudyPulse(ThemeNotifier theme) {
+    final target = _dailyTarget > 0 ? _dailyTarget : 50;
+    final progress = (_dailyPoints / target).clamp(0.0, 1.0);
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.amber.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(CupertinoIcons.flame_fill,
-                color: AppColors.amber, size: 24),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+            color: theme.card,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: theme.border)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Text(label,
+                StudyLabel('$_streak day${_streak == 1 ? '' : 's'} in a row',
+                    icon: Icons.local_fire_department_rounded,
+                    color: theme.isDark
+                        ? AppColors.amber
+                        : const Color(0xFFB96B08)),
+                Text(progress >= 1 ? 'Daily goal complete' : 'Today’s momentum',
                     style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
                         color: theme.text,
-                        letterSpacing: -0.3)),
-                const SizedBox(height: 2),
-                Text(sub, style: TextStyle(fontSize: 12, color: theme.subtext)),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(CupertinoIcons.rosette,
-                    size: 13, color: AppColors.primary),
-                const SizedBox(width: 4),
-                Text('$_streak',
-                    style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.primary,
+                        fontSize: 14,
                         fontWeight: FontWeight.w700)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDailyGoal(ThemeNotifier theme) {
-    final pct = (_dailyPoints / _dailyTarget).clamp(0.0, 1.0);
-    final isComplete = _dailyPoints >= _dailyTarget;
-    final color = isComplete ? AppColors.green : AppColors.primary;
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: theme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: theme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Daily goal',
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: theme.text,
-                      letterSpacing: -0.3)),
-              Text(
-                isComplete
-                    ? 'Complete! 🎉'
-                    : '$_dailyPoints / $_dailyTarget pts',
-                style: TextStyle(
-                    fontSize: 12, color: color, fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
+              ]),
+          const SizedBox(height: 18),
           ClipRRect(
-            borderRadius: BorderRadius.circular(5),
-            child: LinearProgressIndicator(
-              value: pct,
-              backgroundColor: theme.border,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-              minHeight: 6,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _buildPointPill(theme, '📖', '+10 per lesson'),
-              const SizedBox(width: 8),
-              _buildPointPill(theme, '✅', '+20 per quiz'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPointPill(ThemeNotifier theme, String emoji, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: theme.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: theme.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 12)),
-          const SizedBox(width: 4),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 11,
-                  color: theme.subtext,
-                  fontWeight: FontWeight.w500)),
-        ],
-      ),
-    );
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 7,
+                  backgroundColor: theme.surface,
+                  valueColor: const AlwaysStoppedAnimation(AppColors.primary))),
+          const SizedBox(height: 12),
+          Text(
+              '$_dailyPoints / $target points  ·  +10 per lesson  ·  +20 per quiz',
+              style:
+                  TextStyle(color: theme.subtext, fontSize: 12, height: 1.6)),
+        ]));
   }
 
   Widget _buildEnrolledCourses(ThemeNotifier theme, {bool isWide = false}) {
@@ -784,14 +716,14 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Icon(CupertinoIcons.book_fill, size: 36, color: theme.subtext),
             const SizedBox(height: 14),
-            Text('No courses yet',
+            Text('Make this space yours',
                 style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: theme.text)),
             const SizedBox(height: 6),
             Text(
-              'Head to the Courses tab to enroll\nin your first course.',
+              'Save a course from the library and it will be waiting here.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: theme.subtext, height: 1.5),
             ),
@@ -916,12 +848,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSectionTitle(String title, ThemeNotifier theme) {
     return Text(
-      title.toUpperCase(),
+      title,
       style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        color: theme.subtext,
-        letterSpacing: 1.1,
+        fontSize: 19,
+        fontWeight: FontWeight.w700,
+        color: theme.text,
+        letterSpacing: -.4,
       ),
     );
   }

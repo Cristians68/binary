@@ -174,8 +174,7 @@ class _AppEntryState extends State<_AppEntry> {
   }
 
   Future<void> _completeOnboarding() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(kOnboardingCompleteKey, true);
+    // OnboardingScreen persists completion before invoking this callback.
     if (mounted) setState(() => _showOnboarding = false);
   }
 

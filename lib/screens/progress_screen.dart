@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'service_backend.dart';
 import 'course_detail_screen.dart';
 import 'streak_service.dart';
 import 'app_router.dart';
@@ -46,8 +46,7 @@ class _ProgressScreenState extends State<ProgressScreen>
     _slide = Tween<Offset>(
       begin: const Offset(0, 0.04),
       end: Offset.zero,
-    ).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
     _loadAll();
   }
@@ -63,10 +62,8 @@ class _ProgressScreenState extends State<ProgressScreen>
 
   Future<void> _loadCourses() async {
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('courses')
-          .orderBy('order')
-          .get();
+      final snapshot =
+          await ServiceBackend.db.collection('courses').orderBy('order').get();
       if (mounted) {
         setState(() {
           _courses = knownCourses(snapshot.docs
@@ -92,15 +89,16 @@ class _ProgressScreenState extends State<ProgressScreen>
   ///
   /// Both subscriptions are cancelled in dispose().
   void _subscribeToUserData() {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = ServiceBackend.uid;
     if (uid == null) return;
 
     _statsSub = StreakService.statsStream().listen(
       _onStatsUpdate,
-      onError: (Object e) => debugPrint('ProgressScreen stats stream error: $e'),
+      onError: (Object e) =>
+          debugPrint('ProgressScreen stats stream error: $e'),
     );
 
-    _progressSub = FirebaseFirestore.instance
+    _progressSub = ServiceBackend.db
         .collection('users')
         .doc(uid)
         .collection('progress')
@@ -241,9 +239,7 @@ class _ProgressScreenState extends State<ProgressScreen>
               Text(
                 'Your learning journey.',
                 style: TextStyle(
-                    fontSize: 17,
-                    color: theme.subtext,
-                    letterSpacing: -0.2),
+                    fontSize: 17, color: theme.subtext, letterSpacing: -0.2),
               ),
               const SizedBox(height: 28),
             ],
@@ -263,8 +259,8 @@ class _ProgressScreenState extends State<ProgressScreen>
           decoration: BoxDecoration(
             color: AppColors.primary.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.25)),
+            border:
+                Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
           ),
           child: Row(
             children: [
@@ -428,8 +424,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.07),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                        color: color.withValues(alpha: 0.2)),
+                    border: Border.all(color: color.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -440,8 +435,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                           color: color.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(_iconForTag(tag),
-                            color: color, size: 18),
+                        child: Icon(_iconForTag(tag), color: color, size: 18),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -509,8 +503,7 @@ class _ProgressScreenState extends State<ProgressScreen>
             ),
             child: Column(
               children: [
-                Icon(CupertinoIcons.rosette,
-                    size: 36, color: theme.subtext),
+                Icon(CupertinoIcons.rosette, size: 36, color: theme.subtext),
                 const SizedBox(height: 12),
                 Text(
                   'No badges yet',
@@ -524,8 +517,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                 const SizedBox(height: 4),
                 Text(
                   'Complete lessons to earn badges',
-                  style:
-                      TextStyle(fontSize: 12, color: theme.subtext),
+                  style: TextStyle(fontSize: 12, color: theme.subtext),
                 ),
               ],
             ),
@@ -553,8 +545,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(b.emoji,
-                            style: const TextStyle(fontSize: 16)),
+                        Text(b.emoji, style: const TextStyle(fontSize: 16)),
                         const SizedBox(width: 8),
                         Text(
                           b.title,
@@ -587,8 +578,7 @@ class _ProgressScreenState extends State<ProgressScreen>
             ),
             child: Column(
               children: [
-                Icon(CupertinoIcons.time,
-                    size: 36, color: theme.subtext),
+                Icon(CupertinoIcons.time, size: 36, color: theme.subtext),
                 const SizedBox(height: 12),
                 Text(
                   'No activity yet',
@@ -602,8 +592,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                 const SizedBox(height: 4),
                 Text(
                   'Start a lesson to see your activity here',
-                  style:
-                      TextStyle(fontSize: 12, color: theme.subtext),
+                  style: TextStyle(fontSize: 12, color: theme.subtext),
                 ),
               ],
             ),
@@ -624,8 +613,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                 : pct >= 60
                     ? AppColors.amber
                     : AppColors.red;
-            final ts =
-                (item['completedAt'] as Timestamp?)?.toDate();
+            final ts = (item['completedAt'] as Timestamp?)?.toDate();
 
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
@@ -658,8 +646,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          displayModuleTitle(
-                                      item['moduleTitle'] as String?)
+                          displayModuleTitle(item['moduleTitle'] as String?)
                                   .isEmpty
                               ? 'Lesson'
                               : displayModuleTitle(
@@ -674,8 +661,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                         const SizedBox(height: 2),
                         Text(
                           displayTitle(item['courseTag'] as String? ?? ''),
-                          style: TextStyle(
-                              fontSize: 12, color: theme.subtext),
+                          style: TextStyle(fontSize: 12, color: theme.subtext),
                         ),
                       ],
                     ),
@@ -683,8 +669,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                   if (ts != null)
                     Text(
                       _formatDate(ts),
-                      style: TextStyle(
-                          fontSize: 11, color: theme.subtext),
+                      style: TextStyle(fontSize: 11, color: theme.subtext),
                     ),
                 ],
               ),

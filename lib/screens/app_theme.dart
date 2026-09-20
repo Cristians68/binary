@@ -49,7 +49,6 @@ class AppIcon extends StatelessWidget {
   }
 }
 
-
 /// A soft, out-of-focus circle of colour used to add ambient depth behind a
 /// form without competing with it — purely decorative, `IgnorePointer` so it
 /// never intercepts taps meant for the content above it.
@@ -59,7 +58,10 @@ class GlowOrb extends StatelessWidget {
   final double opacity;
 
   const GlowOrb(
-      {super.key, required this.color, required this.size, required this.opacity});
+      {super.key,
+      required this.color,
+      required this.size,
+      required this.opacity});
 
   @override
   Widget build(BuildContext context) {
@@ -86,30 +88,32 @@ class AppColors {
   AppColors._();
 
   // ── Dark mode ──
-  static const darkBg = Color(0xFF0B0B0F);
-  static const darkSurface = Color(0xFF121217);
-  static const darkCard = Color(0xFF1C1C22);
-  static const darkBorder = Color(0x1FFFFFFF);
-  static const darkText = Color(0xFFFFFFFF);
-  static const darkSubtext = Color(0x99FFFFFF);
-  static const darkNavBg = Color(0xFF0B0B0F);
+  static const darkBg = Color(0xFF0E1422);
+  static const darkSurface = Color(0xFF151E30);
+  static const darkCard = Color(0xFF1B263B);
+  static const darkBorder = Color(0xFF2D3950);
+  static const darkText = Color(0xFFF5F7FF);
+  static const darkSubtext = Color(0xFFA8B5CB);
+  static const darkNavBg = Color(0xFF151E30);
 
   // ── Light mode — vibrant, Apple.com-inspired ──
-  static const lightBg = Color(0xFFFFFFFF);
-  static const lightSurface = Color(0xFFF5F5F7);
+  static const lightBg = Color(0xFFF6F8FC);
+  static const lightSurface = Color(0xFFEDF1F8);
   static const lightCard = Color(0xFFFFFFFF);
-  static const lightBorder = Color(0xFFD2D2D7);
-  static const lightText = Color(0xFF1D1D1F);
-  static const lightSubtext = Color(0xFF6E6E73);
-  static const lightNavBg = Color(0xFFF5F5F7);
+  static const lightBorder = Color(0xFFE0E6F0);
+  static const lightText = Color(0xFF17243C);
+  static const lightSubtext = Color(0xFF64728A);
+  static const lightNavBg = Color(0xFFFFFFFF);
 
   // ── Accent colors ──
-  static const primary = Color(0xFF0071E3);
+  static const primary = Color(0xFF325BE8);
   static const blue = Color(0xFF0077ED);
-  static const green = Color(0xFF1DB954);
+  static const green = Color(0xFF11865F);
   static const amber = Color(0xFFFF9500);
   static const red = Color(0xFFFF3B30);
   static const indigo = Color(0xFF5E5CE6);
+  static const ink = Color(0xFF152645);
+  static const mint = Color(0xFFB9F5DD);
 }
 
 // ── Theme notifier ────────────────────────────────────────────────────────────

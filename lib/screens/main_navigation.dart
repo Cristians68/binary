@@ -9,10 +9,11 @@ import 'courses_screen.dart';
 import 'progress_screen.dart';
 import 'profile_screen.dart';
 import 'app_theme.dart';
+import 'learning_navigation_bar.dart';
 
 // Desktop sidebar is shown when the viewport is at least this wide AND we're on web.
 const double _kSidebarBreakpoint = 720;
-const double _kSidebarWidth     = 240;
+const double _kSidebarWidth = 240;
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -28,23 +29,24 @@ class _MainNavigationState extends State<MainNavigation>
   late final AnimationController _controller;
   late final Animation<double> _fadeAnimation;
 
-  static const List<Widget> _screens = [
-    HomeScreen(),
-    CoursesScreen(),
-    ProgressScreen(),
-    ProfileScreen(),
-  ];
+  late final List<Widget> _screens;
 
   static const List<_TabItem> _tabs = [
-    _TabItem(icon: Icons.home_rounded,      label: 'Home'),
-    _TabItem(icon: Icons.book_rounded,      label: 'Courses'),
+    _TabItem(icon: Icons.home_rounded, label: 'Home'),
+    _TabItem(icon: Icons.book_rounded, label: 'Courses'),
     _TabItem(icon: Icons.bar_chart_rounded, label: 'Progress'),
-    _TabItem(icon: Icons.person_rounded,    label: 'Profile'),
+    _TabItem(icon: Icons.person_rounded, label: 'Profile'),
   ];
 
   @override
   void initState() {
     super.initState();
+    _screens = [
+      HomeScreen(onBrowseCourses: () => _onTabTapped(1)),
+      const CoursesScreen(),
+      const ProgressScreen(),
+      const ProfileScreen(),
+    ];
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 250),
@@ -59,8 +61,7 @@ class _MainNavigationState extends State<MainNavigation>
     // already waiting — a cold start delivers the tap long before this widget
     // exists — and then listen for taps that arrive while the app is running.
     pendingNotificationRoute.addListener(_consumePendingRoute);
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _consumePendingRoute());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _consumePendingRoute());
   }
 
   /// Open whatever screen a tapped notification asked for.
@@ -91,16 +92,19 @@ class _MainNavigationState extends State<MainNavigation>
   void _onTabTapped(int index) {
     if (index == _currentIndex) return;
     HapticFeedback.selectionClick();
-    _controller.forward(from: 0).then((_) {
-      if (mounted) setState(() => _currentIndex = index);
-    });
+    setState(() => _currentIndex = index);
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.value = 1;
+    } else {
+      _controller.forward(from: 0);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);
-    final isWide = kIsWeb &&
-        MediaQuery.of(context).size.width >= _kSidebarBreakpoint;
+    final isWide =
+        kIsWeb && MediaQuery.of(context).size.width >= _kSidebarBreakpoint;
 
     if (isWide) {
       return _buildWideLayout(context, theme);
@@ -142,9 +146,8 @@ class _MainNavigationState extends State<MainNavigation>
         opacity: _fadeAnimation,
         child: IndexedStack(index: _currentIndex, children: _screens),
       ),
-      bottomNavigationBar: _BottomNavBar(
+      bottomNavigationBar: LearningNavigationBar(
         currentIndex: _currentIndex,
-        tabs: _tabs,
         onTap: _onTabTapped,
       ),
     );
@@ -155,7 +158,7 @@ class _MainNavigationState extends State<MainNavigation>
 
 class _TabItem {
   final IconData icon;
-  final String   label;
+  final String label;
   const _TabItem({required this.icon, required this.label});
 }
 
@@ -164,10 +167,10 @@ class _TabItem {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _SideNav extends StatelessWidget {
-  final int                  currentIndex;
-  final List<_TabItem>       tabs;
-  final ValueChanged<int>    onTap;
-  final ThemeNotifier        theme;
+  final int currentIndex;
+  final List<_TabItem> tabs;
+  final ValueChanged<int> onTap;
+  final ThemeNotifier theme;
 
   const _SideNav({
     required this.currentIndex,
@@ -235,13 +238,15 @@ class _SideNav extends StatelessWidget {
             ),
 
             // ── Nav items ─────────────────────────────────────────────────────
-            ...List.generate(tabs.length, (i) => _SideNavItem(
-              icon:    tabs[i].icon,
-              label:   tabs[i].label,
-              active:  currentIndex == i,
-              onTap:   () => onTap(i),
-              theme:   theme,
-            )),
+            ...List.generate(
+                tabs.length,
+                (i) => _SideNavItem(
+                      icon: tabs[i].icon,
+                      label: tabs[i].label,
+                      active: currentIndex == i,
+                      onTap: () => onTap(i),
+                      theme: theme,
+                    )),
 
             const Spacer(),
 
@@ -283,10 +288,10 @@ class _SideNav extends StatelessWidget {
 // ── Individual sidebar nav item with hover state ──────────────────────────────
 
 class _SideNavItem extends StatefulWidget {
-  final IconData      icon;
-  final String        label;
-  final bool          active;
-  final VoidCallback  onTap;
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
   final ThemeNotifier theme;
 
   const _SideNavItem({
@@ -307,12 +312,12 @@ class _SideNavItemState extends State<_SideNavItem> {
   @override
   Widget build(BuildContext context) {
     final active = widget.active;
-    final theme  = widget.theme;
+    final theme = widget.theme;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
-      onExit:  (_) => setState(() => _hovered = false),
+      onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
@@ -321,7 +326,8 @@ class _SideNavItemState extends State<_SideNavItem> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
           decoration: BoxDecoration(
             color: active
-                ? AppColors.primary.withValues(alpha: theme.isDark ? 0.14 : 0.08)
+                ? AppColors.primary
+                    .withValues(alpha: theme.isDark ? 0.14 : 0.08)
                 : _hovered
                     ? theme.surface
                     : Colors.transparent,
@@ -346,8 +352,7 @@ class _SideNavItemState extends State<_SideNavItem> {
                   widget.label,
                   style: TextStyle(
                     fontSize: 14,
-                    fontWeight:
-                        active ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                     color: active ? AppColors.primary : theme.subtext,
                     letterSpacing: -0.2,
                   ),
@@ -364,101 +369,6 @@ class _SideNavItemState extends State<_SideNavItem> {
                 ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MOBILE BOTTOM NAV BAR  (unchanged)
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _BottomNavBar extends StatelessWidget {
-  const _BottomNavBar({
-    required this.currentIndex,
-    required this.tabs,
-    required this.onTap,
-  });
-
-  final int                currentIndex;
-  final List<_TabItem>     tabs;
-  final ValueChanged<int>  onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme         = AppTheme.of(context);
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-
-    return Container(
-      padding: EdgeInsets.only(
-        top:    12,
-        bottom: bottomPadding > 0 ? bottomPadding : 12,
-      ),
-      decoration: BoxDecoration(
-        color:  theme.navBg,
-        border: Border(top: BorderSide(color: theme.border)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: List.generate(tabs.length, (i) => _NavTab(
-          icon:   tabs[i].icon,
-          label:  tabs[i].label,
-          active: currentIndex == i,
-          onTap:  () => onTap(i),
-        )),
-      ),
-    );
-  }
-}
-
-class _NavTab extends StatelessWidget {
-  const _NavTab({
-    required this.icon,
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final IconData     icon;
-  final String       label;
-  final bool         active;
-  final VoidCallback onTap;
-
-  static const _purple = AppColors.primary;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = AppTheme.of(context);
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        decoration: BoxDecoration(
-          color: active
-              ? _purple.withValues(alpha: 0.12)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: active ? _purple : theme.subtext, size: 22),
-            const SizedBox(height: 3),
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 200),
-              style: TextStyle(
-                fontSize:   10,
-                fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                color:      active ? _purple : theme.subtext,
-                letterSpacing: active ? 0.2 : 0,
-              ),
-              child: Text(label),
-            ),
-          ],
         ),
       ),
     );

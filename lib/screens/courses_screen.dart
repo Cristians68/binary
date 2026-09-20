@@ -1,21 +1,17 @@
 import 'dart:async';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'course_detail_screen.dart';
 import 'paywall_screen.dart';
 import 'app_router.dart';
 import 'app_theme.dart';
+import 'learning_widgets.dart';
 import '../course_catalog.dart';
 import 'streak_service.dart';
+import 'service_backend.dart';
 
 class CoursesScreen extends StatefulWidget {
   const CoursesScreen({super.key});
-
   @override
   State<CoursesScreen> createState() => _CoursesScreenState();
 }
@@ -23,533 +19,480 @@ class CoursesScreen extends StatefulWidget {
 class _CoursesScreenState extends State<CoursesScreen> {
   List<Map<String, dynamic>> _courses = [];
   Set<String> _enrolledIds = {};
-  bool _loading = true;
-  bool _hasFullAccess = false;
-
+  bool _loading = true, _loadFailed = false, _hasFullAccess = false;
+  String _filter = 'All';
+  final _search = TextEditingController();
   StreamSubscription<Map<String, dynamic>>? _statsSub;
+  static const _filters = [
+    'All',
+    'My courses',
+    'Networking',
+    'Security',
+    'Cloud',
+    'AI',
+    'Business'
+  ];
 
   @override
   void initState() {
     super.initState();
     _loadCatalogue();
-    _statsSub = StreakService.statsStream().listen(_onStatsUpdate);
+    _statsSub = StreakService.statsStream().listen((data) {
+      if (!mounted) return;
+      setState(() {
+        _enrolledIds = StreakService.enrolledCourseIdsFrom(data);
+        _hasFullAccess = data['subscriptionPlan'] == 'all';
+      });
+    });
   }
 
   @override
   void dispose() {
     _statsSub?.cancel();
+    _search.dispose();
     super.dispose();
   }
 
-  /// Read the course catalogue once. Enrolment and plan come from the stream.
-  ///
-  /// This used to read the user document in the same one-shot, which ran once
-  /// in initState and never again — so an enrolment made here was invisible to
-  /// Home until a cold start, and on that start the read could land while
-  /// ServerClock's lastSeenAt write was still pending and see a document with
-  /// no enrolments in it at all.
   Future<void> _loadCatalogue() async {
+    setState(() {
+      _loading = true;
+      _loadFailed = false;
+    });
     try {
-      final coursesSnap = await FirebaseFirestore.instance
+      final snap = await ServiceBackend.db
           .collection('courses')
           .orderBy('order')
-          .get();
-
+          .get()
+          .timeout(const Duration(seconds: 12));
+      if (!mounted) return;
+      setState(() {
+        _courses = knownCourses(
+            snap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+        _loading = false;
+      });
+    } catch (_) {
       if (mounted) {
         setState(() {
-          _courses = knownCourses(
-              coursesSnap.docs.map((d) => {'id': d.id, ...d.data()}).toList());
           _loading = false;
+          _loadFailed = true;
         });
       }
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
-  void _onStatsUpdate(Map<String, dynamic> data) {
-    if (!mounted) return;
-    setState(() {
-      _enrolledIds = StreakService.enrolledCourseIdsFrom(data);
-      _hasFullAccess = (data['subscriptionPlan'] as String?) == 'all';
-    });
+  String _category(Map<String, dynamic> course) {
+    final tag = (course['tag'] ?? courseInfo(course['id'] as String)?.tag ?? '')
+        .toString();
+    if (tag.contains('Network')) return 'Networking';
+    if (tag.contains('Cyber')) return 'Security';
+    if (tag.contains('Cloud')) return 'Cloud';
+    if (tag.contains('AI')) return 'AI';
+    return 'Business';
+  }
+
+  List<Map<String, dynamic>> get _visible {
+    final query = _search.text.trim().toLowerCase();
+    return _courses.where((course) {
+      final id = course['id'] as String;
+      final matches = _filter == 'All' ||
+          (_filter == 'My courses'
+              ? _enrolledIds.contains(id)
+              : _category(course) == _filter);
+      final text = '${displayTitle(id)} ${course['subtitle'] ?? ''} '
+          '${courseInfo(id)?.preparesFor ?? ''}';
+      return matches && text.toLowerCase().contains(query);
+    }).toList();
   }
 
   Future<void> _toggleEnrollment(String courseId) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = ServiceBackend.uid;
     if (uid == null) return;
-
     HapticFeedback.selectionClick();
-
-    final isEnrolled = _enrolledIds.contains(courseId);
-
-    // Optimistic UI update
-    setState(() {
-      if (isEnrolled) {
-        _enrolledIds.remove(courseId);
-      } else {
-        _enrolledIds.add(courseId);
-      }
-    });
-
+    final enrolled = _enrolledIds.contains(courseId);
+    setState(() =>
+        enrolled ? _enrolledIds.remove(courseId) : _enrolledIds.add(courseId));
     try {
-      // Dot-notation field path — avoids nested-map iOS Firestore crash
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .update({'enrolments.$courseId': !isEnrolled});
+      await safeUpdate(ServiceBackend.db.collection('users').doc(uid),
+          {'enrolments.$courseId': !enrolled});
     } catch (_) {
-      // Document may not exist yet — create it, then use dot-notation update.
-      // Note: set() does NOT expand dot-notation into nested paths; only
-      // update() does. Use mergeFields with FieldPath for nested-safe merge.
-      try {
-        await FirebaseFirestore.instance.collection('users').doc(uid).set(
-          {'enrolments': {courseId: !isEnrolled}},
-          SetOptions(mergeFields: [FieldPath(['enrolments', courseId])]),
-        );
-      } catch (_) {
-        // Revert optimistic update on failure
-        if (mounted) {
-          setState(() {
-            if (isEnrolled) {
-              _enrolledIds.add(courseId);
-            } else {
-              _enrolledIds.remove(courseId);
-            }
-          });
-        }
-      }
+      if (!mounted || ServiceBackend.uid != uid) return;
+      setState(() => enrolled
+          ? _enrolledIds.add(courseId)
+          : _enrolledIds.remove(courseId));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not update your courses. Please try again.')));
     }
   }
 
-  IconData _iconForTag(String tag) {
-    switch (tag) {
-      case 'ITIL V4':
-        return CupertinoIcons.doc_text_fill;
-      case 'CSM':
-        return CupertinoIcons.person_2_fill;
-      case 'Binary Network Pro':
-        return CupertinoIcons.wifi;
-      case 'Binary Cyber Pro':
-        return CupertinoIcons.shield_fill;
-      case 'Binary Cloud':
-        return CupertinoIcons.cloud_fill;
-      case 'Binary Cloud Pro':
-        return CupertinoIcons.cloud_upload_fill;
-      case 'Binary AI':
-        return CupertinoIcons.sparkles;
-      default:
-        return CupertinoIcons.book_fill;
-    }
+  void _openCourse(Map<String, dynamic> course) {
+    HapticFeedback.selectionClick();
+    final id = course['id'] as String;
+    Navigator.push(
+        context,
+        AppRouter.push(CourseDetailScreen(
+          courseId: id,
+          title: displayTitle(id),
+          subtitle: course['subtitle'] ?? '',
+          progress: 0,
+          color: Color(course['color'] ?? AppColors.primary.toARGB32()),
+          tag: course['tag'] ?? courseInfo(id)?.tag ?? '',
+        )));
   }
+
+  void _openPlans() => Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+          fullscreenDialog: true,
+          builder: (_) => const PaywallScreen(
+              courseTitle: 'B1nary',
+              courseColor: AppColors.primary,
+              defaultToAllPlans: true)));
+  IconData _icon(String category) => switch (category) {
+        'Networking' => Icons.hub_outlined,
+        'Security' => Icons.shield_outlined,
+        'Cloud' => Icons.cloud_outlined,
+        'AI' => Icons.auto_awesome_outlined,
+        _ => Icons.workspaces_outline,
+      };
 
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isWide = kIsWeb && screenWidth >= 720;
-    // On desktop we show 2 columns; on very wide screens, 3
-    final crossAxisCount = isWide
-        ? (screenWidth >= 1200 ? 3 : 2)
-        : 1;
-
+    final visible = _visible;
+    final resultCount = visible.length;
     return Scaffold(
-      backgroundColor: theme.bg,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: isWide ? 1100 : double.infinity,
-                ),
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    isWide ? 32 : 20,
-                    isWide ? 28 : 20,
-                    isWide ? 32 : 20,
-                    8,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Courses',
-                        style: TextStyle(
-                          fontSize: isWide ? 36 : 30,
-                          fontWeight: FontWeight.w700,
-                          color: theme.text,
-                          letterSpacing: -1.0,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Enroll in courses to add them to your home screen.',
-                        style: TextStyle(fontSize: 13, color: theme.subtext),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // Upgrade banner — visible whenever the user doesn't have
-            // an All Courses plan, so IAPs are easy to discover.
-            if (!_loading && !_hasFullAccess)
-              Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: isWide ? 1100 : double.infinity,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                        isWide ? 32 : 20, 0, isWide ? 32 : 20, 8),
-                    child: _buildUpgradeBanner(theme),
-                  ),
-                ),
-              ),
-            Expanded(
-              child: _loading
-                  ? Center(
-                      child: CircularProgressIndicator(
-                          color: AppColors.primary, strokeWidth: 2),
-                    )
-                  : Center(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: isWide ? 1100 : double.infinity,
-                        ),
-                        child: crossAxisCount == 1
-                            ? ListView.builder(
-                                physics: const BouncingScrollPhysics(),
-                                padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
-                                itemCount: _courses.length,
-                                itemBuilder: (context, i) =>
-                                    _buildAnimatedCard(context, i, theme),
-                              )
-                            : GridView.builder(
-                                physics: const BouncingScrollPhysics(),
-                                padding: EdgeInsets.fromLTRB(
-                                    isWide ? 32 : 20, 16,
-                                    isWide ? 32 : 20, 40),
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: crossAxisCount,
-                                  crossAxisSpacing: 16,
-                                  mainAxisSpacing: 16,
-                                  childAspectRatio: 1.65,
-                                ),
-                                itemCount: _courses.length,
-                                itemBuilder: (context, i) =>
-                                    _buildAnimatedCard(context, i, theme),
-                              ),
-                      ),
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
+        backgroundColor: theme.bg,
+        body: SafeArea(
+            child: Center(
+          child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1120),
+              child: LayoutBuilder(builder: (context, constraints) {
+                final spacious = constraints.maxWidth >= 700 &&
+                    MediaQuery.textScalerOf(context).scale(14) <= 18;
+                final columns =
+                    spacious ? (constraints.maxWidth >= 1050 ? 3 : 2) : 1;
+                final inset = spacious ? 32.0 : 20.0;
+                return RefreshIndicator(
+                    onRefresh: _loadCatalogue,
+                    child: CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        SliverPadding(
+                            padding: EdgeInsets.fromLTRB(inset, 24, inset, 20),
+                            sliver: SliverToBoxAdapter(
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                  const StudyLabel('THE COURSE LIBRARY',
+                                      icon: Icons.auto_stories_outlined),
+                                  const SizedBox(height: 14),
+                                  Text('What will you\nlearn next?',
+                                      style: TextStyle(
+                                          color: theme.text,
+                                          fontSize: spacious ? 38 : 32,
+                                          fontWeight: FontWeight.w800,
+                                          height: 1.15,
+                                          letterSpacing: -1.2)),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                      'Real skills, one lesson at a time. Every first module is free.',
+                                      style: TextStyle(
+                                          color: theme.subtext,
+                                          fontSize: 14,
+                                          height: 1.6)),
+                                  const SizedBox(height: 24),
+                                  TextField(
+                                      controller: _search,
+                                      onChanged: (_) => setState(() {}),
+                                      textInputAction: TextInputAction.search,
+                                      style: TextStyle(
+                                          color: theme.text, fontSize: 14),
+                                      decoration: InputDecoration(
+                                          hintText: 'Search courses or skills',
+                                          hintStyle:
+                                              TextStyle(color: theme.subtext),
+                                          prefixIcon: Icon(Icons.search_rounded,
+                                              color: theme.subtext),
+                                          suffixIcon: _search.text.isEmpty
+                                              ? null
+                                              : IconButton(
+                                                  tooltip: 'Clear search',
+                                                  icon: const Icon(
+                                                      Icons.close_rounded),
+                                                  onPressed: () =>
+                                                      setState(_search.clear)),
+                                          filled: true,
+                                          fillColor: theme.card,
+                                          contentPadding: const EdgeInsets.symmetric(
+                                              horizontal: 16, vertical: 18),
+                                          border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              borderSide: BorderSide(
+                                                  color: theme.border)),
+                                          enabledBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              borderSide: BorderSide(
+                                                  color: theme.border)),
+                                          focusedBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              borderSide: const BorderSide(color: AppColors.primary, width: 1.5)))),
+                                  const SizedBox(height: 16),
+                                  SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: Row(
+                                          children: _filters
+                                              .map((label) => Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          right: 8),
+                                                  child: ChoiceChip(
+                                                    label: Text(label),
+                                                    selected: _filter == label,
+                                                    showCheckmark: false,
+                                                    selectedColor:
+                                                        AppColors.primary,
+                                                    backgroundColor: theme.card,
+                                                    labelStyle: TextStyle(
+                                                        color: _filter == label
+                                                            ? Colors.white
+                                                            : theme.subtext,
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w600),
+                                                    side: BorderSide(
+                                                        color: _filter == label
+                                                            ? AppColors.primary
+                                                            : theme.border),
+                                                    shape:
+                                                        RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        12)),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 7,
+                                                        vertical: 8),
+                                                    onSelected: (_) => setState(
+                                                        () => _filter = label),
+                                                  )))
+                                              .toList())),
+                                  const SizedBox(height: 22),
+                                  Wrap(
+                                      alignment: WrapAlignment.spaceBetween,
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      spacing: 18,
+                                      runSpacing: 4,
+                                      children: [
+                                        Text(
+                                            _loading
+                                                ? 'Finding your next course…'
+                                                : resultCount == 1
+                                                    ? '1 course to explore'
+                                                    : '$resultCount courses to explore',
+                                            style: TextStyle(
+                                                color: theme.subtext,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600)),
+                                        if (!_hasFullAccess)
+                                          TextButton(
+                                              onPressed: _openPlans,
+                                              child: const Text('View plans')),
+                                      ]),
+                                ]))),
+                        if (_loading)
+                          const SliverToBoxAdapter(
+                              child: Padding(
+                                  padding: EdgeInsets.all(40),
+                                  child: Center(
+                                      child: CircularProgressIndicator())))
+                        else if (visible.isEmpty)
+                          SliverToBoxAdapter(
+                              child: Padding(
+                                  padding:
+                                      EdgeInsets.fromLTRB(inset, 12, inset, 48),
+                                  child: Container(
+                                      padding: const EdgeInsets.all(28),
+                                      decoration: BoxDecoration(
+                                          color: theme.card,
+                                          borderRadius:
+                                              BorderRadius.circular(24)),
+                                      child: Column(children: [
+                                        Icon(
+                                            _loadFailed
+                                                ? Icons.cloud_off_outlined
+                                                : Icons.search_rounded,
+                                            size: 36,
+                                            color: theme.subtext),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                            _loadFailed
+                                                ? 'Your courses couldn’t load'
+                                                : 'Room for something new',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                                color: theme.text,
+                                                fontSize: 19,
+                                                fontWeight: FontWeight.w700)),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                            _loadFailed
+                                                ? 'Check your connection and try again.'
+                                                : _filter == 'My courses' &&
+                                                        _search.text.isEmpty
+                                                    ? 'Enroll in a course to keep it close. Start with a free first module.'
+                                                    : 'Try a different search or explore all courses.',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                                color: theme.subtext,
+                                                height: 1.6)),
+                                        const SizedBox(height: 16),
+                                        FilledButton(
+                                            onPressed: _loadFailed
+                                                ? _loadCatalogue
+                                                : () => setState(() {
+                                                      _search.clear();
+                                                      _filter = 'All';
+                                                    }),
+                                            child: Text(_loadFailed
+                                                ? 'Try again'
+                                                : 'Explore all courses')),
+                                      ]))))
+                        else
+                          SliverPadding(
+                              padding: EdgeInsets.fromLTRB(inset, 0, inset, 32),
+                              sliver: SliverList.builder(
+                                  itemCount: (visible.length / columns).ceil(),
+                                  itemBuilder: (context, row) => Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 16),
+                                      child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            for (var col = 0;
+                                                col < columns;
+                                                col++) ...[
+                                              if (col > 0)
+                                                const SizedBox(width: 16),
+                                              Expanded(
+                                                  child: row * columns + col <
+                                                          visible.length
+                                                      ? _courseCard(
+                                                          visible[
+                                                              row * columns +
+                                                                  col],
+                                                          theme)
+                                                      : const SizedBox
+                                                          .shrink()),
+                                            ],
+                                          ])))),
+                      ],
+                    ));
+              })),
+        )));
   }
 
-  Widget _buildUpgradeBanner(ThemeNotifier theme) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        Navigator.push(
-          context,
-          CupertinoPageRoute(
-            builder: (_) => const PaywallScreen(
-              courseTitle: 'B1nary',
-              courseColor: AppColors.primary,
-              defaultToAllPlans: true,
-            ),
-            fullscreenDialog: true,
-          ),
-        );
-      },
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(16),
-          border:
-              Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(CupertinoIcons.rocket_fill,
-                  color: AppColors.primary, size: 18),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Unlock all courses',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: theme.text,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Single course, 4-bundle, or everything — from \$14.99',
-                    style: TextStyle(fontSize: 12, color: theme.subtext),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Text(
-                'View Plans',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                  letterSpacing: -0.1,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAnimatedCard(BuildContext context, int i, ThemeNotifier theme) {
-    final course = _courses[i];
+  Widget _courseCard(Map<String, dynamic> course, ThemeNotifier theme) {
     final id = course['id'] as String;
-    final color = Color(course['color'] ?? 0xFF6366F1);
-    final isEnrolled = _enrolledIds.contains(id);
-
-    return _AnimatedCourseCard(
-      delay: Duration(milliseconds: 40 * i),
-      child: _buildCourseCard(
-        course: course,
-        color: color,
-        isEnrolled: isEnrolled,
-        theme: theme,
-        onEnroll: () => _toggleEnrollment(id),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          Navigator.push(
-            context,
-            AppRouter.push(CourseDetailScreen(
-              courseId: id,
-              title: displayTitle(id),
-              subtitle: course['subtitle'] ?? '',
-              progress: (course['progress'] ?? 0.0).toDouble(),
-              color: color,
-              tag: course['tag'] ?? '',
-            )),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildCourseCard({
-    required Map<String, dynamic> course,
-    required Color color,
-    required bool isEnrolled,
-    required ThemeNotifier theme,
-    required VoidCallback onEnroll,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: theme.isDark
-              ? color.withValues(alpha: 0.07)
-              : AppColors.lightCard,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: theme.isDark
-                ? color.withValues(alpha: isEnrolled ? 0.35 : 0.15)
-                : isEnrolled
-                    ? color.withValues(alpha: 0.3)
-                    : AppColors.lightBorder,
-            width: isEnrolled ? 1.5 : 1,
-          ),
-          boxShadow: theme.isDark
-              ? null
-              : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: theme.isDark ? 0.15 : 0.10),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(_iconForTag(course['tag'] ?? ''),
-                      color: color, size: 22),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        displayTitle(course['id'] as String? ?? ''),
+    final category = _category(course);
+    final color = Color(course['color'] ?? AppColors.primary.toARGB32());
+    final enrolled = _enrolledIds.contains(id);
+    final modules = course['totalModules'];
+    return Material(
+        color: theme.card,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          onTap: () => _openCourse(course),
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                      color: enrolled
+                          ? color.withValues(alpha: .45)
+                          : theme.border)),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                              color: color.withValues(alpha: .10),
+                              borderRadius: BorderRadius.circular(15)),
+                          child: Icon(_icon(category), size: 25, color: color)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: Text(category.toUpperCase(),
+                              style: TextStyle(
+                                  color: theme.subtext,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1.2))),
+                      if (enrolled)
+                        Icon(Icons.bookmark_rounded, size: 22, color: color),
+                    ]),
+                    const SizedBox(height: 18),
+                    Text(displayTitle(id),
                         style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: theme.text,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (isEnrolled)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.green.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text('Enrolled',
+                            color: theme.text,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -.5,
+                            height: 1.25)),
+                    const SizedBox(height: 10),
+                    Text(courseInfo(id)?.blurb ?? course['subtitle'] ?? '',
                         style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.green)),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(course['subtitle'] ?? '',
-                style:
-                    TextStyle(fontSize: 13, color: theme.subtext, height: 1.4)),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                _buildCourseMeta(theme, CupertinoIcons.book_fill,
-                    '${course['totalModules'] ?? 8} modules', color),
-                const SizedBox(width: 12),
-                _buildCourseMeta(theme, CupertinoIcons.checkmark_seal_fill,
-                    'Certificate', color),
-                const Spacer(),
-                GestureDetector(
-                  onTap: onEnroll,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isEnrolled ? theme.surface : color,
-                      borderRadius: BorderRadius.circular(12),
-                      border:
-                          isEnrolled ? Border.all(color: theme.border) : null,
-                    ),
-                    child: Text(
-                      isEnrolled ? 'Unenroll' : 'Enroll',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: isEnrolled ? theme.subtext : Colors.white,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+                            color: theme.subtext, fontSize: 13, height: 1.6)),
+                    const SizedBox(height: 18),
+                    Wrap(spacing: 8, runSpacing: 8, children: [
+                      StudyLabel(
+                          modules is num
+                              ? '$modules modules'
+                              : 'Flashcard lessons',
+                          color: theme.subtext,
+                          icon: Icons.layers_outlined),
+                      const StudyLabel('Free first module',
+                          color: AppColors.green),
+                    ]),
+                    const SizedBox(height: 20),
+                    Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          FilledButton(
+                              onPressed: () => _openCourse(course),
+                              style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 18, vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12))),
+                              child: const Text('View course',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.w600))),
+                          TextButton.icon(
+                              onPressed: () => _toggleEnrollment(id),
+                              style: TextButton.styleFrom(
+                                  foregroundColor: theme.subtext),
+                              icon: Icon(
+                                  enrolled
+                                      ? Icons.bookmark_remove_outlined
+                                      : Icons.add_rounded,
+                                  size: 18),
+                              label: Text(enrolled ? 'Unenroll' : 'Enroll')),
+                        ]),
+                  ])),
+        ));
   }
-
-  Widget _buildCourseMeta(
-      ThemeNotifier theme, IconData icon, String label, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 12, color: color.withValues(alpha: 0.7)),
-        const SizedBox(width: 4),
-        Text(label,
-            style: TextStyle(
-                fontSize: 11,
-                color: theme.subtext,
-                fontWeight: FontWeight.w500)),
-      ],
-    );
-  }
-}
-
-class _AnimatedCourseCard extends StatefulWidget {
-  final Widget child;
-  final Duration delay;
-  const _AnimatedCourseCard({required this.child, this.delay = Duration.zero});
-
-  @override
-  State<_AnimatedCourseCard> createState() => _AnimatedCourseCardState();
-}
-
-class _AnimatedCourseCardState extends State<_AnimatedCourseCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fade;
-  late Animation<Offset> _slide;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 400));
-    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _slide = Tween<Offset>(begin: const Offset(0, 0.05), end: Offset.zero)
-        .animate(
-            CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
-    Future.delayed(widget.delay, () {
-      if (mounted) _controller.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => FadeTransition(
-        opacity: _fade,
-        child: SlideTransition(position: _slide, child: widget.child),
-      );
 }
