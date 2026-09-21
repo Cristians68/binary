@@ -2,7 +2,7 @@ name: binary
 description: "B1nary — IT certification prep with flashcards and quizzes."
 publish_to: 'none'
 
-version: 1.0.1+53
+version: 1.0.2+54
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -42,6 +42,10 @@ dev_dependencies:
   yaml: ^3.1.4
 
 flutter:
+  # Keep CI on the CocoaPods integration already used by this Xcode project.
+  # Flutter otherwise enables Swift Package Manager by default on new machines.
+  config:
+    enable-swift-package-manager: false
   uses-material-design: true
   assets:
     - assets/icons/

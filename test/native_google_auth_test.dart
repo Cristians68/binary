@@ -1,4 +1,6 @@
 import 'package:binary/screens/native_google_auth.dart';
+import 'package:binary/firebase_options.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
@@ -8,9 +10,13 @@ class _GooglePlatform extends GoogleSignInPlatform {
   String? token = 'identity-token';
   GoogleSignInException? failure;
   bool supported = true;
+  String? configuredClientId;
 
   @override
-  Future<void> init(InitParameters params) async => calls.add('initialize');
+  Future<void> init(InitParameters params) async {
+    calls.add('initialize');
+    configuredClientId = params.clientId;
+  }
 
   @override
   bool supportsAuthenticate() => supported;
@@ -47,7 +53,24 @@ void main() {
     GoogleSignInPlatform.instance = platform;
     auth = NativeGoogleAuth();
   });
-  tearDown(() => GoogleSignInPlatform.instance = original);
+  tearDown(() {
+    GoogleSignInPlatform.instance = original;
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  test('iOS uses Firebase OAuth client even if a bundled plist is stale',
+      () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    await auth.credential();
+    expect(platform.configuredClientId, DefaultFirebaseOptions.ios.iosClientId);
+    expect(platform.configuredClientId, isNotNull);
+  });
+
+  test('Android does not receive the iOS client identifier', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    await auth.credential();
+    expect(platform.configuredClientId, isNull);
+  });
 
   test('initializes once and opens a fresh account choice on each attempt',
       () async {

@@ -22,7 +22,7 @@ import '../app_links.dart';
 import 'app_theme.dart';
 import 'notification_prefs_service.dart';
 import 'notification_settings_sheet.dart';
-import 'signup_screen.dart';
+import 'welcome_screen.dart';
 import 'streak_logic.dart';
 
 Map<String, dynamic> _toMap(dynamic value) {
@@ -499,15 +499,15 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  /// Send a guest to sign-up so their session becomes a real account.
+  /// Let a guest choose Google, Apple, or email without signing out first.
   ///
-  /// SignupScreen's email path and AuthService._signInOrLink both link the new
+  /// The email path and AuthService._signInOrLink both link the new
   /// credential to the current anonymous user, so the uid — and with it the
   /// streak, badges and completed lessons — carries over rather than being
   /// replaced by a fresh one.
   Future<void> _upgradeGuest() async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SignupScreen()),
+      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
     );
     if (!mounted) return;
     setState(() {});
@@ -965,7 +965,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   // survive the upgrade.
                   if (AuthService.isGuest)
                     _buildItem(CupertinoIcons.person_badge_plus_fill,
-                        'Create an account', AppColors.green, theme,
+                        'Sign in or create an account', AppColors.green, theme,
                         subtitle: 'Save your streak and progress',
                         onTap: _upgradeGuest),
                   if (!AuthService.isGuest)

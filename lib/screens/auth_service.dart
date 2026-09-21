@@ -14,7 +14,7 @@ import 'native_google_auth.dart';
 import 'service_backend.dart';
 
 class AuthService {
-  static final _auth = FirebaseAuth.instance;
+  static FirebaseAuth get _auth => ServiceBackend.auth;
 
   static final _googleSignIn = NativeGoogleAuth();
 
@@ -233,13 +233,16 @@ class AuthService {
   /// free first module of every course. Paid content is still gated by
   /// `hasCourseAccess()`, and entitlement fields remain server-only.
   ///
-  /// Returns null on failure. The most likely failure is `operation-not-allowed`,
+  /// Returns a failed AuthResult on failure. The most likely code is `operation-not-allowed`,
   /// which means Anonymous sign-in is not enabled in the Firebase console under
   /// Authentication -> Sign-in method.
   static Future<AuthResult> signInAsGuest() async {
     try {
-      final credential = await _auth.signInAnonymously();
-      debugPrint('Guest sign-in: uid=${credential.user?.uid}');
+      // The welcome screen also serves restored guests. Reuse their identity
+      // rather than replacing it, and never downgrade a registered session.
+      if (_auth.currentUser == null) {
+        await _auth.signInAnonymously();
+      }
       await _onSignInSuccess();
       return const AuthResult.success();
     } on FirebaseAuthException catch (e) {

@@ -6,6 +6,60 @@ absent from both live GitHub branches. The installed iPhone build and its native
 not available, so this audit distinguishes source findings from a confirmed
 diagnosis of that particular crash.
 
+## Follow-up after another reported crash — version 1.0.2
+
+The earlier fix was subsequently pushed in the history of `cdff36a`. The user
+started a Codemagic build and then reported another immediate Google crash,
+plus the app opening into a guest session. The successful build's revision,
+installed TestFlight version/build and native crash report have not been
+provided. The new report therefore does not establish which Google integration
+was running. The native crash remains **unverified on the device**.
+
+The guest behavior has a confirmed source cause: `_AppEntry` resumed every
+persisted Firebase session, including anonymous sessions, directly into the
+app. Version 1.0.2 changes this behavior:
+
+- A restored guest sees the sign-in choices. Its identity stays alive so Google,
+  Apple or email can link it without first signing out.
+- Explicitly choosing Continue as guest reuses that identity and its progress.
+  A stale guest action cannot replace a registered account.
+- A guest already inside the app can choose any sign-in method from Profile.
+
+The iOS OAuth client is now explicit in both Firebase options and native Google
+initialization. Both the Google reversed-client scheme and Firebase fallback
+scheme are registered. These close configuration gaps found in the source;
+they are not evidence of the exception on the user's phone.
+
+The project now explicitly uses its existing CocoaPods integration. The local
+generated plugin configuration had Swift Package Manager disabled, while the
+project did not pin that choice for fresh CI machines. Flutter enables Swift
+Package Manager by default from 3.44. This change removes build drift; it is
+not a confirmed cause of the reported crash.
+[Flutter project configuration](https://docs.flutter.dev/packages-and-plugins/swift-package-manager/for-app-developers)
+
+The `ios-testflight` workflow now stamps the source revision and resolved
+Google plugin/SDK versions into the app and checks the exported IPA's plist
+before upload. It rejects missing callbacks, mismatched client/bundle/build
+identifiers, stale revision markers and conflicting bundled Firebase config.
+It retains `ios-auth-release.json`, both lockfiles and the archive's dSYMs for
+matching and diagnosing the installed build. The verifier also requires the
+expected CocoaPods configuration, plugin 6.3.3 or newer and Google SDK 9 or newer.
+
+Validation completed locally: **534 Flutter tests passed**, `flutter analyze`
+reported **no issues**, and **7 Python archive-verifier tests passed**. The new
+guest widget regression exercises the real app entry and Google button, with
+Firebase and Google's native platform mocked. The Python tests inspect
+synthetic IPA archives, including binary plists and deliberate configuration
+errors. Neither test suite runs the native Google sheet or a signed iOS app.
+
+The next diagnostic input is the existing crash report, not another assumption
+from a successful build. On the iPhone, retrieve the latest Runner/B1nary
+report under Settings → Privacy & Security → Analytics & Improvements →
+Analytics Data. Retain its version/build, exception, termination reason and
+faulting-thread backtrace, or the complete `.ips` file. A TestFlight crash can
+also be obtained through Xcode's crash organizer.
+[Apple crash-report instructions](https://developer.apple.com/documentation/xcode/acquiring-crash-reports-and-diagnostic-logs)
+
 ## Release state at the initial audit
 
 Both the GitHub branches API and `git ls-remote --heads origin` returned:
@@ -73,7 +127,7 @@ error without rethrowing it. The app's manual URL forwarding was removed.
 The upstream changelog records configuration-crash handling in 6.0.1 and scene
 support in 6.3.0. [Plugin changelog](https://pub.dev/packages/google_sign_in_ios/changelog)
 
-## Checks completed
+## Checks completed during the initial audit
 
 - The read-only live Firebase audit returned Google provider enabled, with
   client ID and client secret present. It did not expose credentials or user
@@ -93,15 +147,17 @@ support in 6.3.0. [Plugin changelog](https://pub.dev/packages/google_sign_in_ios
 ## Required release verification
 
 Use the `feature/notifications-and-streaks` branch, which contains the complete
-authentication fix. Rebuilding the old `master` revision repeats the defective
-provider flow. This release is version **1.0.1**; the CI workflow assigns the
+authentication changes. Rebuilding the old `master` revision repeats the defective
+provider flow. The follow-up release is version **1.0.2**; the CI workflow assigns the
 next unused TestFlight build number.
 
-Build a revision containing `4de8e5d` with the `ios-testflight` workflow and
-record the CI commit and generated build number. Install that exact build,
-then exercise Google sign-in, cancellation/retry, and sign-out/sign-in on an
-iPhone. Inspect the archive's Info.plist and resolved plugin versions if its
-configuration differs from the repository.
+Build the latest feature-branch revision with the `ios-testflight` workflow
+from `codemagic.yaml`, and retain `ios-auth-release.json` with the generated
+build number. Install that exact build, then exercise Google sign-in,
+cancellation/retry, and sign-out/sign-in on an iPhone. Also verify that a
+restored guest sees the welcome screen and can link Google without signing
+out or losing progress. A green archive check alone does not verify these
+native runtime behaviors.
 
 For the already reported crash, retain the TestFlight version/build and native
 crash report. `OAuthProvider.getCredentialWith` plus the missing callback

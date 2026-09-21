@@ -1,8 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'auth_result.dart';
+import '../firebase_options.dart';
 
 /// Shared by sign-in and account reauthentication. Initialize the native SDK
 /// once, on first use; web uses Firebase's popup and never enters this class.
@@ -11,7 +13,13 @@ class NativeGoogleAuth {
   Future<void>? _initialization;
 
   Future<OAuthCredential> credential() async {
-    await (_initialization ??= _signIn.initialize());
+    // Use the same iOS client for Firebase and the Google SDK. A stale
+    // GoogleService-Info.plist must not silently select another OAuth client.
+    await (_initialization ??= _signIn.initialize(
+      clientId: defaultTargetPlatform == TargetPlatform.iOS
+          ? DefaultFirebaseOptions.ios.iosClientId
+          : null,
+    ));
     if (!_signIn.supportsAuthenticate()) {
       throw PlatformException(
           code: 'operation-not-supported-in-this-environment');

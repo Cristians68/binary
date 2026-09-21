@@ -18,14 +18,16 @@ class ServiceBackend {
   ServiceBackend._();
 
   static FirebaseFirestore? _dbOverride;
+  static FirebaseAuth? _authOverride;
   static String? Function()? _uidOverride;
   static final userStreams = UserStreams();
 
   static FirebaseFirestore get db => _dbOverride ?? FirebaseFirestore.instance;
 
-  static String? get uid => _uidOverride != null
-      ? _uidOverride!()
-      : FirebaseAuth.instance.currentUser?.uid;
+  static FirebaseAuth get auth => _authOverride ?? FirebaseAuth.instance;
+
+  static String? get uid =>
+      _uidOverride != null ? _uidOverride!() : auth.currentUser?.uid;
 
   static Stream<DocumentSnapshot<Map<String, dynamic>>> watchUser() {
     final userId = uid;
@@ -48,8 +50,15 @@ class ServiceBackend {
   }
 
   @visibleForTesting
+  static void useAuth(FirebaseAuth auth) {
+    _authOverride = auth;
+    _uidOverride = null;
+  }
+
+  @visibleForTesting
   static void reset() {
     _dbOverride = null;
+    _authOverride = null;
     _uidOverride = null;
   }
 }

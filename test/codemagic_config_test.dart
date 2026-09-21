@@ -74,17 +74,21 @@ void main() {
       // The stored assets were fetched through this integration and the
       // TestFlight upload still authenticates with it, so losing it breaks
       // both refreshing the profile and publishing.
-      final integrations = (workflows[id] as YamlMap)['integrations'] as YamlMap;
+      final integrations =
+          (workflows[id] as YamlMap)['integrations'] as YamlMap;
       expect(integrations['app_store_connect'], isNotNull);
       expect(scriptText(id), contains('xcode-project use-profiles'));
     });
 
     test('runs the test suite before building', () {
       final steps = (workflows[id] as YamlMap)['scripts'] as YamlList;
-      final scripts = steps.map((s) => (s as YamlMap)['script'].toString()).toList();
+      final scripts =
+          steps.map((s) => (s as YamlMap)['script'].toString()).toList();
       final testStep = scripts.indexWhere((s) => s.contains('flutter test'));
-      final buildStep = scripts.indexWhere((s) => s.contains('flutter build ipa'));
-      expect(testStep, isNonNegative, reason: 'the release must run its own tests');
+      final buildStep =
+          scripts.indexWhere((s) => s.contains('flutter build ipa'));
+      expect(testStep, isNonNegative,
+          reason: 'the release must run its own tests');
       expect(buildStep, isNonNegative);
       expect(testStep, lessThan(buildStep),
           reason: 'a build that fails its tests must not reach a tester');
@@ -106,6 +110,26 @@ void main() {
     test('keeps the IPA as an artifact', () {
       final artifacts = (workflows[id] as YamlMap)['artifacts'] as YamlList;
       expect(artifacts.any((a) => a.toString().endsWith('.ipa')), isTrue);
+    });
+
+    test('validates the exported IPA and retains its identity and symbols', () {
+      final steps = (workflows[id] as YamlMap)['scripts'] as YamlList;
+      final scripts =
+          steps.map((s) => (s as YamlMap)['script'].toString()).toList();
+      final stamp =
+          scripts.indexWhere((s) => s.contains('verify_release.py --stamp'));
+      final build = scripts.indexWhere((s) => s.contains('flutter build ipa'));
+      final verify =
+          scripts.lastIndexWhere((s) => s.contains('verify_release.py'));
+      expect(stamp, isNonNegative);
+      expect(stamp, lessThan(build));
+      expect(verify, greaterThan(build));
+      expect(scripts[verify], contains('--build-number'));
+      expect(scripts[verify], contains('--revision'));
+      final artifacts = (workflows[id] as YamlMap)['artifacts'] as YamlList;
+      expect(artifacts, contains('build/ios/ios-auth-release.json'));
+      expect(artifacts, contains('build/ios/ios-symbols.zip'));
+      expect(artifacts, contains('ios/Podfile.lock'));
     });
   });
 
@@ -142,7 +166,8 @@ void main() {
     );
 
     // And the vars the build scripts read must agree with it.
-    final env = (workflows['ios-testflight'] as YamlMap)['environment'] as YamlMap;
+    final env =
+        (workflows['ios-testflight'] as YamlMap)['environment'] as YamlMap;
     expect((env['vars'] as YamlMap)['BUNDLE_ID'], 'com.cristians.b1nary');
   });
 
@@ -179,6 +204,10 @@ void main() {
         .firstMatch(podfile.readAsStringSync());
     expect(platform, isNotNull,
         reason: 'the platform line must be active, not commented out');
+
+    final pubspec = loadYaml(File('pubspec.yaml').readAsStringSync()) as YamlMap;
+    expect(pubspec['flutter']['config']['enable-swift-package-manager'], isFalse,
+        reason: 'CI must use the same CocoaPods integration as this project');
   });
 
   test('the Podfile platform matches the Xcode deployment target', () {

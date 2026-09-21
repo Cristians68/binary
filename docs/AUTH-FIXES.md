@@ -1,8 +1,9 @@
 # Authentication fixes — 1.0.1
 
-Follow-up: the [2026-09-20 iOS crash audit](IOS-GOOGLE-SIGNIN-AUDIT.md) found
-that this fix had not been pushed at the time of the audit and identified an
-additional Firebase callback configuration crash on remote `master`.
+Follow-up: see the [iOS crash audit and 1.0.2 changes](IOS-GOOGLE-SIGNIN-AUDIT.md)
+for the guest-session correction, explicit OAuth configuration, exported IPA
+checks and current validation status. The changes below were subsequently
+pushed; the original no-push/no-build notes describe their initial state.
 
 ## iOS Google sign-in
 

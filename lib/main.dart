@@ -4,7 +4,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
@@ -15,6 +14,7 @@ import 'screens/subscription_service.dart';
 import 'screens/notification_prefs_service.dart';
 import 'screens/notification_service.dart';
 import 'screens/main_navigation.dart';
+import 'screens/service_backend.dart';
 import 'security_service.dart';
 
 void main() {
@@ -227,11 +227,11 @@ class _AppEntryState extends State<_AppEntry> {
     if (_showOnboarding!) {
       return OnboardingScreen(onComplete: _completeOnboarding);
     }
-    // A session that survived the last launch goes straight in. Without this
-    // the welcome screen rendered on every cold start even for a signed-in
-    // user, who then had to log in again — including a guest, who would have
-    // been handed a brand new anonymous uid and silently lost their streak.
-    if (FirebaseAuth.instance.currentUser != null) {
+    // Resume registered accounts. A restored anonymous session must still
+    // choose a sign-in method or Continue as guest. Keep that session alive
+    // so either choice can preserve its uid and learning progress.
+    final user = ServiceBackend.auth.currentUser;
+    if (user != null && !user.isAnonymous) {
       return const MainNavigation();
     }
     return const WelcomeScreen();
