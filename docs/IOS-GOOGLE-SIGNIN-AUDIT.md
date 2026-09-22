@@ -28,6 +28,42 @@ Checked and **cleared** as the cause — each is now covered by a test:
 - 540 Flutter tests pass, `flutter analyze` reports no issues, and 7 Python
   archive-verifier tests pass.
 
+### The strongest candidate yet, and it is now closed
+
+Upgrading to `google_sign_in_ios` **6.3.5** (from 6.3.3) closes a concrete,
+uncatchable termination in the exact path this crash follows.
+
+In 6.3.3 the presenter is obtained with `[self topViewController]`, which
+returns `self.viewProvider.viewController` — a **nullable** value. It is passed
+straight into `signInWithPresentingViewController:` with **no nil check**, in
+neither `FLTGoogleSignInPlugin.m` nor `WrapperProtocolImplementations.m`.
+
+The native SDK underneath is `GoogleSignIn ~> 9.0`, which is **Swift**, and its
+`signIn(withPresenting:)` takes a *non-optional* `UIViewController`. Passing nil
+from Objective-C into a Swift non-optional parameter traps immediately —
+`EXC_BREAKPOINT` — and a Swift trap is not an `NSException`, so the plugin's
+`@try/@catch` cannot intercept it. The process dies with no Dart error, which is
+exactly the reported symptom: the app closes to the home screen.
+
+6.3.5 adds the missing guard, returning an error to Dart instead:
+
+```swift
+guard let presentingViewController else {
+  completion?(nil, missingPresenterError)
+  return
+}
+```
+
+6.3.4/6.3.5 also migrate the plugin itself from Objective-C to Swift and fix
+scene URL handling to report whether Google actually handled the URL.
+
+This app is unusually exposed to a nil presenter: it uses a custom
+`SceneDelegate` and `FlutterImplicitEngineDelegate`, so the registrar's view
+controller is not guaranteed to be attached when the button is tapped.
+
+This is **not confirmed on the device** — it is a mechanism that matches the
+symptom and is now removed. If the crash persists, Crashlytics will say so.
+
 ### Why the cause is still not named
 
 The plugin's `@try/@catch` is **weaker protection than it looks**. Its podspec
@@ -62,11 +98,17 @@ produces one by itself (below) instead of depending on a manual export.
    left every later tap awaiting the same dead future, so Google stayed broken
    until the app was force-quit while Apple and email kept working. A failed
    attempt is now forgotten and retried; a successful one is still made once.
-4. **CI uploads dSYMs to Crashlytics**, so reports arrive symbolicated rather
+4. **`google_sign_in_ios` 6.3.3 -> 6.3.5**, plus the other upgrades available
+   inside the existing constraints (`flutter_svg` 2.3.0, `share_plus` 13.3.0,
+   `in_app_review` 2.0.12). Deliberately *not* a major-version upgrade of
+   Firebase, RevenueCat or `flutter_local_notifications`: mixing a large
+   migration into this release would make a changed crash impossible to
+   attribute.
+5. **CI uploads dSYMs to Crashlytics**, so reports arrive symbolicated rather
    than as raw addresses. Deliberately non-fatal: a symbol-upload failure must
    not discard a signed, verified build.
-5. **The release verifier now refuses an iOS build with no crash reporting.**
-6. **Android `google-services.json` named the wrong package.** It declared
+6. **The release verifier now refuses an iOS build with no crash reporting.**
+7. **Android `google-services.json` named the wrong package.** It declared
    `com.example.binary`, the Flutter template default, while the app ships as
    `com.cristians.b1nary`. The `com.google.gms.google-services` plugin is
    applied and fails the build outright on that mismatch. Nothing caught it

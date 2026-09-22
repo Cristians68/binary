@@ -1,5 +1,6 @@
 from copy import deepcopy
 import json
+import re
 from pathlib import Path
 import plistlib
 import tempfile
@@ -111,9 +112,17 @@ class ReleaseVerificationTests(unittest.TestCase):
                     release_settings(fixture)
         plugins.write_text(json.dumps({"swift_package_manager_enabled": {"ios": False}}),
                            encoding="utf-8")
+        # Downgrade whatever google_sign_in_ios actually resolved to, rather
+        # than a hard-coded version: pinning one here made this check quietly
+        # stop testing anything the first time the plugin was upgraded.
         lock = fixture / "pubspec.lock"
-        lock.write_text(lock.read_text(encoding="utf-8").replace('version: "6.3.3"', 'version: "5.9.0"'),
-                        encoding="utf-8")
+        original = lock.read_text(encoding="utf-8")
+        downgraded = re.sub(
+            r'(^  google_sign_in_ios:\n(?:.*\n)*?    version: ")[\d.]+(")',
+            r'\g<1>5.9.0\g<2>', original, count=1, flags=re.M)
+        self.assertNotEqual(downgraded, original,
+                            "the simulated downgrade must actually edit the lockfile")
+        lock.write_text(downgraded, encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "predates"):
             release_settings(fixture)
 
