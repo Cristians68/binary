@@ -16,14 +16,17 @@ import 'screens/notification_service.dart';
 import 'screens/main_navigation.dart';
 import 'screens/service_backend.dart';
 import 'security_service.dart';
+import 'crash_reporting.dart';
 
 void main() {
   // Last-resort handling for uncaught Dart/plugin futures. The binding and
   // runApp must share this zone. Account listeners are cancelled separately
-  // before sign-out; a Dart zone cannot catch a native iOS process crash.
+  // before sign-out; a Dart zone cannot catch a native iOS process crash --
+  // CrashReporting installs a native handler for those, see crash_reporting.dart.
   runZonedGuarded(_bootstrap, (error, stack) {
     debugPrint('Uncaught async error: $error');
     debugPrint('$stack');
+    CrashReporting.recordFatal(error, stack);
   });
 }
 
@@ -43,6 +46,10 @@ Future<void> _bootstrap() async {
   debugPrint = debugPrintFor(kReleaseMode);
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Immediately after Firebase and before anything that can fail, so a
+  // crash during the rest of bootstrap is still reported.
+  await CrashReporting.install();
 
   // RevenueCat must be configured before any purchase / entitlement check.
   await SubscriptionService.configure();

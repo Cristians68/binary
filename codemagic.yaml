@@ -170,6 +170,23 @@ workflows:
         script: |
           python3 tools/ios/verify_release.py \
             --revision "$(git rev-parse HEAD)" --build-number "$NEXT_BUILD_NUMBER"
+
+      # Without this a native crash still reports, but every frame is a raw
+      # address. Deliberately not `set -e`: a symbol-upload hiccup must not
+      # throw away a signed, verified build that is otherwise ready to ship.
+      - name: Upload dSYMs to Crashlytics
+        script: |
+          UPLOAD=ios/Pods/FirebaseCrashlytics/upload-symbols
+          DSYMS=build/ios/archive/Runner.xcarchive/dSYMs
+          if [ -x "$UPLOAD" ] && [ -d "$DSYMS" ]; then
+            if "$UPLOAD" -gsp ios/Runner/GoogleService-Info.plist -p ios "$DSYMS"; then
+              echo "Crashlytics symbols uploaded"
+            else
+              echo "WARNING: dSYM upload failed; crashes arrive unsymbolicated"
+            fi
+          else
+            echo "WARNING: no upload-symbols or dSYMs found; skipping"
+          fi
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/ios-auth-release.json

@@ -45,6 +45,15 @@ def release_settings(root):
             "The resolved Google iOS plugin predates the scene/configuration fixes")
     require(tuple(map(int, settings["googleSDK"].split("."))) >= (9, 0, 0),
             "The resolved native Google SDK is older than expected")
+    # A native iOS termination -- a Swift fatalError, an uncaught NSException,
+    # a signal -- is invisible to every Dart handler in this app. Shipping a
+    # release without a native crash handler is how one Google sign-in crash
+    # survived five build cycles with no evidence beyond "it closed".
+    crash = match(r"^  firebase_crashlytics:\n([\s\S]*?)(?=^  \w+:|\Z)",
+                  lock, "resolved Crashlytics plugin "
+                  "(an iOS release must be able to report native crashes)")
+    settings["crashlytics"] = match(r'^    version: "([\d.]+)"', crash,
+                                    "Crashlytics version")
     return settings
 
 
