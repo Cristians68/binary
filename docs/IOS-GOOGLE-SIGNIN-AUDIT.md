@@ -1,4 +1,107 @@
-# iOS Google sign-in crash audit — 2026-09-20
+# iOS Google sign-in crash audit
+
+## Full audit — 2026-09-22, version 1.0.3
+
+Reported again: on the installed iPhone build, tapping Google closes the app to
+the home screen. That symptom is a **native process termination**. No Dart
+handler in this app can see it, which is why four previous audits ended by
+asking for a `.ips` file instead of naming a cause.
+
+### What this audit established
+
+Checked and **cleared** as the cause — each is now covered by a test:
+
+- The iOS callback configuration is correct and self-consistent. `GIDClientID`,
+  `DefaultFirebaseOptions.ios.iosClientId`, the reversed-client URL scheme, the
+  Firebase fallback scheme `app-1-221875967372-ios-ef2266196153b474a372a9`,
+  `GoogleService-Info.plist` and the bundle identifier all agree.
+  `test/firebase_platform_config_test.dart` now asserts this.
+- `google_sign_in_ios` 6.3.3 no longer re-raises. Its `signInWithScopeHint:`
+  and `addScopes:` wrap the call in `@try/@catch` and return a `FlutterError`.
+  The `[e raise]` path described in the previous audit is gone.
+- `SceneDelegate.swift` is a plain `FlutterSceneDelegate` subclass, is listed in
+  the Xcode `Sources` build phase, and is named correctly by
+  `UISceneDelegateClassName` in `Info.plist`.
+- The Dart layer cannot crash the process. Every Google entry point catches
+  `GoogleSignInException`, `PlatformException`, `FirebaseAuthException` and a
+  bare `catch`. `_onSignInSuccess` swallows its own failures.
+- 540 Flutter tests pass, `flutter analyze` reports no issues, and 7 Python
+  archive-verifier tests pass.
+
+### Why the cause is still not named
+
+The plugin's `@try/@catch` is **weaker protection than it looks**. Its podspec
+requires `GoogleSignIn ~> 9.0`, and the 9.x Google SDK is written in Swift. A
+Swift `fatalError`, trap or force-unwrap is not an `NSException` and is not
+catchable by Objective-C `@catch`, so the plugin's handler cannot intercept it.
+
+`ios/Podfile.lock` is **not committed**, so CocoaPods re-resolves the native
+GoogleSignIn SDK on every CI machine. Two builds from the identical Dart source
+can therefore contain different native SDKs. The verifier only requires
+`>= 9.0.0`. This is the most likely reason the crash has appeared to come and
+go across builds.
+
+Naming the faulting frame still requires a crash report — but the app now
+produces one by itself (below) instead of depending on a manual export.
+
+### Changed in 1.0.3
+
+1. **Native crash reporting** (`lib/crash_reporting.dart`). `firebase_crashlytics`
+   installs a native handler, so a Swift `fatalError`, an uncaught `NSException`
+   or a signal uploads itself. `FlutterError.onError`, `PlatformDispatcher.onError`
+   and the `runZonedGuarded` handler in `main()` feed the same report. Disabled
+   on web (no implementation) and in debug builds.
+2. **Breadcrumbs through the Google flow.** `CrashReporting.trail` marks each
+   native stage — initializing, clearing the account selection, presenting the
+   chooser, reading the identity token, exchanging it with Firebase. When the
+   process is killed, the last breadcrumb names the stage that killed it. This
+   is the single question no previous audit could answer.
+3. **A transient initialization failure is no longer permanent.**
+   `NativeGoogleAuth` cached the `initialize()` future with `??=`, including a
+   *rejected* one. One failure — no network on first launch, a slow keychain —
+   left every later tap awaiting the same dead future, so Google stayed broken
+   until the app was force-quit while Apple and email kept working. A failed
+   attempt is now forgotten and retried; a successful one is still made once.
+4. **CI uploads dSYMs to Crashlytics**, so reports arrive symbolicated rather
+   than as raw addresses. Deliberately non-fatal: a symbol-upload failure must
+   not discard a signed, verified build.
+5. **The release verifier now refuses an iOS build with no crash reporting.**
+6. **Android `google-services.json` named the wrong package.** It declared
+   `com.example.binary`, the Flutter template default, while the app ships as
+   `com.cristians.b1nary`. The `com.google.gms.google-services` plugin is
+   applied and fails the build outright on that mismatch. Nothing caught it
+   because Android is not built in CI.
+
+### Still open — needs the Firebase console, not the repo
+
+- **Android has no OAuth client.** `google-services.json` carries
+  `"oauth_client": []`, and no `serverClientId` is passed anywhere. Google
+  sign-in on Android cannot return an identity token in this state. Register the
+  Android app and its SHA-1/SHA-256 fingerprints, add a Web client, then re-run
+  `flutterfire configure`. The corrected package name above only unblocks the
+  build; it does not create the client. Confirm the console really holds
+  `com.cristians.b1nary` for app id
+  `1:221875967372:android:2c008d4d146758efa372a9`.
+- **`ios/Podfile.lock` is not committed**, so native pod versions are not
+  reproducible. It cannot be generated on Windows. Commit the one produced by
+  the next macOS CI build — it is already retained as a build artifact.
+- **`ios/Runner/GoogleService-Info.plist` is tracked but never bundled.** It
+  appears in no Resources build phase, so it does not reach the app. Firebase is
+  configured from `DefaultFirebaseOptions` in Dart, so nothing is broken today,
+  and the archive verifier already rejects a bundled copy that conflicts. It is
+  a decoy that has misled at least one previous audit, and CI uses it for the
+  dSYM upload.
+
+### Next step
+
+Build `feature/notifications-and-streaks` with `ios-testflight`, install it, and
+tap Google. If it still terminates, the report is now in Firebase Crashlytics
+with the faulting frame and the breadcrumb naming the stage — no manual `.ips`
+export. Retain the build number from `ios-auth-release.json`.
+
+---
+
+## Earlier audit — 2026-09-20
 
 The repository contains two native crash paths in older Google sign-in
 integrations. At the initial audit, the newest fix was committed locally but
