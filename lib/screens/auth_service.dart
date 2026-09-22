@@ -12,6 +12,7 @@ import 'user_document.dart';
 import 'native_apple_auth.dart';
 import 'native_google_auth.dart';
 import 'service_backend.dart';
+import '../crash_reporting.dart';
 
 class AuthService {
   static FirebaseAuth get _auth => ServiceBackend.auth;
@@ -69,10 +70,13 @@ class AuthService {
     // depended on different OAuth configuration.
     try {
       final credential = await _googleSignIn.credential();
+      CrashReporting.trail('google: exchanging credential with Firebase');
       final userCredential = await _signInOrLink(credential);
       debugPrint(
           'Google Sign-In: Firebase success uid=${userCredential.user?.uid}');
+      CrashReporting.trail('google: signed in, running post-sign-in work');
       await _onSignInSuccess();
+      CrashReporting.trail('google: complete');
       return const AuthResult.success();
     } on GoogleSignInException catch (e) {
       return googleAuthFailure(e);
