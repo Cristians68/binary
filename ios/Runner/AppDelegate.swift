@@ -77,7 +77,9 @@ private final class AppleSignInCoordinator: NSObject,
 
   func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
     // Set before performRequests and retained for the lifetime of this request.
-    return anchor!
+    // Never force-unwrap: a nil here is a Swift trap that kills the app with no
+    // catchable error. A bare anchor still lets the system present the sheet.
+    return anchor ?? ASPresentationAnchor()
   }
 
   func authorizationController(controller: ASAuthorizationController,

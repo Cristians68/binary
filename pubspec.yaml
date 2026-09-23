@@ -24,7 +24,7 @@ dependencies:
   google_fonts: ^6.2.1
   google_sign_in: ^7.2.0
   # UIScene support and native configuration errors returned to Dart.
-  google_sign_in_ios: ^6.3.3
+  google_sign_in_ios: ^6.3.5
   sign_in_with_apple: ^6.1.1
   crypto: ^3.0.3
   shared_preferences: ^2.2.2
