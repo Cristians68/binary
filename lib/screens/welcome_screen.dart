@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'app_router.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -49,26 +50,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     super.dispose();
   }
 
+  // AppRouter.slide: the same fade-and-lift as before, plus the iOS
+  // left-edge swipe back, which the plain PageRouteBuilder here never had.
   void _navigateTo(Widget screen) {
     HapticFeedback.selectionClick();
-    Navigator.push(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (_, animation, __) => screen,
-        transitionsBuilder: (_, animation, __, child) => FadeTransition(
-          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.03),
-              end: Offset.zero,
-            ).animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
-            child: child,
-          ),
-        ),
-        transitionDuration: const Duration(milliseconds: 450),
-      ),
-    );
+    Navigator.push(context, AppRouter.slide<void>(screen));
   }
 
   void _goToHome() {

@@ -1,5 +1,6 @@
 import 'package:binary/main.dart';
 import 'package:binary/screens/auth_service.dart';
+import 'package:binary/screens/login_screen.dart';
 import 'package:binary/screens/main_navigation.dart';
 import 'package:binary/screens/service_backend.dart';
 import 'package:binary/screens/welcome_screen.dart';
@@ -144,5 +145,35 @@ void main() {
     expect(auth.currentUser?.uid, 'member');
     expect(auth.anonymousCalls, 0);
     expect((await db.doc('users/new-guest').get()).exists, isFalse);
+  });
+
+  // Every other forward push swipes back from the left edge like any iOS
+  // app; Welcome's Log in and Create an account used a plain
+  // PageRouteBuilder, which has no back gesture at all.
+  testWidgets('Log in can be swiped back to Welcome from the left edge',
+      (tester) async {
+    tester.view.physicalSize = const Size(430, 1100);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const BinaryApp(initialIsDark: false));
+    await tester.pumpAndSettle();
+    final logIn = find.text('Already learning with us? Log in');
+    await tester.ensureVisible(logIn);
+    await tester.tap(logIn);
+    await tester.pumpAndSettle();
+    expect(find.byType(LoginScreen), findsOneWidget);
+
+    final gesture = await tester.startGesture(const Offset(3, 500));
+    for (var moved = 0.0; moved < 400; moved += 40) {
+      await gesture.moveBy(const Offset(40, 0));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LoginScreen), findsNothing);
+    expect(find.byType(WelcomeScreen), findsOneWidget);
   });
 }
