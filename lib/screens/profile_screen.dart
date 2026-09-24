@@ -7,6 +7,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:in_app_review/in_app_review.dart';
+import 'package:image_picker/image_picker.dart';
+import 'profile_avatar.dart';
+import 'profile_photo.dart';
 import 'auth_service.dart';
 import 'sign_out.dart';
 import 'badges_screen.dart';
@@ -402,6 +405,63 @@ class _ProfileScreenState extends State<ProfileScreen>
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  // ── Profile photo ──────────────────────────────────────────────────────────
+  // Private to the learner: stored at users/{uid}/profile/photo, never shown
+  // to anyone else. Library only — iOS's picker needs no permission prompt.
+  Future<void> _editPhoto() async {
+    HapticFeedback.selectionClick();
+    final hasCustom = await ProfilePhotoService.watch().first != null;
+    if (!mounted) return;
+    final choice = await showCupertinoModalPopup<String>(
+      context: context,
+      builder: (ctx) => CupertinoActionSheet(
+        title: const Text('Profile photo'),
+        message: const Text('Only you can see your photo.'),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, 'choose'),
+            child: const Text('Choose photo'),
+          ),
+          if (hasCustom)
+            CupertinoActionSheetAction(
+              isDestructiveAction: true,
+              onPressed: () => Navigator.pop(ctx, 'remove'),
+              child: const Text('Remove photo'),
+            ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Cancel'),
+        ),
+      ),
+    );
+    try {
+      if (choice == 'remove') {
+        await ProfilePhotoService.remove();
+      } else if (choice == 'choose') {
+        final file = await ImagePicker().pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 256,
+          maxHeight: 256,
+          imageQuality: 80,
+          requestFullMetadata: false,
+        );
+        if (file == null) return; // cancelled
+        final bytes = await file.readAsBytes();
+        if (!isAcceptablePhoto(bytes)) {
+          if (mounted) _showToast('That photo is too large. Try another one.');
+          return;
+        }
+        await ProfilePhotoService.save(bytes);
+      }
+    } catch (e) {
+      debugPrint('Profile photo update failed: $e');
+      if (mounted) {
+        _showToast('Could not update your photo. Check your connection.');
+      }
+    }
   }
 
   void _showEditProfile() {
@@ -1144,14 +1204,37 @@ class _ProfileScreenState extends State<ProfileScreen>
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
           child: Column(
             children: [
-              CircleAvatar(
-                radius: 44,
-                backgroundColor: AppColors.primary,
-                child: Text(_getInitials(),
-                    style: const TextStyle(
-                        color: Colors.white,
+              Semantics(
+                button: true,
+                label: 'Change profile photo',
+                child: GestureDetector(
+                  onTap: _editPhoto,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      ProfileAvatar(
+                        radius: 44,
+                        initials: _getInitials(),
                         fontSize: 26,
-                        fontWeight: FontWeight.w700)),
+                        photoUrl: FirebaseAuth.instance.currentUser?.photoURL,
+                      ),
+                      Positioned(
+                        right: -2,
+                        bottom: -2,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: theme.surface,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: theme.border),
+                          ),
+                          child: Icon(CupertinoIcons.camera_fill,
+                              size: 14, color: theme.text),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 14),
               Text(_getFullName(),

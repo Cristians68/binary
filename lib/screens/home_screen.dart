@@ -10,6 +10,7 @@ import 'course_detail_screen.dart';
 import 'app_router.dart';
 import 'badges_screen.dart';
 import 'paywall_screen.dart';
+import 'profile_avatar.dart';
 import 'lessons_screen.dart';
 import 'quiz_score_screen.dart';
 import 'streak_logic.dart';
@@ -240,19 +241,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            CircleAvatar(
+            ProfileAvatar(
               radius: 30,
-              backgroundColor: AppColors.primary,
-              child: Text(
-                _getFirstName().isNotEmpty
-                    ? _getFirstName()[0].toUpperCase()
-                    : 'U',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              initials: _getFirstName().isNotEmpty
+                  ? _getFirstName()[0].toUpperCase()
+                  : 'U',
+              photoUrl: FirebaseAuth.instance.currentUser?.photoURL,
             ),
             const SizedBox(height: 12),
             Text(
