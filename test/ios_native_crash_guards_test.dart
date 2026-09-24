@@ -51,6 +51,21 @@ void main() {
     expect(traps, isEmpty,
         reason: 'A Swift trap terminates the app with no catchable error');
   });
+
+  test('Info.plist explains every protected API the photo picker links', () {
+    final plist = File('ios/Runner/Info.plist').readAsStringSync();
+    for (final key in [
+      'NSPhotoLibraryUsageDescription',
+      'NSCameraUsageDescription',
+    ]) {
+      final value = RegExp('<key>$key</key>\\s*<string>([^<]*)</string>')
+          .firstMatch(plist)
+          ?.group(1);
+      expect(value?.trim(), isNotEmpty,
+          reason: '$key missing: App Store upload is rejected (ITMS-90683) '
+              'and a permission request without it terminates the app');
+    }
+  });
 }
 
 bool _atLeast(String version, List<int> minimum) {

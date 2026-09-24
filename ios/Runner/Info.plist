@@ -50,6 +50,10 @@
 	<true/>
 	<key>NSUserNotificationUsageDescription</key>
 	<string>B1nary uses notifications to remind you about your daily learning streak and new course content.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>B1nary uses a photo you choose as your profile picture.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>B1nary can use the camera for your profile picture.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
