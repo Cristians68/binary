@@ -52,6 +52,9 @@ async function del(tok) {
     { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idToken: tok }) });
 }
+// Runs inside a Chrome page (run_probe.js), so no Node Buffer: base64 of n
+// copies of one byte, built without spreading 150 KB into a call.
+const bytesB64 = (n, fill) => { let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(fill); return btoa(s); };
 const get = (tok, path) => fetch(`${FS}/${path}`, { headers: { Authorization: `Bearer ${tok}` } });
 const patch = (tok, path, fields, mask) =>
   fetch(`${FS}/${path}?${mask.map(m => `updateMask.fieldPaths=${m}`).join('&')}`,
@@ -81,7 +84,7 @@ const patch = (tok, path, fields, mask) =>
       } else { record('PC-3', 'no free module found to use as control', 0, false, ids.join(',')); }
       r = await patch(a.token, `users/${a.uid}`, { displayName: { stringValue: 'probe' } }, ['displayName']);
       record('PC-4', 'own non-entitlement field writable (proves PATCH shape valid)', r.status, r.ok);
-      r = await patch(a.token, `users/${a.uid}/profile/photo`, { jpeg: { bytesValue: Buffer.alloc(64, 7).toString('base64') } }, ['jpeg']);
+      r = await patch(a.token, `users/${a.uid}/profile/photo`, { jpeg: { bytesValue: bytesB64(64, 7) } }, ['jpeg']);
       record('PC-5', 'own small profile photo writable', r.status, r.ok);
     }
     console.log('\n--- abuse cases (these MUST be denied) ---');
@@ -136,9 +139,9 @@ const patch = (tok, path, fields, mask) =>
     record('AB-14', 'unauthenticated catalogue read refused', r.status, r.status === 403);
     r = await get(a.token, `users/${b.uid}/profile/photo`);
     record('AB-16', 'reading another user profile photo refused', r.status, r.status === 403);
-    r = await patch(a.token, `users/${a.uid}/profile/photo`, { jpeg: { bytesValue: Buffer.alloc(150 * 1024 + 1, 7).toString('base64') } }, ['jpeg']);
+    r = await patch(a.token, `users/${a.uid}/profile/photo`, { jpeg: { bytesValue: bytesB64(150 * 1024 + 1, 7) } }, ['jpeg']);
     record('AB-17', 'oversize profile photo refused', r.status, r.status === 403);
-    r = await patch(a.token, `users/${a.uid}/profile/photo`, { jpeg: { bytesValue: Buffer.alloc(8).toString('base64') }, subscriptionPlan: { stringValue: 'all' } }, ['jpeg', 'subscriptionPlan']);
+    r = await patch(a.token, `users/${a.uid}/profile/photo`, { jpeg: { bytesValue: bytesB64(8, 0) }, subscriptionPlan: { stringValue: 'all' } }, ['jpeg', 'subscriptionPlan']);
     record('AB-18', 'extra fields on the profile photo refused', r.status, r.status === 403);
 
     console.log('\n========== SUMMARY ==========');
