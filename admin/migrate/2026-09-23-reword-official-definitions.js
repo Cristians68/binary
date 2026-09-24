@@ -94,6 +94,21 @@ const edits = [
     },
   },
   {
+    // Found on the post-commit re-scan: a shortened copy of the same ITIL
+    // definition, as the correct answer option.
+    path: "courses/itil-v4/modules/module-1/quiz/q-3",
+    guard: ["options", "means of enabling value co-creation"],
+    set: {
+      options: [
+        "A piece of software installed on a server",
+        "A way of helping customers get results they want, with value created together",
+        "A contract between a provider and customer",
+        "A helpdesk ticket system",
+      ],
+      correctIndex: 1,
+    },
+  },
+  {
     path: "courses/csm/modules/module-2/quiz/q-3",
     guard: ["explanation", "single objective for the Sprint"],
     set: {
