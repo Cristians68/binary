@@ -4,6 +4,21 @@ Read this first. It records what is live, what is waiting on the owner, and
 the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 `docs/IOS-GOOGLE-SIGNIN-AUDIT.md`, `docs/SECURITY.md` and `docs/RELEASE.md`.
 
+## Can we resubmit? NO (assessed 2026-09-23, build `efe660b`)
+
+Certain App Review rejections: (1) purchases unlock nothing and (2) Delete
+account fails with `not-found`, both because zero Cloud Functions are
+deployed; (3) Sign in with Apple fails (`invalid-credential`), and it must
+work because Google sign-in is offered (4.8). Also needed: App Privacy labels
+updated (profile photos, Crashlytics), device paywall screenshot, review
+notes, and a device test of the 2026-09-23 features.
+
+Order: Apple fix (needs the `token:` line from a device) → owner upgrades to
+Blaze + confirms Paid Apps Agreement/bank/tax → deploy functions → build the
+payment system (instant unlock via a server check against RevenueCat, one
+product per course; design awaiting the owner's yes) → sandbox purchase and
+restore on device → submission prep.
+
 ## Where things are
 
 - Work branch: `feature/notifications-and-streaks`. **`master` must be
