@@ -10,6 +10,8 @@ import 'auth_result.dart';
 import 'subscription_service.dart';
 import 'user_document.dart';
 import 'apple_profile_name.dart';
+import 'apple_token_diagnostics.dart';
+import '../firebase_options.dart';
 import 'native_apple_auth.dart';
 import 'native_google_auth.dart';
 import 'service_backend.dart';
@@ -440,8 +442,13 @@ class AuthService {
   }
 
   static Future<AuthResult> _appleViaNativeSdk() async {
+    // Kept outside the try so a Firebase rejection can be diagnosed from the
+    // token Apple actually returned. See apple_token_diagnostics.dart.
+    String? diagToken;
+    String? diagNonce;
     try {
       final rawNonce = _generateNonce();
+      diagNonce = rawNonce;
       final nonce = _sha256ofString(rawNonce);
 
       final appleCredential = await NativeAppleAuth.getCredential(
@@ -462,6 +469,7 @@ class AuthService {
         debugPrint('Apple Sign-In: identityToken is null — aborting');
         return const AuthResult.failed(code: 'missing-identity-token');
       }
+      diagToken = identityToken;
 
       final oauthCredential = OAuthProvider('apple.com').credential(
         idToken: identityToken,
@@ -517,7 +525,18 @@ class AuthService {
       // operation-not-allowed means Apple is not enabled in the Firebase
       // console, which the App ID capability alone does not cover.
       debugPrint('Apple Sign-In FirebaseAuthException: ${e.code} ${e.message}');
-      return AuthResult.failed(code: e.code, message: e.message);
+      final diagnosis = diagToken == null || diagNonce == null
+          ? null
+          : appleTokenDiagnostics(
+              idToken: diagToken,
+              rawNonce: diagNonce,
+              expectedAudience:
+                  DefaultFirebaseOptions.ios.iosBundleId ?? 'unknown',
+              now: DateTime.now(),
+            );
+      return AuthResult.failed(
+          code: e.code,
+          message: [e.message, diagnosis].whereType<String>().join(' | '));
     } on PlatformException catch (e) {
       if (_isCancellation(e.code)) return const AuthResult.cancelled();
       // The Google path has caught this since it was written; this one fell
