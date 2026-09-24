@@ -13,6 +13,7 @@ import 'screens/app_theme.dart';
 import 'screens/subscription_service.dart';
 import 'screens/notification_prefs_service.dart';
 import 'screens/notification_service.dart';
+import 'screens/app_lock.dart';
 import 'screens/main_navigation.dart';
 import 'screens/service_backend.dart';
 import 'security_service.dart';
@@ -182,8 +183,10 @@ class _BinaryAppState extends State<BinaryApp> {
               },
             ),
           ),
-          builder: (context, child) =>
-              AppTheme(notifier: _themeNotifier, child: child!),
+          // AppLock sits under the theme and around the navigator, so the
+          // lock screen covers every route and the app keeps its place.
+          builder: (context, child) => AppTheme(
+              notifier: _themeNotifier, child: AppLock(child: child!)),
           home: const _AppEntry(),
         );
       },

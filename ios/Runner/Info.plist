@@ -54,6 +54,8 @@
 	<string>B1nary uses a photo you choose as your profile picture.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>B1nary can use the camera for your profile picture.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>B1nary uses Face ID to unlock the app when you turn on App Lock.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -57,6 +57,8 @@ void main() {
     for (final key in [
       'NSPhotoLibraryUsageDescription',
       'NSCameraUsageDescription',
+      // local_auth: using Face ID without this string terminates the app.
+      'NSFaceIDUsageDescription',
     ]) {
       final value = RegExp('<key>$key</key>\\s*<string>([^<]*)</string>')
           .firstMatch(plist)

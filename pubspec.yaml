@@ -37,6 +37,7 @@ dependencies:
   share_plus: ^13.0.0
   flutter_jailbreak_detection: ^1.10.0
   image_picker: ^1.2.3
+  local_auth: ^3.0.2
 
 dev_dependencies:
   flutter_test:

@@ -10,6 +10,7 @@ import 'package:in_app_review/in_app_review.dart';
 import 'package:image_picker/image_picker.dart';
 import 'profile_avatar.dart';
 import 'profile_photo.dart';
+import 'app_lock.dart';
 import 'auth_service.dart';
 import 'sign_out.dart';
 import 'badges_screen.dart';
@@ -53,6 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   int _streak = 0;
   String _avgScore = '-';
   bool _notificationsEnabled = true;
+  bool _appLockOn = false;
   bool _loadingNotifPref = true;
 
   StreamSubscription<Map<String, dynamic>>? _statsSub;
@@ -69,6 +71,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     _controller.forward();
     _listenToStats();
     _loadNotifPref();
+    AppLockSettings.isEnabled().then((on) {
+      if (mounted) setState(() => _appLockOn = on);
+    });
   }
 
   @override
@@ -405,6 +410,21 @@ class _ProfileScreenState extends State<ProfileScreen>
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  // ── App Lock ───────────────────────────────────────────────────────────────
+  // Opt-in. Turning it on runs one Face ID/passcode check, which is also when
+  // iOS asks to allow Face ID; a decline leaves it off.
+  Future<void> _toggleAppLock() async {
+    final want = !_appLockOn;
+    final ok = await AppLockSettings.setEnabled(want);
+    if (!mounted) return;
+    if (ok) {
+      setState(() => _appLockOn = want);
+      _showToast(want ? 'App Lock is on.' : 'App Lock is off.');
+    } else {
+      _showToast('App Lock needs Face ID or a passcode set on this phone.');
+    }
   }
 
   // ── Profile photo ──────────────────────────────────────────────────────────
@@ -1048,6 +1068,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                     _buildItem(CupertinoIcons.lock_fill, 'Change password',
                         AppColors.primary, theme,
                         onTap: _showChangePasswordSheet),
+                  _buildItem(CupertinoIcons.lock_shield_fill, 'App Lock',
+                      AppColors.primary, theme,
+                      subtitle: 'Face ID or passcode after 2 minutes away',
+                      onTap: _toggleAppLock,
+                      trailing: _appLockOn
+                          ? _badge('On', AppColors.green)
+                          : _badge('Off', theme.subtext)),
                   _buildThemeToggle(theme),
                 ]),
 
