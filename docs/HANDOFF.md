@@ -12,7 +12,7 @@ the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
   `git push origin feature/notifications-and-streaks:master`
 - iOS builds: Codemagic workflow **iOS → TestFlight**. Always confirm the
   build page shows the commit you expect before debugging a device report.
-- Checks: `flutter analyze` (zero issues) and `flutter test` (597 passing),
+- Checks: `flutter analyze` (zero issues) and `flutter test` (602 passing),
   `cd functions && npm test` (23 passing),
   `python -m unittest discover -s tools/ios -p 'test_*.py'`.
 - Live security probe: serve `build/web` on 127.0.0.1:8099, then
@@ -66,6 +66,29 @@ the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
    (`oauth_client: []` in `google-services.json`), and leftover legacy course
    docs `networking` and `binary-network-pro` (hidden by the catalogue
    allow-list).
+
+## Paywall audit (2026-09-23)
+
+Fixed in the app (`f945d86`): bundle course no longer locked in; a purchase
+whose entitlement never lands is no longer reported as success; every paywall
+entry swipes back.
+
+**Purchases still cannot work in production. These are server/store issues,
+not app code:**
+- **Zero Cloud Functions deployed** (Spark plan). `setPendingPurchase`
+  (which courses were bought) and the RevenueCat webhook (which grants the
+  plan) do not exist live. A real buyer is charged and gets nothing; the app
+  now at least says so and points to Restore. Fix: Blaze plan, then
+  `firebase deploy --only functions`, then set the RevenueCat webhook URL and
+  secret.
+- `binary_course_single` is ONE non-consumable: an Apple ID can buy it once,
+  ever, so a second single course is impossible. The approved redesign is
+  one product per course (`binary_course_<code>`); see the purchase-redesign
+  notes (brainstorm was paused mid-way).
+- Webhook ignores `TRANSFER` (restore on a new account grants nothing) and
+  does not revoke on refunds (`CANCELLATION`).
+- Unknown: whether the three products exist and are attached to a RevenueCat
+  offering. App Store Connect has not been checked from this machine.
 
 ## Traps
 
