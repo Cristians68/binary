@@ -718,11 +718,11 @@ class _QuizScreenState extends State<QuizScreen> {
         return [
           {
             'question':
-                'Which ITIL V4 term describes a means of enabling value co-creation by facilitating outcomes customers want, without them managing specific costs and risks?',
+                'In ITIL 4, what do we call something that helps customers get the results they want while the provider carries certain costs and risks for them?',
             'answers': ['A product', 'A service', 'A process', 'A practice'],
             'correct': 1,
             'explanation':
-                'A service enables value co-creation by facilitating outcomes customers want without them managing specific costs and risks. This is the precise ITIL V4 definition — "co-creation" is key.',
+                'That is a service. ITIL 4 stresses that its value is co-created: provider and customer create it together.',
           },
           {
             'question':
@@ -1786,7 +1786,7 @@ class _QuizScreenState extends State<QuizScreen> {
             'question': 'Scrum is best described as:',
             'answers': [
               'A project management methodology with fixed processes',
-              'A lightweight framework for addressing complex adaptive problems',
+              'A simple framework for tackling complex, changing problems',
               'A software development programming technique',
               'A risk management approach for large enterprises',
             ],
@@ -1998,7 +1998,7 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 1,
             'explanation':
-                'Sprint Goal = single objective for the Sprint. Gives focus while allowing flexibility on how to achieve it.',
+                'Sprint Goal = the one aim the Sprint works toward. Gives focus while allowing flexibility on how to achieve it.',
           },
           {
             'question': 'What is the maximum length of a Sprint?',

@@ -519,7 +519,7 @@ class _LessonScreenState extends State<LessonScreen> {
               'label': 'Foundation',
               'term': 'What is a Service?',
               'definition':
-                  'A service is a means of enabling value co-creation by facilitating outcomes that customers want to achieve, without the customer having to manage specific costs and risks. Key phrase: "co-creation" — value is not delivered TO the customer, it is created WITH them.',
+                  'A service helps customers reach the results they care about, while the provider takes on certain costs and risks for them. Key idea: "co-creation" — value is not delivered TO the customer, it is created WITH them.',
               'example':
                   'Exam trap: Do not say a service "delivers value." The correct ITIL V4 language is that a service "facilitates value co-creation." If the exam uses "delivers," that answer is likely wrong.',
             },
@@ -3554,7 +3554,7 @@ class _LessonScreenState extends State<LessonScreen> {
               'label': 'Foundation',
               'term': 'What is Scrum?',
               'definition':
-                  'Scrum is a lightweight framework for developing complex products. It uses fixed-length iterations called Sprints (1–4 weeks) to deliver potentially releasable increments. Scrum defines three accountabilities (roles), five events, and three artifacts. It is the most widely used Agile framework.',
+                  'Scrum is a simple, minimal framework for building complex products. It uses fixed-length iterations called Sprints (1–4 weeks) to deliver potentially releasable increments. Scrum defines three accountabilities (roles), five events, and three artifacts. It is the most widely used Agile framework.',
               'example':
                   'Exam trap: Scrum is a FRAMEWORK, not a methodology or process. It provides structure (events, roles, artifacts) but does not prescribe specific engineering practices. If a question calls Scrum a "methodology," that phrasing is technically imprecise — but exam answers typically use "framework."',
             },
@@ -3793,7 +3793,7 @@ class _LessonScreenState extends State<LessonScreen> {
               'label': 'Event',
               'term': 'Sprint Goal',
               'definition':
-                  'The Sprint Goal is the single objective for the Sprint. It gives the Developers flexibility in the exact work needed to achieve it. If work turns out different than expected, the team collaborates with the Product Owner to renegotiate scope — but the Sprint Goal remains fixed.',
+                  'The Sprint Goal is the one thing the whole Sprint is aiming for. It gives the Developers flexibility in the exact work needed to achieve it. If work turns out different than expected, the team collaborates with the Product Owner to renegotiate scope — but the Sprint Goal remains fixed.',
               'example':
                   'Scenario: Halfway through the Sprint, a Developer discovers the planned approach won\'t work. They talk to the PO and adjust WHICH items to complete — but the Sprint Goal stays the same. The goal is fixed; the plan is flexible. This is a key Scrum concept tested frequently.',
             },
@@ -3801,7 +3801,7 @@ class _LessonScreenState extends State<LessonScreen> {
               'label': 'Event',
               'term': 'Daily Scrum — Purpose and Time-box',
               'definition':
-                  'The Daily Scrum is a 15-minute event for the Developers to inspect progress toward the Sprint Goal and adapt the Sprint Backlog as necessary. It is held at the same time and place every day. The Scrum Master does NOT run it — the Developers own it.',
+                  'The Daily Scrum is a short daily check-in (15 minutes at most) where the Developers look at how they are tracking against the Sprint Goal and adjust the Sprint Backlog if needed. It is held at the same time and place every day. The Scrum Master does NOT run it — the Developers own it.',
               'example':
                   'Exam trap: The Daily Scrum is for DEVELOPERS only — not the Product Owner, not stakeholders, not management. The Scrum Master may attend to coach but does not facilitate it as their primary role. The three classic questions ("what did I do, what will I do, blockers") are common practice but NOT required by the Scrum Guide.',
             },
@@ -4201,7 +4201,7 @@ class _LessonScreenState extends State<LessonScreen> {
               'label': 'Definition',
               'term': 'What is Scrum?',
               'definition':
-                  'Scrum is a lightweight framework for developing complex products using short iterations called Sprints. It defines three accountabilities, five events, and three artifacts.',
+                  'Scrum is a simple, minimal framework for building complex products using short iterations called Sprints. It defines three accountabilities, five events, and three artifacts.',
               'example':
                   'A software team works in 2-week sprints, delivering a working feature increment at the end of each sprint.',
             },
