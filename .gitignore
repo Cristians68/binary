@@ -92,3 +92,6 @@ tools/screenshots/shots/verify/
 # NOT committed: it carries ~42k characters of lesson prose from four PAID
 # courses, and this repository is public. Regenerate it locally instead.
 tools/screenshots/fixture_content.dart
+
+# Paid course content (repo is public). Loaded by admin/migrate scripts.
+admin/private/
