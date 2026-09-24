@@ -140,11 +140,6 @@ class SubscriptionService {
       debugPrint('RevenueCat: purchasing ${package.storeProduct.identifier}');
       await Purchases.purchase(PurchaseParams.package(package));
       debugPrint('RevenueCat: purchase success — awaiting webhook');
-
-      // The entitlement lands in Firestore when the webhook fires. planStream()
-      // is a live snapshot listener, so the UI updates on its own.
-      await _awaitEntitlement();
-      return true;
     } catch (e) {
       final err = e.toString().toLowerCase();
       if (err.contains('cancel') || err.contains('usercancel')) {
@@ -162,6 +157,21 @@ class SubscriptionService {
       debugPrint('RevenueCat purchase error: $e');
       throw 'Purchase failed. Please try again or restore purchases.';
     }
+
+    // Deliberately OUTSIDE the try: the store has taken payment by now, so
+    // this must never be reported as "Purchase failed. Please try again",
+    // which would invite a second charge.
+    //
+    // The entitlement lands in Firestore when the webhook fires. The wait's
+    // result used to be ignored and `true` returned regardless, so a buyer
+    // whose plan never landed saw the paywall close as if it had worked and
+    // was dropped on the course they had just paid for, still locked.
+    if (!await _awaitEntitlement()) {
+      throw 'Payment received. Your courses are still being activated, '
+          'which can take a minute. If they are still locked afterwards, '
+          'tap Restore purchases.';
+    }
+    return true;
   }
 
   /// Restore previously purchased non-consumables.

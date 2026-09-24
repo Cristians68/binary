@@ -7,6 +7,7 @@ import 'restore_result.dart';
 import 'subscription_service.dart';
 import '../app_links.dart';
 import 'app_theme.dart';
+import 'bundle_selection.dart';
 import '../course_catalog.dart';
 
 // ── All available courses the user can pick from in a bundle-4 plan ──────────
@@ -265,10 +266,13 @@ class _PaywallScreenState extends State<PaywallScreen> {
   }
 
   void _showError(String message) {
+    // A paid-but-not-yet-active purchase is not an error; titling it as one
+    // reads like the charge failed and invites a second purchase.
+    final paid = message.startsWith('Payment received');
     showCupertinoDialog(
       context: context,
       builder: (_) => CupertinoAlertDialog(
-        title: const Text('Something went wrong'),
+        title: Text(paid ? 'Almost there' : 'Something went wrong'),
         content: Text(message),
         actions: [
           CupertinoDialogAction(
@@ -632,7 +636,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
   }
 
   /// Course picker shown when bundle-4 plan is selected.
-  /// The course the user arrived from is pre-ticked and cannot be removed.
+  /// The course the user arrived from is pre-ticked, and can be unticked like
+  /// any other (see bundle_selection.dart).
   Widget _buildBundle4Picker(ThemeNotifier theme) {
     final remaining = 4 - _bundle4Selection.length;
     return Column(
@@ -675,21 +680,13 @@ class _PaywallScreenState extends State<PaywallScreen> {
         ..._kAllCourses.map((course) {
           final id        = course['id']!;
           final title     = course['title']!;
-          final isLocked  = id == widget.courseId; // pre-selected, can't deselect
           final isChecked = _bundle4Selection.contains(id);
-          final canSelect = !isChecked && _bundle4Selection.length < 4;
 
           return GestureDetector(
             onTap: () {
-              if (isLocked) return; // can't deselect the originating course
               HapticFeedback.selectionClick();
-              setState(() {
-                if (isChecked) {
-                  _bundle4Selection.remove(id);
-                } else if (canSelect) {
-                  _bundle4Selection.add(id);
-                }
-              });
+              setState(() => _bundle4Selection =
+                  toggleBundleCourse(_bundle4Selection, id));
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
@@ -741,25 +738,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       ),
                     ),
                   ),
-                  // Lock badge for the pre-selected course
-                  if (isLocked)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.amber.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'INCLUDED',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.amber,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),
