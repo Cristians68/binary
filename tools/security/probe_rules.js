@@ -81,6 +81,8 @@ const patch = (tok, path, fields, mask) =>
       } else { record('PC-3', 'no free module found to use as control', 0, false, ids.join(',')); }
       r = await patch(a.token, `users/${a.uid}`, { displayName: { stringValue: 'probe' } }, ['displayName']);
       record('PC-4', 'own non-entitlement field writable (proves PATCH shape valid)', r.status, r.ok);
+      r = await patch(a.token, `users/${a.uid}/profile/photo`, { jpeg: { bytesValue: Buffer.alloc(64, 7).toString('base64') } }, ['jpeg']);
+      record('PC-5', 'own small profile photo writable', r.status, r.ok);
     }
     console.log('\n--- abuse cases (these MUST be denied) ---');
     r = await patch(a.token, `users/${a.uid}`, { subscriptionPlan: { stringValue: 'all' } }, ['subscriptionPlan']);
@@ -132,6 +134,12 @@ const patch = (tok, path, fields, mask) =>
     record('AB-13', 'feedback under another uid refused', r.status, r.status === 403);
     r = await fetch(`${FS}/courses`);
     record('AB-14', 'unauthenticated catalogue read refused', r.status, r.status === 403);
+    r = await get(a.token, `users/${b.uid}/profile/photo`);
+    record('AB-16', 'reading another user profile photo refused', r.status, r.status === 403);
+    r = await patch(a.token, `users/${a.uid}/profile/photo`, { jpeg: { bytesValue: Buffer.alloc(150 * 1024 + 1, 7).toString('base64') } }, ['jpeg']);
+    record('AB-17', 'oversize profile photo refused', r.status, r.status === 403);
+    r = await patch(a.token, `users/${a.uid}/profile/photo`, { jpeg: { bytesValue: Buffer.alloc(8).toString('base64') }, subscriptionPlan: { stringValue: 'all' } }, ['jpeg', 'subscriptionPlan']);
+    record('AB-18', 'extra fields on the profile photo refused', r.status, r.status === 403);
 
     console.log('\n========== SUMMARY ==========');
     const pc = results.filter(x => x.id.startsWith('PC'));

@@ -79,6 +79,16 @@ service cloud.firestore {
       match /progress/{document=**} {
         allow read, write: if isOwner(uid);
       }
+
+      // Private profile photo: users/{uid}/profile/photo. Owner only, and
+      // capped at 150 KB to match kMaxProfilePhotoBytes in the app.
+      match /profile/photo {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['jpeg', 'updatedAt'])
+          && request.resource.data.jpeg is bytes
+          && request.resource.data.jpeg.size() <= 150 * 1024;
+      }
     }
 
     // ── course catalogue (shared, read-only to clients) ─────────────────────
