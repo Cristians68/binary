@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'auth_result.dart';
 import 'subscription_service.dart';
 import 'user_document.dart';
+import 'apple_profile_name.dart';
 import 'native_apple_auth.dart';
 import 'native_google_auth.dart';
 import 'service_backend.dart';
@@ -200,6 +201,7 @@ class AuthService {
   /// signInWithCredential would mint a new uid and silently orphan all of it.
   static Future<UserCredential> _signInOrLink(AuthCredential credential) async {
     final current = _auth.currentUser;
+    var signInCredential = credential;
     if (current != null && current.isAnonymous) {
       try {
         return await current.linkWithCredential(credential);
@@ -213,12 +215,13 @@ class AuthService {
         // because merging two histories is not something we can do safely.
         debugPrint('Guest link failed (${e.code}) - signing in to the '
             'existing account instead');
+        signInCredential = credentialForExistingAccount(e, credential);
       }
     }
     return current == null
-        ? _auth.signInWithCredential(credential)
+        ? _auth.signInWithCredential(signInCredential)
         : ServiceBackend.userStreams
-            .transition(() => _auth.signInWithCredential(credential));
+            .transition(() => _auth.signInWithCredential(signInCredential));
   }
 
   // ── Continue as a guest ───────────────────────────────────────────────────
@@ -465,26 +468,35 @@ class AuthService {
         rawNonce: rawNonce,
       );
 
+      // Apple only sends the name on the very first authorisation, so keep it
+      // on the device BEFORE Firebase can fail — see [AppleNameStore].
+      final appleUserId = appleCredential.userIdentifier;
+      var fullName =
+          appleFullName(appleCredential.givenName, appleCredential.familyName);
+      if (fullName != null && appleUserId != null) {
+        await AppleNameStore.remember(appleUserId, fullName);
+      }
+
       final userCredential = await _signInOrLink(oauthCredential);
 
-      // Apple only sends name on the very first sign-in; save it if present.
-      final given = appleCredential.givenName;
-      final family = appleCredential.familyName;
-      if (given != null || family != null) {
-        final fullName =
-            [given, family].where((s) => s != null && s.isNotEmpty).join(' ');
-        if (fullName.isNotEmpty) {
-          try {
-            await userCredential.user
-                ?.updateDisplayName(fullName)
-                .timeout(const Duration(seconds: 8));
-          } catch (error) {
-            debugPrint('Apple profile name update deferred: $error');
-          }
+      if (fullName == null && appleUserId != null) {
+        fullName = await AppleNameStore.recall(appleUserId);
+      }
+      final user = userCredential.user;
+      if (fullName != null &&
+          user != null &&
+          (user.displayName?.trim().isEmpty ?? true)) {
+        try {
+          await user
+              .updateDisplayName(fullName)
+              .timeout(const Duration(seconds: 8));
+          if (appleUserId != null) await AppleNameStore.forget(appleUserId);
+        } catch (error) {
+          debugPrint('Apple profile name update deferred: $error');
         }
       }
 
-      await _onSignInSuccess();
+      await _onSignInSuccess(displayName: fullName);
       return const AuthResult.success();
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code == AuthorizationErrorCode.canceled) {
@@ -521,13 +533,13 @@ class AuthService {
     }
   }
 
-  static Future<void> _onSignInSuccess() async {
+  static Future<void> _onSignInSuccess({String? displayName}) async {
     // FIRST: make sure users/{uid} exists. Only email/password signup created
     // it, so a Google or Apple user used to reach the home screen with no
     // document, and everything that writes to it had to survive that.
     try {
       await ensureUserDocument(
-        displayName: _auth.currentUser?.displayName,
+        displayName: _auth.currentUser?.displayName ?? displayName,
       ).timeout(const Duration(seconds: 8));
     } catch (e) {
       debugPrint('ensureUserDocument error: $e');
