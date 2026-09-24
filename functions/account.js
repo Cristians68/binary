@@ -28,21 +28,12 @@ exports.deleteAccount = onCall(async (request) => {
   const db = admin.firestore();
   const userRef = db.collection("users").doc(uid);
 
-  // users/{uid}/progress/{courseId}/modules/{moduleId} is a sub-subcollection
-  // and must be emptied before the parent docs can be removed — Firestore
-  // does not cascade-delete subcollections.
-  const progressSnap = await userRef.collection("progress").get();
-  for (const courseDoc of progressSnap.docs) {
-    const modulesSnap = await courseDoc.ref.collection("modules").get();
-    if (!modulesSnap.empty) {
-      const batch = db.batch();
-      modulesSnap.docs.forEach((d) => batch.delete(d.ref));
-      await batch.commit();
-    }
-    await courseDoc.ref.delete();
-  }
-
-  await userRef.delete();
+  // Firestore does not cascade-delete subcollections. The old hand-written
+  // walk knew only about progress/{courseId}/modules, so it left behind the
+  // quiz attempt receipts under each module and the profile/photo doc.
+  // recursiveDelete removes the document and every subcollection beneath it,
+  // including any added later.
+  await db.recursiveDelete(userRef);
 
   // Deleting the Auth record last: if anything above throws, the user can
   // still sign in and retry, rather than being locked out with orphaned data
