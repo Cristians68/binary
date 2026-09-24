@@ -12,7 +12,7 @@ the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
   `git push origin feature/notifications-and-streaks:master`
 - iOS builds: Codemagic workflow **iOS → TestFlight**. Always confirm the
   build page shows the commit you expect before debugging a device report.
-- Checks: `flutter analyze` (zero issues) and `flutter test` (562 passing),
+- Checks: `flutter analyze` (zero issues) and `flutter test` (579 passing),
   `cd functions && npm test` (23 passing),
   `python -m unittest discover -s tools/ios -p 'test_*.py'`.
 - Live security probe: serve `build/web` on 127.0.0.1:8099, then
@@ -32,14 +32,14 @@ the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 | AI & ML Foundations course live | read back: 7 modules × 12 cards × 12 questions |
 | Paid lesson prose sealed (F-02) | 0 prose on module docs, 80 in `body/lesson`; probe AB-15 on network-professional |
 | Copyright scan: ITIL glossary + Scrum Guide sentences reworded in app | commit `79daaa5` |
+| Copyright: 10 Firestore items reworded (owner ran the script); live re-scan finds none of the flagged wording | `admin/migrate/2026-09-23-reword-official-definitions.js` |
+| App Lock (opt-in Face ID/passcode after 2 min away; first-open offer + Profile switch) | `test/app_lock_test.dart`, 17 tests, mutation-checked; `NSFaceIDUsageDescription` guarded |
 | Four 20-module courses made playable (480 original flashcards + 400 quiz moved to `quiz`) | owner ran the restore script; re-run finds 0 to do; network-pro module-1 has 6 cards + 5 questions |
 
 ## Waiting on the owner (production writes; auto mode blocks the assistant)
 
-1. `GOOGLE_CLOUD_PROJECT=binary-6a372 NODE_PATH=functions/node_modules node admin/migrate/2026-09-23-reword-official-definitions.js --commit`
-   — rewords 9 Firestore items copied from official ITIL/Scrum wording and
-   fixes "AXELOS owns ITIL" (PeopleCert since 2021). Dry run: 9 edits.
-2. Fast-forward `master`, then build iOS → TestFlight.
+1. Fast-forward `master`, then build iOS → TestFlight (App Lock, profile
+   photo and the Apple fixes are not on any device yet).
 
 ## Open work, in the owner's priority order
 
@@ -51,16 +51,12 @@ the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
    token's non-identifying claims on the device (`aud`, `iss`, `exp`/`iat`
    against device time, and whether `nonce` equals SHA-256 of the raw nonce)
    and add them to "Copy details for support". Do not log email or `sub`.
-2. **Free trial should be one full module**, then purchase to continue.
-   Module 1 is already free in the rules (`module-1`/`module-01`); check what
-   the in-app "Try free" flow actually gives.
-3. **"Sign out 2 minutes after closing the app"** was requested. Recommend
-   a Face ID/passcode app lock instead: signing out a guest loses their
-   account for good, and Apple/Google users would sign in on every launch.
-   Confirm with the owner before building.
-4. **Go-live readiness**: every new user must get onboarding and course
+2. **Free trial = one full module**: already true in code and rules; every
+   course's Module 1 now has 5-12 cards and 5-12 questions. The "one question"
+   the owner saw was the broken-course fallback sample. Re-test on device.
+3. **Go-live readiness**: every new user must get onboarding and course
    picking; confirm no test data or owner account is baked in.
-5. Still outstanding from earlier: zero Cloud Functions deployed (needs the
+4. Still outstanding from earlier: zero Cloud Functions deployed (needs the
    Blaze plan: purchases, restore and delete account are dead in production),
    the purchase redesign, App Store screenshots/IAPs, Android Google sign-in
    (`oauth_client: []` in `google-services.json`), and leftover legacy course
