@@ -12,7 +12,7 @@ the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
   `git push origin feature/notifications-and-streaks:master`
 - iOS builds: Codemagic workflow **iOS → TestFlight**. Always confirm the
   build page shows the commit you expect before debugging a device report.
-- Checks: `flutter analyze` (zero issues) and `flutter test` (579 passing),
+- Checks: `flutter analyze` (zero issues) and `flutter test` (597 passing),
   `cd functions && npm test` (23 passing),
   `python -m unittest discover -s tools/ios -p 'test_*.py'`.
 - Live security probe: serve `build/web` on 127.0.0.1:8099, then
@@ -44,18 +44,22 @@ the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 ## Open work, in the owner's priority order
 
 1. **Apple sign-in fails**: `Invalid OAuth response from apple.com
-   (invalid-credential)`. Checked and ruled out: the Apple provider is enabled
-   (empty `appleSignInConfig`, normal for native iOS) and the iOS Firebase app
-   is registered as `com.cristians.b1nary`. A stale `com.example.binary` iOS
-   app also exists (harmless). Next step: on failure, decode the identity
-   token's non-identifying claims on the device (`aud`, `iss`, `exp`/`iat`
-   against device time, and whether `nonce` equals SHA-256 of the raw nonce)
-   and add them to "Copy details for support". Do not log email or `sub`.
+   (invalid-credential)`. Ruled out: provider enabled (empty
+   `appleSignInConfig`, normal for native iOS); iOS app registered as
+   `com.cristians.b1nary` (a stale `com.example.binary` iOS app also exists).
+   Built: on that failure the copied error now ends with
+   `token: aud …, iss …, exp …, iat …, nonce …` (`apple_token_diagnostics.dart`).
+   **Next: get that line from the device, then fix what it names.** Note the
+   iOS path has no fallback to `_appleViaFirebaseProvider` (FlutterFire builds
+   its own nonce/credential); a fallback on `invalid-credential` is an option
+   if the nonce is the cause.
 2. **Free trial = one full module**: already true in code and rules; every
    course's Module 1 now has 5-12 cards and 5-12 questions. The "one question"
    the owner saw was the broken-course fallback sample. Re-test on device.
-3. **Go-live readiness**: every new user must get onboarding and course
-   picking; confirm no test data or owner account is baked in.
+3. Go-live readiness, DONE 2026-09-23: fresh installs sign out any session
+   iOS restored from the Keychain (`lib/fresh_install.dart`); a one-time
+   per-account "What do you want to learn?" picker (`course_picker.dart`); an
+   intro slide listing every course; no hardcoded accounts in `lib/`.
 4. Still outstanding from earlier: zero Cloud Functions deployed (needs the
    Blaze plan: purchases, restore and delete account are dead in production),
    the purchase redesign, App Store screenshots/IAPs, Android Google sign-in
