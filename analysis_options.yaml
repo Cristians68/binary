@@ -16,6 +16,10 @@ analyzer:
     - windows/**
     - macos/**
     - linux/**
+    # Local-only design preview. It imports tools/screenshots/fixture_content.dart,
+    # which is gitignored because it holds paid lesson prose and the repo is
+    # public — so on CI the import cannot resolve and analysis fails the build.
+    - tools/screenshots/ui_preview.dart
 include: package:flutter_lints/flutter.yaml
 
 linter:
