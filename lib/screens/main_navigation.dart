@@ -10,6 +10,7 @@ import 'progress_screen.dart';
 import 'profile_screen.dart';
 import 'app_theme.dart';
 import 'app_lock.dart';
+import 'course_picker.dart';
 import 'learning_navigation_bar.dart';
 
 // Desktop sidebar is shown when the viewport is at least this wide AND we're on web.
@@ -62,10 +63,13 @@ class _MainNavigationState extends State<MainNavigation>
     // already waiting — a cold start delivers the tap long before this widget
     // exists — and then listen for taps that arrive while the app is running.
     pendingNotificationRoute.addListener(_consumePendingRoute);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       _consumePendingRoute();
-      // One-time "Protect B1nary with Face ID?" on first reaching the app.
-      if (!kIsWeb && mounted) AppLockOffer.maybeShow(context);
+      // First landing in the app, one at a time: pick courses, then the
+      // one-time "Protect B1nary with Face ID?".
+      if (!mounted) return;
+      await CoursePicker.maybeShow(context);
+      if (!kIsWeb && mounted) await AppLockOffer.maybeShow(context);
     });
   }
 
