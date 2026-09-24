@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../course_catalog.dart';
 import '../main.dart';
 import 'app_theme.dart';
 import 'learning_widgets.dart';
@@ -22,14 +23,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int? _answer;
   bool _finishing = false;
 
+  // Learn, practice, explore the catalogue, then grow. The last page always
+  // holds the finish button, wherever it sits.
+  static const _pageCount = 4;
+  static const _last = _pageCount - 1;
+
   static const _titles = [
     'Big ideas.\nSmall lessons.',
     'A little practice.\nA lot more clarity.',
+    'Seven courses.\nOne app.',
     'Your next chapter\nstarts here.',
   ];
   static const _descriptions = [
     'Build your IT knowledge one clear, useful idea at a time. Try your first flashcard.',
     'Put the idea to work. Every question comes with an explanation, so each attempt teaches you something.',
+    'From service management and Agile to networking, security, cloud and AI. Start wherever you are.',
     'Find your course, build a rhythm, and turn what you learn into lasting confidence.',
   ];
 
@@ -103,7 +111,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Expanded(
               child: PageView.builder(
                 controller: _controller,
-                itemCount: 3,
+                itemCount: _pageCount,
                 onPageChanged: (page) => setState(() => _page = page),
                 itemBuilder: (context, page) => SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
@@ -113,6 +121,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         StudyLabel('0${page + 1}  /  ${[
                           'LEARN',
                           'PRACTICE',
+                          'EXPLORE',
                           'GROW'
                         ][page]}'),
                         const SizedBox(height: 18),
@@ -133,7 +142,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         _demo(page, theme),
                         const SizedBox(height: 18),
                         Text(
-                            page == 2
+                            page == _last
                                 ? 'First module free. No card needed.'
                                 : 'A quick preview of how you’ll learn.',
                             style: TextStyle(
@@ -148,14 +157,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
               child: Column(children: [
                 Semantics(
-                  label: 'Step ${_page + 1} of 3',
+                  label: 'Step ${_page + 1} of $_pageCount',
                   child: Row(
                       children: List.generate(
-                          3,
+                          _pageCount,
                           (i) => Expanded(
                                 child: Container(
                                   height: 4,
-                                  margin: EdgeInsets.only(right: i < 2 ? 6 : 0),
+                                  margin: EdgeInsets.only(right: i < _last ? 6 : 0),
                                   decoration: BoxDecoration(
                                     color: i <= _page
                                         ? AppColors.primary
@@ -179,7 +188,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       child: FilledButton(
                     onPressed: _finishing
                         ? null
-                        : () => _page == 2 ? _complete() : _move(_page + 1),
+                        : () => _page == _last ? _complete() : _move(_page + 1),
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
@@ -192,7 +201,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     child: Text(
                         _finishing
                             ? 'Getting ready…'
-                            : _page == 2
+                            : _page == _last
                                 ? 'Explore free lessons'
                                 : 'Continue',
                         textAlign: TextAlign.center),
@@ -270,6 +279,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           : 'Good try. DHCP assigns addresses to devices. DNS translates domain names.',
                       style: TextStyle(color: theme.subtext, height: 1.5))),
           ]),
+        2 => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            StudyLabel('${kCourseCatalog.length} COURSES',
+                icon: Icons.school_rounded),
+            const SizedBox(height: 16),
+            for (final course in kCourseCatalog)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                child: Row(children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                        color: AppColors.primary, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                      child: Text(course.title,
+                          style: TextStyle(
+                              color: theme.text,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600))),
+                ]),
+              ),
+          ]),
         _ => Column(children: [
             const Align(
                 alignment: Alignment.centerLeft,
@@ -284,6 +317,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 CupertinoIcons.arrow_2_circlepath,
                 'Review what needs practice',
                 'Missed quiz questions return in short review sessions.'),
+            const SizedBox(height: 22),
+            _benefit(theme, CupertinoIcons.flame, 'Build a habit',
+                'Daily goals, streaks and badges keep you coming back.'),
             const SizedBox(height: 22),
             _benefit(theme, CupertinoIcons.checkmark_seal, 'See your progress',
                 'Finish a course to earn a B1nary completion certificate.'),

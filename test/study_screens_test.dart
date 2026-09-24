@@ -1,3 +1,4 @@
+import 'package:binary/course_catalog.dart';
 import 'package:binary/screens/app_theme.dart';
 import 'package:binary/screens/lesson_screen.dart';
 import 'package:binary/screens/onboarding_screen.dart';
@@ -188,6 +189,10 @@ void main() {
     await tap(tester, 'Continue');
     await tap(tester, 'DNS');
     expect(find.textContaining('Exactly. DNS'), findsOneWidget);
+    await tap(tester, 'Continue');
+    // The catalogue slide lists every course by its display title.
+    expect(find.text('Seven courses.\nOne app.'), findsOneWidget);
+    expect(find.text(kCourseCatalog.last.title), findsOneWidget);
     await tap(tester, 'Continue');
     await tap(tester, 'Explore free lessons');
     expect(completed, 1);
