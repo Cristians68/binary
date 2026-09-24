@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_router.dart';
 import 'package:flutter/cupertino.dart';
 import 'subscription_service.dart';
 import 'paywall_screen.dart';
@@ -59,14 +60,11 @@ class _ContentGateState extends State<ContentGate> {
   Future<void> _openPaywall() async {
     final purchased = await Navigator.push<bool>(
       context,
-      CupertinoPageRoute(
-        builder: (_) => PaywallScreen(
-          courseId: widget.courseId,
-          courseTitle: widget.courseTitle,
-          courseColor: widget.courseColor,
-        ),
-        fullscreenDialog: true,
-      ),
+      AppRouter.push<bool>(PaywallScreen(
+        courseId: widget.courseId,
+        courseTitle: widget.courseTitle,
+        courseColor: widget.courseColor,
+      )),
     );
 
     // Re-check access after paywall closes — handles purchase + restore.

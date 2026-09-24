@@ -141,12 +141,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
   void _openPlans() => Navigator.push(
       context,
-      MaterialPageRoute<void>(
-          fullscreenDialog: true,
-          builder: (_) => const PaywallScreen(
-              courseTitle: 'B1nary',
-              courseColor: AppColors.primary,
-              defaultToAllPlans: true)));
+      AppRouter.push<void>(const PaywallScreen(
+          courseTitle: 'B1nary',
+          courseColor: AppColors.primary,
+          defaultToAllPlans: true)));
   IconData _icon(String category) => switch (category) {
         'Networking' => Icons.hub_outlined,
         'Security' => Icons.shield_outlined,

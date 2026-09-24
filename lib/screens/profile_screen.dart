@@ -1120,14 +1120,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                       AppColors.primary, theme,
                       onTap: () => Navigator.push(
                             context,
-                            CupertinoPageRoute(
-                              builder: (_) => const PaywallScreen(
-                                courseTitle: 'B1nary',
-                                courseColor: AppColors.primary,
-                                defaultToAllPlans: true,
-                              ),
-                              fullscreenDialog: true,
-                            ),
+                            AppRouter.push<void>(const PaywallScreen(
+                              courseTitle: 'B1nary',
+                              courseColor: AppColors.primary,
+                              defaultToAllPlans: true,
+                            )),
                           )),
                   _buildItem(CupertinoIcons.doc_text_fill,
                       'Privacy Policy & Terms', const Color(0xFF8B5CF6), theme,

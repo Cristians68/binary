@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_router.dart';
 import 'subscription_service.dart';
 import 'paywall_screen.dart';
 
@@ -31,23 +32,13 @@ class SubscriptionGate {
 
     final result = await Navigator.push<bool>(
       context,
-      PageRouteBuilder(
-        pageBuilder: (_, animation, __) => PaywallScreen(
-          courseId: courseId,
-          courseTitle: courseTitle,
-          courseColor: courseColor,
-        ),
-        transitionsBuilder: (_, animation, __, child) => SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, 1),
-            end: Offset.zero,
-          ).animate(
-            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-          ),
-          child: child,
-        ),
-        transitionDuration: const Duration(milliseconds: 400),
-      ),
+      // Swipe back from the left edge like every other screen; a swipe
+      // returns null, which is "not purchased" below.
+      AppRouter.push<bool>(PaywallScreen(
+        courseId: courseId,
+        courseTitle: courseTitle,
+        courseColor: courseColor,
+      )),
     );
 
     if (result == true && context.mounted) {

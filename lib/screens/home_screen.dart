@@ -392,14 +392,11 @@ class _HomeScreenState extends State<HomeScreen> {
     HapticFeedback.selectionClick();
     Navigator.push(
       context,
-      CupertinoPageRoute(
-        builder: (_) => const PaywallScreen(
-          courseTitle: 'B1nary',
-          courseColor: AppColors.primary,
-          defaultToAllPlans: true,
-        ),
-        fullscreenDialog: true,
-      ),
+      AppRouter.push<void>(const PaywallScreen(
+        courseTitle: 'B1nary',
+        courseColor: AppColors.primary,
+        defaultToAllPlans: true,
+      )),
     );
   }
 
