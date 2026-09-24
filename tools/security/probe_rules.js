@@ -69,7 +69,14 @@ const patch = (tok, path, fields, mask) =>
     let r = await get(a.token, 'courses');
     const courses = (await r.clone().json()).documents || [];
     record('PC-1', 'signed-in user can list the course catalogue', r.status, r.ok && courses.length > 0, `${courses.length} courses`);
-    const courseId = courses.length ? courses[0].name.split('/').pop() : null;
+    // Probe a course that is KNOWN to have carried lesson prose. Taking
+    // courses[0] made AB-15 meaningless the moment binary-ai-fundamentals
+    // (seeded with no prose on its docs) sorted first: it passed on a course
+    // that could never have leaked.
+    const courseIds = courses.map(c => c.name.split('/').pop());
+    const courseId = courseIds.includes('binary-network-professional')
+      ? 'binary-network-professional'
+      : (courseIds[0] || null);
     let lockedModule = null;
     if (courseId) {
       r = await get(a.token, `courses/${courseId}/modules`);
