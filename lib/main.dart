@@ -18,6 +18,7 @@ import 'screens/main_navigation.dart';
 import 'screens/service_backend.dart';
 import 'security_service.dart';
 import 'crash_reporting.dart';
+import 'fresh_install.dart';
 
 void main() {
   // Last-resort handling for uncaught Dart/plugin futures. The binding and
@@ -218,6 +219,10 @@ class _AppEntryState extends State<_AppEntry> {
       if (mounted) setState(() => _showOnboarding = false);
       return;
     }
+    // Before choosing a screen: a fresh install must not open whatever
+    // account iOS restored from the Keychain. See fresh_install.dart.
+    await clearSessionRestoredFromKeychain(
+        signOut: () => ServiceBackend.auth.signOut());
     final prefs = await SharedPreferences.getInstance();
     final done = prefs.getBool(kOnboardingCompleteKey) ?? false;
     if (mounted) setState(() => _showOnboarding = !done);
