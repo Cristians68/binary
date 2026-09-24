@@ -32,18 +32,14 @@ the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 | AI & ML Foundations course live | read back: 7 modules × 12 cards × 12 questions |
 | Paid lesson prose sealed (F-02) | 0 prose on module docs, 80 in `body/lesson`; probe AB-15 on network-professional |
 | Copyright scan: ITIL glossary + Scrum Guide sentences reworded in app | commit `79daaa5` |
+| Four 20-module courses made playable (480 original flashcards + 400 quiz moved to `quiz`) | owner ran the restore script; re-run finds 0 to do; network-pro module-1 has 6 cards + 5 questions |
 
 ## Waiting on the owner (production writes; auto mode blocks the assistant)
 
-1. `GOOGLE_CLOUD_PROJECT=binary-6a372 NODE_PATH=functions/node_modules node admin/migrate/2026-09-23-restore-pro-course-content.js --commit`
-   — makes Network Pro, Cybersecurity Pro, Cloud Fundamentals and Cloud
-   Architecture playable (480 flashcards + 400 quiz questions). Dry run
-   passed. Card content is in gitignored `admin/private/flashcards/`: keep
-   that folder, it exists only on the owner's PC.
-2. `GOOGLE_CLOUD_PROJECT=binary-6a372 NODE_PATH=functions/node_modules node admin/migrate/2026-09-23-reword-official-definitions.js --commit`
+1. `GOOGLE_CLOUD_PROJECT=binary-6a372 NODE_PATH=functions/node_modules node admin/migrate/2026-09-23-reword-official-definitions.js --commit`
    — rewords 9 Firestore items copied from official ITIL/Scrum wording and
    fixes "AXELOS owns ITIL" (PeopleCert since 2021). Dry run: 9 edits.
-3. Fast-forward `master`, then build iOS → TestFlight.
+2. Fast-forward `master`, then build iOS → TestFlight.
 
 ## Open work, in the owner's priority order
 
