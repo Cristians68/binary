@@ -9,8 +9,10 @@ the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 Work stopped after finishing the local purchase implementation and checks.
 At the owner's follow-up request, local `master` was fast-forwarded to the
 existing work at `1f534b9`, and this checkpoint is committed on **`master`**
-as "Complete server-verified course purchases and restores". Nothing was
-pushed, deployed, submitted, or built for TestFlight in this session.
+as `cf0c758`, "Complete server-verified course purchases and restores".
+The owner subsequently authorized publishing all local commits to GitHub
+`origin/master`, including this handoff update. No Firebase deployment,
+App Store submission, or TestFlight build was performed in this session.
 
 Completed locally:
 
