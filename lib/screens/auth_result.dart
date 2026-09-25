@@ -20,7 +20,8 @@ enum AuthOutcome {
 }
 
 class AuthResult {
-  const AuthResult._(this.outcome, {this.code, this.message});
+  const AuthResult._(this.outcome,
+      {this.code, this.message, this.supportDetails});
 
   const AuthResult.success() : this._(AuthOutcome.success);
 
@@ -30,12 +31,25 @@ class AuthResult {
   /// `invalid-credential`, an `AuthorizationErrorCode`, a `PlatformException`
   /// code. It is shown to the user verbatim, because the person hitting the
   /// bug is usually the only one who can see it happen.
-  const AuthResult.failed({String? code, String? message})
-      : this._(AuthOutcome.failed, code: code, message: message);
+  const AuthResult.failed(
+      {String? code, String? message, String? supportDetails})
+      : this._(AuthOutcome.failed,
+            code: code, message: message, supportDetails: supportDetails);
 
   final AuthOutcome outcome;
   final String? code;
   final String? message;
+
+  /// Multi-line detail for "Copy details for support": which stage failed and
+  /// which build is installed. Shown under [displayMessage], and copied with it.
+  final String? supportDetails;
+
+  /// Everything the copy button hands over.
+  String supportText(String provider) => [
+        displayMessage(provider),
+        if (supportDetails != null && supportDetails!.isNotEmpty)
+          supportDetails!,
+      ].join('\n');
 
   bool get isSuccess => outcome == AuthOutcome.success;
   bool get isCancelled => outcome == AuthOutcome.cancelled;

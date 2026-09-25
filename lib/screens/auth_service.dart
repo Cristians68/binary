@@ -10,7 +10,9 @@ import 'auth_result.dart';
 import 'subscription_service.dart';
 import 'user_document.dart';
 import 'apple_profile_name.dart';
+import 'apple_sign_in_support.dart';
 import 'apple_token_diagnostics.dart';
+import 'build_identity.dart';
 import '../firebase_options.dart';
 import 'native_apple_auth.dart';
 import 'native_google_auth.dart';
@@ -442,15 +444,43 @@ class AuthService {
   }
 
   static Future<AuthResult> _appleViaNativeSdk() async {
-    // Kept outside the try so a Firebase rejection can be diagnosed from the
-    // token Apple actually returned. See apple_token_diagnostics.dart.
+    // Kept outside the try so any failure can say how far it got, and a
+    // Firebase rejection can be diagnosed from the token Apple actually
+    // returned. See apple_sign_in_support.dart and apple_token_diagnostics.dart.
+    var stage = AppleSignInStage.starting;
     String? diagToken;
     String? diagNonce;
+
+    Future<AuthResult> fail(String? code, String? message,
+        {Object? nativeDetails}) async {
+      final tokenCheck = diagToken == null || diagNonce == null
+          ? null
+          : appleTokenDiagnostics(
+              idToken: diagToken,
+              rawNonce: diagNonce,
+              expectedAudience:
+                  DefaultFirebaseOptions.ios.iosBundleId ?? 'unknown',
+              now: DateTime.now(),
+            );
+      return AuthResult.failed(
+        code: code,
+        message: message,
+        supportDetails: appleSupportDetails(
+          stage: stage,
+          build: await BuildIdentity.load(),
+          code: code,
+          nativeDetails: nativeDetails,
+          tokenCheck: tokenCheck,
+        ),
+      );
+    }
+
     try {
       final rawNonce = _generateNonce();
       diagNonce = rawNonce;
       final nonce = _sha256ofString(rawNonce);
 
+      stage = AppleSignInStage.appleSheet;
       final appleCredential = await NativeAppleAuth.getCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
@@ -464,10 +494,11 @@ class AuthService {
       // release build, the obfuscated "Error: Error") several frames later,
       // with nothing pointing back at the real cause. The Google path has
       // guarded its idToken since it was written; this one never did.
+      stage = AppleSignInStage.appleToken;
       final identityToken = appleCredential.identityToken;
       if (identityToken == null || identityToken.isEmpty) {
         debugPrint('Apple Sign-In: identityToken is null — aborting');
-        return const AuthResult.failed(code: 'missing-identity-token');
+        return await fail('missing-identity-token', null);
       }
       diagToken = identityToken;
 
@@ -485,8 +516,10 @@ class AuthService {
         await AppleNameStore.remember(appleUserId, fullName);
       }
 
+      stage = AppleSignInStage.firebase;
       final userCredential = await _signInOrLink(oauthCredential);
 
+      stage = AppleSignInStage.profile;
       if (fullName == null && appleUserId != null) {
         fullName = await AppleNameStore.recall(appleUserId);
       }
@@ -517,38 +550,29 @@ class AuthService {
       // enabled on the App ID.
       debugPrint(
           'Apple Sign-In AuthorizationException: ${e.code} ${e.message}');
-      return AuthResult.failed(
-        code: e.code.name,
-        message: e.message,
-      );
+      return fail(e.code.name, e.message);
     } on FirebaseAuthException catch (e) {
       // operation-not-allowed means Apple is not enabled in the Firebase
       // console, which the App ID capability alone does not cover.
       debugPrint('Apple Sign-In FirebaseAuthException: ${e.code} ${e.message}');
-      final diagnosis = diagToken == null || diagNonce == null
-          ? null
-          : appleTokenDiagnostics(
-              idToken: diagToken,
-              rawNonce: diagNonce,
-              expectedAudience:
-                  DefaultFirebaseOptions.ios.iosBundleId ?? 'unknown',
-              now: DateTime.now(),
-            );
-      return AuthResult.failed(
-          code: e.code,
-          message: [e.message, diagnosis].whereType<String>().join(' | '));
+      return fail(e.code, e.message);
     } on PlatformException catch (e) {
       if (_isCancellation(e.code)) return const AuthResult.cancelled();
+      // The bridge rejects an incomplete credential itself, before this
+      // method's own token check can run; report it at the same stage.
+      if (e.code == 'missing-identity-token') {
+        stage = AppleSignInStage.appleToken;
+      }
       // The Google path has caught this since it was written; this one fell
       // through to the generic handler below, which reports
       // `PlatformException(code, message, ...)` as one unsplittable blob.
       // A bare code is what the person holding the device can actually read
       // back off a screenshot.
       debugPrint('Apple Sign-In PlatformException: ${e.code} - ${e.message}');
-      return AuthResult.failed(code: e.code, message: e.message);
+      return fail(e.code, e.message, nativeDetails: e.details);
     } catch (e) {
       debugPrint('Apple Sign-In ERROR: $e');
-      return AuthResult.failed(message: e.toString());
+      return fail(null, e.toString());
     }
   }
 

@@ -27,6 +27,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   bool _appleLoading = false;
   bool _guestLoading = false;
   String? _authError;
+
+  /// Stage + installed build for the last failure, when the provider gave
+  /// one. Shown under [_authError] and copied with it.
+  String? _authSupport;
   bool get _busy => _googleLoading || _appleLoading || _guestLoading;
 
   @override
@@ -78,7 +82,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   /// is usually the only one who can see it: this app ships through
   /// TestFlight, where a debugPrint goes nowhere anybody can read.
   void _showAuthError(AuthResult result, String provider) {
-    setState(() => _authError = result.displayMessage(provider));
+    setState(() {
+      _authError = result.displayMessage(provider);
+      _authSupport = result.supportDetails;
+    });
   }
 
   Future<void> _handleAuth(
@@ -91,6 +98,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     setState(() {
       setLoading(true);
       _authError = null;
+      _authSupport = null;
     });
     AuthResult result;
     try {
@@ -423,10 +431,23 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     Text(_authError!,
                         style: TextStyle(
                             color: theme.text, fontSize: 13, height: 1.5)),
+                    if (_authSupport != null) ...[
+                      const SizedBox(height: 8),
+                      SelectableText(_authSupport!,
+                          style: TextStyle(
+                              color: theme.subtext,
+                              fontSize: 11,
+                              height: 1.4,
+                              fontFamily: 'Menlo',
+                              fontFamilyFallback: const ['Courier'])),
+                    ],
                     TextButton.icon(
                       onPressed: () async {
                         await Clipboard.setData(
-                            ClipboardData(text: _authError!));
+                            ClipboardData(text: [
+                          _authError!,
+                          if (_authSupport != null) _authSupport!,
+                        ].join('\n')));
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(

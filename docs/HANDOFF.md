@@ -38,13 +38,37 @@ Completed locally:
 Verification on 2026-09-24:
 
 - `flutter analyze --no-pub`: **zero issues**.
-- `flutter test --no-pub --reporter expanded`: **619 passing**.
+- `flutter test --no-pub --reporter expanded`: **619 passing** (630 after the
+  Apple support-details change the same day).
 - `cd functions && npm test`: **49 passing**.
 - `python -m unittest discover -s tools/ios -p 'test_*.py'`: **7 passing**.
 - No live purchase, iOS runtime, or updated Firestore-rules emulator test was
   performed. The fake Firestore/transaction tests do not enforce rules.
 
-Apple sign-in is still unresolved. The owner said the error **does not give a
+**2026-09-24 (later): Apple support details now cover every failure stage.**
+Every Apple sign-in failure shows, under the error and in "Copy details for
+support", a block like:
+
+```
+stage: firebase            (starting | apple-sheet | apple-token | firebase | profile)
+build: 1.0.3 (57) @ 1f534b9 (read from Info.plist; "unstamped" = not a Codemagic build)
+code: invalid-credential
+native: <NSError domain + code, when Apple itself refused>
+token: aud ok, iss ok, ... (or "token: none received")
+```
+
+The build line comes from `BinarySourceRevision`, which Codemagic already
+stamps (`tools/ios/verify_release.py --stamp`); Runner serves it on channel
+`org.binaryapp/build-info`. Tests: `test/apple_sign_in_support_test.dart`
+(drives the real `signInWithApple` through the sheet, token and Firebase
+stages; stage mutations killed). The Swift side is source-checked only.
+**Why the owner saw no `token:` line:** that line only existed after Firebase
+rejected a token Apple returned, and only reached remote `master` (the branch
+Codemagic builds) at 22:12 on 09-23 (`40f01be`). A build started earlier
+lacked it entirely. With this change, a copied error with no `build:` line
+means the installed build predates it — ask for the block, not a specific line.
+
+Earlier note: Apple sign-in is still unresolved. The owner said the error **does not give a
 `token:` diagnostic line**. Inspection confirmed that the current native path
 only appends it after a Firebase rejection with a received token. The welcome
 screen's copy button copies the displayed error. No Apple-flow or error-screen

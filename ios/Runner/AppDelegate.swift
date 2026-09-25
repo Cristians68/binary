@@ -32,6 +32,22 @@ import AuthenticationServices
       }
       self.appleSignIn.signIn(arguments: call.arguments, result: result)
     }
+
+    // Which build is installed, for support details. Codemagic stamps
+    // BinarySourceRevision into Info.plist (tools/ios/verify_release.py).
+    let buildInfo = FlutterMethodChannel(name: "org.binaryapp/build-info", binaryMessenger: registrar.messenger())
+    buildInfo.setMethodCallHandler { call, result in
+      guard call.method == "read" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      let info = Bundle.main.infoDictionary ?? [:]
+      var values: [String: String] = [:]
+      if let version = info["CFBundleShortVersionString"] as? String { values["version"] = version }
+      if let build = info["CFBundleVersion"] as? String { values["build"] = build }
+      if let revision = info["BinarySourceRevision"] as? String { values["revision"] = revision }
+      result(values)
+    }
   }
 }
 
@@ -104,7 +120,8 @@ private final class AppleSignInCoordinator: NSObject,
     let cancelled = nativeError.domain == ASAuthorizationError.errorDomain &&
       nativeError.code == ASAuthorizationError.canceled.rawValue
     finish(FlutterError(code: cancelled ? "canceled" : "apple-authorization-\(nativeError.code)",
-                        message: error.localizedDescription, details: nil))
+                        message: error.localizedDescription,
+                        details: "\(nativeError.domain) \(nativeError.code)"))
   }
 
   private func finish(_ value: Any?) {
