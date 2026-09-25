@@ -30,11 +30,13 @@ class PaywallScreen extends StatefulWidget {
   /// "no course chosen yet", and [_buildSinglePicker] makes the user choose.
   final String? courseId;
   final String courseTitle;
-  final Color  courseColor;
+  final Color courseColor;
+
   /// When true, the All Courses plan is pre-selected instead of Single.
   /// Use this when opening the paywall from a generic "Plans & Pricing" entry
   /// rather than from a specific locked course.
   final bool defaultToAllPlans;
+  final Future<List<Package>> Function() loadPackages;
 
   const PaywallScreen({
     super.key,
@@ -42,6 +44,7 @@ class PaywallScreen extends StatefulWidget {
     required this.courseTitle,
     required this.courseColor,
     this.defaultToAllPlans = false,
+    this.loadPackages = SubscriptionService.getPackages,
   });
 
   @override
@@ -51,8 +54,9 @@ class PaywallScreen extends StatefulWidget {
 enum _Plan { single, bundle4, all }
 
 class _PaywallScreenState extends State<PaywallScreen> {
-  List<Package> _packages    = [];
-  bool          _loading     = true;
+  List<Package> _packages = [];
+  bool _loading = true;
+
   /// True when RevenueCat returned no purchasable packages.
   ///
   /// This used to blank the entire paywall (`_loadError ? _buildErrorState()`),
@@ -62,9 +66,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
   /// account with no offerings attached — replaced every plan, price and
   /// purchase button with a "Could not load products" screen. The plans are
   /// now always rendered; only the purchase action is disabled.
-  bool          _productsUnavailable = false;
-  bool          _purchasing  = false;
-  late _Plan    _selected;
+  bool _productsUnavailable = false;
+  bool _purchasing = false;
+  late _Plan _selected;
 
   // Bundle-4: the courses the user has selected (max 4).
   // Pre-seed with the course they came from so it is already ticked.
@@ -101,10 +105,13 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
   Package? _packageFor(_Plan plan) {
     final id = {
-      _Plan.single:  kProductSingle,
+      _Plan.single: _singleSelection == null
+          ? null
+          : courseInfo(_singleSelection!)?.productId,
       _Plan.bundle4: kProductBundle4,
-      _Plan.all:     kProductBundleAll,
-    }[plan]!;
+      _Plan.all: kProductBundleAll,
+    }[plan];
+    if (id == null) return null;
     try {
       return _packages.firstWhere((p) => p.storeProduct.identifier == id);
     } catch (_) {
@@ -121,6 +128,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
   String _priceFor(_Plan plan, {required String fallback}) =>
       _packageFor(plan)?.storeProduct.priceString ?? fallback;
 
+  bool get _selectedProductUnavailable =>
+      (_selected != _Plan.single || _singleSelection != null) &&
+      _packageFor(_selected) == null;
+
   /// "SAVE X%" computed from live numeric prices rather than a hardcoded
   /// dollar figure — a fixed "SAVE $10" is only true for one specific pair of
   /// USD prices and silently becomes a false claim (an App Store Review 2.3.1
@@ -128,22 +139,33 @@ class _PaywallScreenState extends State<PaywallScreen> {
   /// Connect or the user is in a different pricing region/currency. Percentage
   /// saved is currency-agnostic, so it stays correct everywhere.
   String get _bundle4SavingsBadge {
-    final single  = _packageFor(_Plan.single)?.storeProduct.price;
-    final bundle4 = _packageFor(_Plan.bundle4)?.storeProduct.price;
-    if (single == null || bundle4 == null || single <= 0) return 'BUNDLE';
-    final fullPrice = single * 4;
-    if (bundle4 >= fullPrice) return 'BUNDLE';
-    final percentSaved = (((fullPrice - bundle4) / fullPrice) * 100).round();
+    final bundle = _packageFor(_Plan.bundle4)?.storeProduct;
+    if (bundle == null || _bundle4Selection.length != 4) return 'BUNDLE';
+    var fullPrice = 0.0;
+    for (final courseId in _bundle4Selection) {
+      final id = courseInfo(courseId)?.productId;
+      final matches = _packages.where((p) => p.storeProduct.identifier == id);
+      if (matches.isEmpty) return 'BUNDLE';
+      final product = matches.first.storeProduct;
+      if (product.currencyCode != bundle.currencyCode) return 'BUNDLE';
+      fullPrice += product.price;
+    }
+    if (fullPrice <= 0 || bundle.price >= fullPrice) return 'BUNDLE';
+    final percentSaved =
+        (((fullPrice - bundle.price) / fullPrice) * 100).round();
     return percentSaved > 0 ? 'SAVE $percentSaved%' : 'BUNDLE';
   }
 
   Future<void> _loadPackages() async {
-    setState(() { _loading = true; _productsUnavailable = false; });
-    final packages = await SubscriptionService.getPackages();
+    setState(() {
+      _loading = true;
+      _productsUnavailable = false;
+    });
+    final packages = await widget.loadPackages();
     if (mounted) {
       setState(() {
-        _packages            = packages;
-        _loading             = false;
+        _packages = packages;
+        _loading = false;
         _productsUnavailable = packages.isEmpty;
       });
     }
@@ -201,9 +223,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
         // one they arrived from when they arrived from one.
         courseId: _selected == _Plan.single ? _singleSelection : null,
         // Bundle-4: pass the set of chosen courses as a list.
-        selectedCourseIds: _selected == _Plan.bundle4
-            ? _bundle4Selection.toList()
-            : null,
+        selectedCourseIds:
+            _selected == _Plan.bundle4 ? _bundle4Selection.toList() : null,
       );
 
       if (success && mounted) {
@@ -227,6 +248,16 @@ class _PaywallScreenState extends State<PaywallScreen> {
       final result = await SubscriptionService.restore();
       if (!mounted) return;
       if (result.isApplied) {
+        final courseId = widget.courseId;
+        if (courseId != null &&
+            !await SubscriptionService.canAccessCourse(courseId)) {
+          if (mounted) {
+            _showError(
+                'Your previous purchases were restored. This course is not included in them.');
+          }
+          return;
+        }
+        if (!mounted) return;
         HapticFeedback.heavyImpact();
         Navigator.pop(context, true);
       } else {
@@ -338,45 +369,48 @@ class _PaywallScreenState extends State<PaywallScreen> {
             ? Center(
                 child: CircularProgressIndicator(
                     color: widget.courseColor, strokeWidth: 2))
-            : WebContentBounds(maxWidth: 640, child: Column(
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildCloseButton(theme),
-                          const SizedBox(height: 24),
-                          _buildHeroSection(theme),
-                          const SizedBox(height: 28),
-                          _buildFeatureList(theme),
-                          const SizedBox(height: 28),
-                          if (_productsUnavailable) ...[
-                            _buildUnavailableBanner(theme),
+            : WebContentBounds(
+                maxWidth: 640,
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildCloseButton(theme),
+                            const SizedBox(height: 24),
+                            _buildHeroSection(theme),
+                            const SizedBox(height: 28),
+                            _buildFeatureList(theme),
+                            const SizedBox(height: 28),
+                            if (_productsUnavailable ||
+                                _selectedProductUnavailable) ...[
+                              _buildUnavailableBanner(theme),
+                              const SizedBox(height: 20),
+                            ],
+                            _buildPlanSection(theme),
+                            // Course pickers — each only shown for its own plan.
+                            if (_selected == _Plan.single) ...[
+                              const SizedBox(height: 20),
+                              _buildSinglePicker(theme),
+                            ],
+                            if (_selected == _Plan.bundle4) ...[
+                              const SizedBox(height: 20),
+                              _buildBundle4Picker(theme),
+                            ],
                             const SizedBox(height: 20),
+                            _buildNoticeBox(theme),
+                            const SizedBox(height: 32),
                           ],
-                          _buildPlanSection(theme),
-                          // Course pickers — each only shown for its own plan.
-                          if (_selected == _Plan.single) ...[
-                            const SizedBox(height: 20),
-                            _buildSinglePicker(theme),
-                          ],
-                          if (_selected == _Plan.bundle4) ...[
-                            const SizedBox(height: 20),
-                            _buildBundle4Picker(theme),
-                          ],
-                          const SizedBox(height: 20),
-                          _buildNoticeBox(theme),
-                          const SizedBox(height: 32),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                  _buildCta(theme),
-                ],
-              )),
+                    _buildCta(theme),
+                  ],
+                )),
       ),
     );
   }
@@ -489,7 +523,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
           badgeColor: AppColors.green,
           color: widget.courseColor,
           theme: theme,
-          unavailable: _packageFor(_Plan.single) == null,
+          unavailable: !_packages.any((p) => kCourseCatalog
+              .any((c) => c.productId == p.storeProduct.identifier)),
         ),
         const SizedBox(height: 10),
         _buildPlanTile(
@@ -541,8 +576,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
             ),
             const Spacer(),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: _singleSelection != null
                     ? AppColors.green.withValues(alpha: 0.12)
@@ -598,13 +632,11 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     width: 22,
                     height: 22,
                     decoration: BoxDecoration(
-                      color: isChecked
-                          ? widget.courseColor
-                          : Colors.transparent,
+                      color:
+                          isChecked ? widget.courseColor : Colors.transparent,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color:
-                            isChecked ? widget.courseColor : theme.subtext,
+                        color: isChecked ? widget.courseColor : theme.subtext,
                         width: 2,
                       ),
                     ),
@@ -655,8 +687,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
             ),
             const Spacer(),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: remaining == 0
                     ? AppColors.green.withValues(alpha: 0.12)
@@ -664,9 +695,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                remaining == 0
-                    ? '4 / 4 selected ✓'
-                    : '$remaining more to pick',
+                remaining == 0 ? '4 / 4 selected ✓' : '$remaining more to pick',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
@@ -678,8 +707,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
         ),
         const SizedBox(height: 12),
         ..._kAllCourses.map((course) {
-          final id        = course['id']!;
-          final title     = course['title']!;
+          final id = course['id']!;
+          final title = course['title']!;
           final isChecked = _bundle4Selection.contains(id);
 
           return GestureDetector(
@@ -730,9 +759,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       title,
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: isChecked
-                            ? FontWeight.w600
-                            : FontWeight.w400,
+                        fontWeight:
+                            isChecked ? FontWeight.w600 : FontWeight.w400,
                         color: isChecked ? theme.text : theme.subtext,
                         letterSpacing: -0.2,
                       ),
@@ -763,8 +791,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(_planNotice,
-                style: TextStyle(
-                    fontSize: 12, color: theme.subtext, height: 1.5)),
+                style:
+                    TextStyle(fontSize: 12, color: theme.subtext, height: 1.5)),
           ),
         ],
       ),
@@ -779,7 +807,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
     final bundle4Incomplete =
         _selected == _Plan.bundle4 && _bundle4Selection.length < 4;
     final ctaDisabled =
-        singleIncomplete || bundle4Incomplete || _productsUnavailable;
+        singleIncomplete || bundle4Incomplete || _packageFor(_selected) == null;
     final ctaColor = ctaDisabled
         ? widget.courseColor.withValues(alpha: 0.4)
         : widget.courseColor;
@@ -810,7 +838,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       ),
                     )
                   : Text(
-                      _productsUnavailable
+                      (_productsUnavailable || _selectedProductUnavailable)
                           ? 'Purchases unavailable'
                           : _ctaLabel,
                       textAlign: TextAlign.center,
@@ -867,7 +895,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Payment processed by Apple. All sales final.\nContact support for refund requests.',
+            'Payment processed by Apple.\nManage purchases and refund requests with Apple.',
             textAlign: TextAlign.center,
             style: TextStyle(
                 fontSize: 10,
@@ -905,7 +933,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Purchases are unavailable right now',
+                  _productsUnavailable
+                      ? 'Purchases are unavailable right now'
+                      : 'This selection is unavailable right now',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -945,21 +975,21 @@ class _PaywallScreenState extends State<PaywallScreen> {
   // ── Plan tile ─────────────────────────────────────────────────────────────
 
   Widget _buildPlanTile({
-    required _Plan      plan,
-    required String     title,
-    required String     subtitle,
-    required String     price,
-    required String     badge,
-    required Color      badgeColor,
-    required Color      color,
+    required _Plan plan,
+    required String title,
+    required String subtitle,
+    required String price,
+    required String badge,
+    required Color badgeColor,
+    required Color color,
     required ThemeNotifier theme,
-    required bool       unavailable,
+    required bool unavailable,
   }) {
-    final selected        = _selected == plan;
-    final effectiveColor  = unavailable ? theme.subtext : color;
+    final selected = _selected == plan;
+    final effectiveColor = unavailable ? theme.subtext : color;
 
     return GestureDetector(
-      onTap: unavailable
+      onTap: unavailable || _purchasing
           ? null
           : () {
               HapticFeedback.selectionClick();
@@ -974,9 +1004,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
               : theme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected
-                ? effectiveColor.withValues(alpha: 0.5)
-                : theme.border,
+            color:
+                selected ? effectiveColor.withValues(alpha: 0.5) : theme.border,
             width: selected ? 2 : 1,
           ),
         ),
@@ -1038,8 +1067,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(subtitle,
-                      style:
-                          TextStyle(fontSize: 12, color: theme.subtext)),
+                      style: TextStyle(fontSize: 12, color: theme.subtext)),
                 ],
               ),
             ),

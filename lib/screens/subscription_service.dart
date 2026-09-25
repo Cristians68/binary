@@ -2,21 +2,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-import 'restore_result.dart';
-
-import 'service_backend.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
-// ── Product identifiers ──────────────────────────────────────────────────────
-const String kProductSingle = 'binary_course_single';
-const String kProductBundle4 = 'binary_bundle_4';
-const String kProductBundleAll = 'binary_bundle_all';
+import 'purchase_coordinator.dart';
+import 'restore_result.dart';
+import 'service_backend.dart';
 
-// ── Entitlement ───────────────────────────────────────────────────────────────
+export 'purchase_coordinator.dart'
+    show kProductSingle, kProductBundle4, kProductBundleAll;
+
 const String kEntitlementPro = 'B1nary Academy Pro';
-
-// ── RevenueCat API key ────────────────────────────────────────────────────────
 const String kRevenueCatApiKey = String.fromEnvironment(
   'REVENUECAT_API_KEY',
   defaultValue: 'appl_HRXqLWNhneveCEBKZdSgczigiGk',
@@ -27,28 +22,15 @@ enum SubscriptionPlan { none, single, bundle4, all, trial }
 class SubscriptionService {
   static FirebaseFirestore get _db => ServiceBackend.db;
   static String? get _uid => ServiceBackend.uid;
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Lifecycle
-  // ─────────────────────────────────────────────────────────────────────────
-
   static FirebaseFunctions get _fn => FirebaseFunctions.instance;
 
   static Future<void> configure() async {
     if (kIsWeb) return;
     try {
-      // Debug logging prints purchase payloads and the customer's entitlement
-      // state into the device log. Keep it out of release builds.
       await Purchases.setLogLevel(
-        kReleaseMode ? LogLevel.warn : LogLevel.debug,
-      );
-      final config = PurchasesConfiguration(kRevenueCatApiKey);
-      await Purchases.configure(config);
-      final uid = _uid;
-      if (uid != null) {
-        await Purchases.logIn(uid);
-        debugPrint('RevenueCat: logged in as $uid');
-      }
+          kReleaseMode ? LogLevel.warn : LogLevel.debug);
+      await Purchases.configure(PurchasesConfiguration(kRevenueCatApiKey));
+      await identifyUser();
     } catch (e) {
       debugPrint('RevenueCat configure failed: $e');
     }
@@ -58,320 +40,167 @@ class SubscriptionService {
     if (kIsWeb) return;
     try {
       final uid = _uid;
-      if (uid != null) {
-        await Purchases.logIn(uid);
-        debugPrint('RevenueCat: identified user $uid');
-      }
+      if (uid != null) await Purchases.logIn(uid);
     } catch (e) {
       debugPrint('RevenueCat identifyUser failed: $e');
     }
   }
 
-  /// Called on app launch / sign-in to sync RevenueCat → Firestore.
-  /// This is the only place we hit the RevenueCat network on launch.
+  static Future<Map<String, dynamic>> _refreshEntitlement() async {
+    final result = await _fn
+        .httpsCallable(
+          'refreshEntitlement',
+          options: HttpsCallableOptions(timeout: const Duration(seconds: 15)),
+        )
+        .call<Map<String, dynamic>>();
+    return result.data;
+  }
+
+  /// A server lookup repairs missing webhooks without silently initiating a
+  /// store restore, which may transfer a receipt or show an Apple ID prompt.
   static Future<bool> syncEntitlementsOnLaunch() async {
-    if (kIsWeb) return false;
-    if (_uid == null) return false;
+    if (kIsWeb || _uid == null) return false;
+    final uid = _uid;
     try {
-      // Read-only. Entitlements are written by the RevenueCat webhook; if the
-      // store says the user has one but Firestore does not, a restore (which
-      // re-triggers the webhook) is the recovery path — not a client write.
-      final info = await Purchases.getCustomerInfo();
-      final hasActive = info.entitlements.active.isNotEmpty;
-      if (hasActive) {
-        final snap = await _db.collection('users').doc(_uid).get();
-        final plan = snap.data()?['subscriptionPlan'] as String? ?? 'none';
-        if (plan == 'none') {
-          debugPrint(
-              'Store has entitlement but Firestore does not — restoring');
-          await Purchases.restorePurchases();
-          await _awaitEntitlement(timeout: const Duration(seconds: 8));
-        }
-      }
-      return hasActive;
+      final state = await _refreshEntitlement();
+      return _uid == uid && _hasPaidAccess(state);
     } catch (e) {
       debugPrint('syncEntitlementsOnLaunch failed: $e');
       return false;
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Packages & Purchase
-  // ─────────────────────────────────────────────────────────────────────────
-
   static Future<List<Package>> getPackages() async {
     if (kIsWeb) return [];
     try {
       final offerings = await Purchases.getOfferings();
-      final packages = offerings.current?.availablePackages ?? [];
-      debugPrint('RevenueCat: loaded ${packages.length} packages');
-      for (final p in packages) {
-        debugPrint('  → ${p.storeProduct.identifier} ${p.storeProduct.price}');
-      }
-      return packages;
+      return offerings.current?.availablePackages ?? [];
     } catch (e) {
       debugPrint('RevenueCat getPackages failed: $e');
       return [];
     }
   }
 
-  /// Purchase a package.
-  ///
-  /// [courseId]         — required for single-course purchases.
-  /// [selectedCourseIds] — required for bundle-4 purchases (the 4 chosen courses).
-  ///
-  /// Returns true on success, false if the user cancelled.
-  /// Throws a user-facing string on any other error.
+  static PurchaseCoordinator get _coordinator => PurchaseCoordinator(
+        currentUid: () => _uid,
+        identify: (uid) async {
+          await Purchases.logIn(uid);
+        },
+        prepare: (request) async {
+          try {
+            final result = await _fn
+                .httpsCallable(
+                  'setPendingPurchase',
+                  options: HttpsCallableOptions(
+                      timeout: const Duration(seconds: 15)),
+                )
+                .call<Map<String, dynamic>>(request.payload);
+            // An older function only returned {ok:true}; it cannot guarantee that
+            // verification works. Never open StoreKit against that server version.
+            if (result.data['ok'] != true ||
+                result.data['alreadyOwned'] is! bool) {
+              throw const PurchaseFailure(
+                  'Purchases are temporarily unavailable. No payment was started.');
+            }
+            return result.data['alreadyOwned'] == true;
+          } on FirebaseFunctionsException catch (e) {
+            if (e.code == 'failed-precondition' && e.message != null) {
+              throw PurchaseFailure('${e.message} No payment was started.');
+            }
+            rethrow;
+          }
+        },
+        refresh: _refreshEntitlement,
+        readAccount: (uid) async =>
+            (await _db
+                    .collection('users')
+                    .doc(uid)
+                    .get(const GetOptions(source: Source.server)))
+                .data() ??
+            {},
+      );
+
   static Future<bool> purchase(
     Package package, {
     String? courseId,
     List<String>? selectedCourseIds,
   }) async {
     if (kIsWeb) return false;
+    final request = PurchaseRequest(
+      productId: package.storeProduct.identifier,
+      courseId: courseId,
+      selectedCourseIds: selectedCourseIds,
+    );
     try {
-      // Record WHICH course(s) this purchase is for, before paying. The server
-      // promotes this to a real entitlement only once RevenueCat confirms
-      // payment via webhook — writing it here grants nothing on its own.
-      await _setPendingPurchase(
-        courseId: courseId,
-        courseIds: selectedCourseIds,
-      );
-
-      debugPrint('RevenueCat: purchasing ${package.storeProduct.identifier}');
-      await Purchases.purchase(PurchaseParams.package(package));
-      debugPrint('RevenueCat: purchase success — awaiting webhook');
-    } catch (e) {
-      final err = e.toString().toLowerCase();
-      if (err.contains('cancel') || err.contains('usercancel')) {
-        debugPrint('RevenueCat: user cancelled');
-        return false;
-      }
-      if (err.contains('alreadypurchased') || err.contains('already')) {
-        debugPrint('RevenueCat: already purchased — restoring');
+      return await _coordinator.purchase(request, () async {
+        await Purchases.purchase(PurchaseParams.package(package));
+      });
+    } on PlatformException catch (e) {
+      final code = PurchasesErrorHelper.getErrorCode(e);
+      if (code == PurchasesErrorCode.purchaseCancelledError) return false;
+      if (code == PurchasesErrorCode.productAlreadyPurchasedError) {
         final result = await restore();
-        if (result.isApplied) return true;
-        // Do not claim success for a restore that did not actually grant
-        // access; say what happened so the user is not left on a locked screen.
-        throw result.displayMessage;
+        // Owning a different course must not dismiss this paywall as success.
+        final uid = _uid;
+        if (result.isApplied && uid != null) {
+          final data = await _coordinator.readAccount(uid);
+          if (_uid == uid && request.isApplied(data)) return true;
+        }
+        throw PurchaseFailure(result.isApplied
+            ? 'Your previous purchases were restored. This selection is not included in them.'
+            : result.displayMessage);
       }
-      debugPrint('RevenueCat purchase error: $e');
-      throw 'Purchase failed. Please try again or restore purchases.';
+      if (code == PurchasesErrorCode.paymentPendingError) {
+        throw const PurchaseFailure(
+            'Your payment is awaiting approval. Once approved, restore purchases to activate your courses.');
+      }
+      throw const PurchaseFailure(
+          'The App Store could not complete your purchase. Please try again or restore purchases.');
     }
-
-    // Deliberately OUTSIDE the try: the store has taken payment by now, so
-    // this must never be reported as "Purchase failed. Please try again",
-    // which would invite a second charge.
-    //
-    // The entitlement lands in Firestore when the webhook fires. The wait's
-    // result used to be ignored and `true` returned regardless, so a buyer
-    // whose plan never landed saw the paywall close as if it had worked and
-    // was dropped on the course they had just paid for, still locked.
-    if (!await _awaitEntitlement()) {
-      throw 'Payment received. Your courses are still being activated, '
-          'which can take a minute. If they are still locked afterwards, '
-          'tap Restore purchases.';
-    }
-    return true;
   }
 
-  /// Restore previously purchased non-consumables.
-  ///
-  /// Returns a [RestoreResult] rather than a bool, because four different
-  /// things can happen and three of them used to be indistinguishable. See
-  /// restore_result.dart for why that mattered.
   static Future<RestoreResult> restore() async {
     if (kIsWeb) {
       return const RestoreResult.failed(
-        message: 'Purchases can only be restored in the iOS app.',
-      );
+          message: 'Purchases can only be restored in the iOS app.');
     }
-    try {
-      debugPrint('RevenueCat: restoring purchases');
-      // Restoring re-associates the store receipt with this RevenueCat user,
-      // which triggers a TRANSFER/RENEWAL webhook. The server writes the
-      // entitlement; we just wait for it to arrive.
+    return _coordinator.restore(() async {
       final info = await Purchases.restorePurchases();
-      if (info.entitlements.active.isEmpty) {
-        debugPrint('RevenueCat: restore found no active entitlement');
-        return const RestoreResult.nothing();
-      }
-      // The store says they own it. Whether they can USE it depends on the
-      // webhook having written the plan, which is a separate question.
-      final applied = await _awaitEntitlement();
-      debugPrint('RevenueCat: restore complete — applied=$applied');
-      return applied
-          ? const RestoreResult.applied()
-          : const RestoreResult.pending();
-    } on PlatformException catch (e) {
-      debugPrint(
-          'RevenueCat restore PlatformException: ${e.code} ${e.message}');
-      return RestoreResult.failed(code: e.code, message: e.message);
-    } catch (e) {
-      debugPrint('RevenueCat restore failed: $e');
-      return RestoreResult.failed(message: e.toString());
-    }
+      return info.allPurchasedProductIdentifiers.any(isKnownPurchaseProduct);
+    });
   }
 
-  /// Poll Firestore briefly for the webhook-written entitlement.
-  ///
-  /// Webhook delivery is typically sub-second but is not synchronous with the
-  /// StoreKit callback, so without this the paywall can close before the plan
-  /// lands and the user sees a locked screen for a course they just bought.
-  ///
-  /// Returns true if the plan landed, false if the wait timed out. Callers
-  /// MUST distinguish those: a store purchase that never becomes a Firestore
-  /// plan leaves the user locked out of what they just paid for, and reporting
-  /// it as success is what hid that.
-  static Future<bool> _awaitEntitlement({
-    Duration timeout = const Duration(seconds: 12),
-  }) async {
-    final uid = _uid;
-    if (uid == null) return false;
-
-    final deadline = DateTime.now().add(timeout);
-    while (DateTime.now().isBefore(deadline)) {
-      try {
-        final snap = await _db.collection('users').doc(uid).get();
-        final plan = snap.data()?['subscriptionPlan'] as String? ?? 'none';
-        if (plan != 'none') {
-          debugPrint('_awaitEntitlement: plan="$plan" landed');
-          return true;
-        }
-      } catch (e) {
-        debugPrint('_awaitEntitlement read failed: $e');
-      }
-      await Future<void>.delayed(const Duration(milliseconds: 600));
-    }
-    debugPrint('_awaitEntitlement: timed out — webhook may be delayed');
-    return false;
-  }
-
-  /// Tell the server which course(s) the imminent purchase is for.
-  static Future<void> _setPendingPurchase({
-    String? courseId,
-    List<String>? courseIds,
-  }) async {
-    if (courseId == null && (courseIds == null || courseIds.isEmpty)) return;
-    try {
-      await _fn.httpsCallable('setPendingPurchase').call<void>({
-        if (courseId != null) 'courseId': courseId,
-        if (courseIds != null && courseIds.isNotEmpty) 'courseIds': courseIds,
-      });
-    } catch (e) {
-      // Non-fatal: the webhook still grants the plan, it just may not know
-      // which single course to attach. Surfaced in logs for support.
-      debugPrint('setPendingPurchase failed: $e');
-    }
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Access Checks  ←  Firestore-first, no live RevenueCat call
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /// Whether the user can access a specific course.
-  ///
-  /// Reads from Firestore (written by [_syncToFirestore] immediately after
-  /// purchase/restore). Falls back to a live RevenueCat call only if the
-  /// Firestore document has no recognised plan — e.g. fresh install with a
-  /// previous purchase that hasn't been synced yet.
-  /// Does the plan recorded on [data] unlock [courseId]?
-  ///
-  /// The single place that answers this. It used to be answered twice:
-  /// properly on the Firestore path, and on the RevenueCat fallback path as
-  /// `subscriptionPlan != 'none'` — which unlocked whatever course had been
-  /// asked for, so one single-course purchase opened the whole catalogue to
-  /// anyone who went through a reinstall. That branch cannot be reached from
-  /// a test, so the decision was moved out of it rather than fixed inside it.
-  ///
-  /// Unknown plan names fail CLOSED. A plan this build does not recognise is
-  /// one the server added later, and guessing in the user's favour is how a
-  /// paywall opens by accident.
-  ///
-  /// Trials are deliberately not considered here — they are time-bound and
-  /// handled separately by the caller.
-  static bool planGrantsAccess(Map<String, dynamic> data, String courseId) {
-    switch (data['subscriptionPlan'] as String? ?? 'none') {
-      case 'all':
-        return true;
-      case 'bundle4':
-        final courses = data['bundleCourseIds'];
-        return courses is List && courses.contains(courseId);
-      case 'single':
-        return data['subscribedCourseId'] == courseId;
-      default:
-        return false;
-    }
-  }
+  static bool planGrantsAccess(Map<String, dynamic> data, String courseId) =>
+      paidCourseAccess(data, courseId);
 
   static Future<bool> canAccessCourse(String courseId,
       {bool cachedOnly = false}) async {
-    // NOTE: web deliberately does NOT short-circuit to `true`. It used to,
-    // which made the entire paid catalogue free on the Firebase Hosting build.
-    // Web has no StoreKit, so it cannot *sell* — but it can still read the
-    // entitlement the user already owns, which is all this check needs.
     final uid = _uid;
     if (uid == null) return false;
-
     try {
-      // ── 1. Read Firestore (fast, offline-capable) ──────────────────────
       final snap = await _db.collection('users').doc(uid).get(GetOptions(
           source: cachedOnly ? Source.cache : Source.serverAndCache));
       if (_uid != uid) return false;
       final data = snap.data() ?? {};
-      final planString = data['subscriptionPlan'] as String? ?? 'none';
-
-      debugPrint('canAccessCourse($courseId): Firestore plan=$planString');
-
-      if (planString != 'none') return planGrantsAccess(data, courseId);
-
-      // ── 2. Trial check ─────────────────────────────────────────────────
-      final trialCourseId = data['trialCourseId'] as String?;
-      final trialExpiry = data['trialExpiry'] as Timestamp?;
-      if (trialCourseId == courseId && trialExpiry != null) {
-        return trialExpiry.toDate().isAfter(DateTime.now());
+      if (planGrantsAccess(data, courseId)) return true;
+      final expiry = data['trialExpiry'];
+      if (data['trialCourseId'] == courseId &&
+          expiry is Timestamp &&
+          expiry.toDate().isAfter(DateTime.now())) {
+        return true;
       }
-
-      // ── 3. Firestore says 'none' — fall back to RevenueCat live check ──
-      // This handles the edge case where the user has a valid purchase but
-      // the entitlement webhook hasn't landed yet (e.g. reinstall, new device).
-      // There is no RevenueCat SDK on web, so Firestore is final there.
-      if (kIsWeb || cachedOnly) return false;
-
-      debugPrint(
-          'canAccessCourse: Firestore has no plan — checking RevenueCat live');
-      final info = await Purchases.getCustomerInfo();
-      if (_planFromInfo(info) == SubscriptionPlan.none) return false;
-
-      // The store says this user owns something Firestore hasn't recorded —
-      // usually a reinstall whose webhook predates this device. Restoring
-      // re-fires the webhook; the server then writes the entitlement.
-      await Purchases.restorePurchases();
-      await _awaitEntitlement(timeout: const Duration(seconds: 8));
-
-      // Re-apply the same decision. Asking only whether SOME plan now exists
-      // is what turned one single-course purchase into catalogue-wide access.
-      final retry = await _db.collection('users').doc(uid).get();
-      return planGrantsAccess(retry.data() ?? {}, courseId);
+      // Launch and explicit purchase/restore reconcile access. Reading a
+      // locked lesson must not launch a StoreKit restore behind the user's back.
+      return false;
     } catch (e) {
       debugPrint('canAccessCourse error: $e');
       return false;
     }
   }
 
-  /// Module IDs that are free for everyone — the course preview.
-  ///
-  /// Both spellings are accepted on purpose. The seed scripts write `module-1`
-  /// while the in-app content and this check originally used `module-01`, so
-  /// the strings never matched and NOTHING was ever free — every user hit a
-  /// paywall on the first tap. Matching both is the safe fix; normalising the
-  /// data can follow without re-breaking the funnel.
-  static bool isFreePreviewModule(String moduleId) {
-    // Keep the preview aligned with the IDs allowed by firestore.rules.
-    return moduleId == 'module-1' || moduleId == 'module-01';
-  }
+  static bool isFreePreviewModule(String moduleId) =>
+      moduleId == 'module-1' || moduleId == 'module-01';
 
-  /// Whether the user can access a specific module.
-  /// The first module of every course is always free.
   static Future<bool> canAccessModule({
     required String courseId,
     required String moduleId,
@@ -381,60 +210,42 @@ class SubscriptionService {
     return canAccessCourse(courseId, cachedOnly: cachedOnly);
   }
 
+  static SubscriptionPlan _plan(Map<String, dynamic> data) =>
+      switch (data['subscriptionPlan']) {
+        'all' => SubscriptionPlan.all,
+        'bundle4' => SubscriptionPlan.bundle4,
+        'single' => SubscriptionPlan.single,
+        _ => SubscriptionPlan.none,
+      };
+
+  static bool _hasPaidAccess(Map<String, dynamic> data) =>
+      data['subscriptionPlan'] == 'all' ||
+      (data['purchasedCourseIds'] is List &&
+          (data['purchasedCourseIds'] as List).isNotEmpty);
+
   static Future<SubscriptionPlan> getCurrentPlan() async {
-    if (kIsWeb) return SubscriptionPlan.none;
+    final uid = _uid;
+    if (uid == null) return SubscriptionPlan.none;
     try {
-      final info = await Purchases.getCustomerInfo();
-      return _planFromInfo(info);
-    } catch (e) {
-      debugPrint('getCurrentPlan error: $e');
+      final snap = await _db.collection('users').doc(uid).get();
+      return _uid == uid ? _plan(snap.data() ?? {}) : SubscriptionPlan.none;
+    } catch (_) {
       return SubscriptionPlan.none;
     }
   }
 
-  /// Real-time Firestore stream of the user's plan.
-  /// Used by UI widgets that should react instantly to a purchase.
   static Stream<SubscriptionPlan> planStream() {
-    if (kIsWeb) return Stream.value(SubscriptionPlan.none);
-    final uid = _uid;
-    if (uid == null) return const Stream.empty();
-    return ServiceBackend.watchUser().map((snap) {
-      final data = snap.data() ?? {};
-      switch (data['subscriptionPlan'] as String? ?? 'none') {
-        case 'all':
-          return SubscriptionPlan.all;
-        case 'bundle4':
-          return SubscriptionPlan.bundle4;
-        case 'single':
-          return SubscriptionPlan.single;
-        default:
-          return SubscriptionPlan.none;
-      }
-    });
+    if (_uid == null) return const Stream.empty();
+    return ServiceBackend.watchUser().map((snap) => _plan(snap.data() ?? {}));
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Trial
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /// Start the one-time free trial.
-  ///
-  /// This used to run as a client-side Firestore transaction, which meant the
-  /// user could simply reset `hasUsedTrial` on their own document and farm
-  /// unlimited trials. It is now a Cloud Function: the client can ask, but only
-  /// the server can grant.
   static Future<bool> startTrial(String courseId) async {
     if (_uid == null) return false;
     try {
       final res = await _fn
           .httpsCallable('startTrial')
           .call<Map<String, dynamic>>({'courseId': courseId});
-      final granted = res.data['granted'] == true;
-      debugPrint('startTrial: granted=$granted for $courseId');
-      return granted;
-    } on FirebaseFunctionsException catch (e) {
-      debugPrint('startTrial failed: ${e.code} ${e.message}');
-      return false;
+      return res.data['granted'] == true;
     } catch (e) {
       debugPrint('startTrial failed: $e');
       return false;
@@ -442,53 +253,27 @@ class SubscriptionService {
   }
 
   static Future<bool> hasUsedTrial() async {
-    if (kIsWeb) return false;
     try {
       final uid = _uid;
       if (uid == null) return false;
       final snap = await _db.collection('users').doc(uid).get();
-      return snap.data()?['hasUsedTrial'] == true;
+      return _uid == uid && snap.data()?['hasUsedTrial'] == true;
     } catch (_) {
       return false;
     }
   }
 
   static Future<bool> isInActiveTrial() async {
-    if (kIsWeb) return false;
     try {
       final uid = _uid;
       if (uid == null) return false;
       final snap = await _db.collection('users').doc(uid).get();
-      final data = snap.data() ?? {};
-      final expiry = data['trialExpiry'] as Timestamp?;
-      if (expiry == null) return false;
-      return expiry.toDate().isAfter(DateTime.now());
+      final expiry = snap.data()?['trialExpiry'];
+      return _uid == uid &&
+          expiry is Timestamp &&
+          expiry.toDate().isAfter(DateTime.now());
     } catch (_) {
       return false;
     }
   }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Private helpers
-  // ─────────────────────────────────────────────────────────────────────────
-
-  static SubscriptionPlan _planFromInfo(CustomerInfo info) {
-    final active = info.entitlements.active;
-    debugPrint('RC active entitlements: ${active.keys.toList()}');
-    if (!active.containsKey(kEntitlementPro)) return SubscriptionPlan.none;
-
-    final productId = active[kEntitlementPro]?.productIdentifier ?? '';
-    debugPrint('RC active product: $productId');
-
-    if (productId == kProductBundleAll) return SubscriptionPlan.all;
-    if (productId == kProductBundle4) return SubscriptionPlan.bundle4;
-    if (productId == kProductSingle) return SubscriptionPlan.single;
-
-    return SubscriptionPlan.single; // unknown product → fail-safe to single
-  }
-
-  // _syncToFirestore was removed deliberately. Entitlement fields are now
-  // written only by functions/entitlements.js (Admin SDK). If you reintroduce
-  // a client-side writer here, firestore.rules will reject it — and the
-  // paywall bypass it caused will come back. See docs/SECURITY.md.
 }

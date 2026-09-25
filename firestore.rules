@@ -35,6 +35,9 @@ service cloud.firestore {
         'subscriptionUpdatedAt',
         'subscribedCourseId',
         'bundleCourseIds',
+        'purchasedCourseIds',
+        'pendingCourseId',
+        'pendingBundleCourseIds',
         'trialCourseId',
         'trialExpiry',
         'trialStartedAt',
@@ -124,10 +127,18 @@ service cloud.firestore {
       let u = userDoc();
       let plan = u.get('subscriptionPlan', 'none');
       return plan == 'all'
+        || (plan in ['single', 'bundle4'] && hasVerifiedCoursePurchase(courseId))
         || (plan == 'bundle4' && courseId in u.get('bundleCourseIds', []))
         || (plan == 'single'  && u.get('subscribedCourseId', '') == courseId)
         || (u.get('trialCourseId', '') == courseId
             && u.get('trialExpiry', request.time) > request.time);
+    }
+
+    function hasVerifiedCoursePurchase(courseId) {
+      let path = /databases/$(database)/documents/users/$(request.auth.uid)/purchaseState/current;
+      // The new list on the profile was client-writable before this release.
+      // Only the always-private server snapshot can authorize these new grants.
+      return exists(path) && courseId in get(path).data.get('purchasedCourseIds', []);
     }
 
     // ── admin allowlist (membership grants catalogue write access) ──────────
@@ -155,6 +166,11 @@ service cloud.firestore {
     // Locked to nothing at all; the catch-all below would cover it, but stating
     // it explicitly keeps the intent readable next to the other collections.
     match /processed_rc_events/{eventId} {
+      allow read, write: if false;
+    }
+
+    // Course choices follow a verified receipt when it moves between accounts.
+    match /purchase_bindings/{purchaseId} {
       allow read, write: if false;
     }
 

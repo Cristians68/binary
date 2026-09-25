@@ -7,12 +7,10 @@
 /// webhook and locked down in firestore.rules — the client merely *reads* the
 /// server's answer. These tests pin that reading.
 ///
-/// SCOPE NOTE: when Firestore reports no plan at all, the real code falls back
-/// to a live RevenueCat lookup. The RevenueCat SDK is a platform channel with
-/// no implementation in the Dart test VM, so that branch cannot be exercised
-/// here; it throws and is caught, which is why a no-plan user reads as denied.
-/// The tests below therefore prove "Firestore says X → decision Y", not the
-/// store-fallback behaviour. See docs/SECURITY.md.
+/// Purchase/restore reconciliation is covered by purchase_coordinator_test.dart
+/// and functions/test/purchases.test.js. Access reads themselves never start a
+/// StoreKit restore. These tests cover the Firestore access decision; the fake
+/// does not enforce security rules. See docs/SECURITY.md.
 library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -136,19 +134,15 @@ void main() {
     });
   });
 
-  group('canAccessCourse — documented quirk', () {
-    test('a bundle plan short-circuits before the trial is considered', () {
-      // Pinning current behaviour, not endorsing it: the bundle4 branch
-      // returns false for a course outside the bundle without ever reaching
-      // the trial check below it. A bundle4 owner who also started a trial on
-      // a fifth course is therefore locked out of that trial.
+  group('canAccessCourse — independent entitlements', () {
+    test('a bundle owner can still use a trial on another course', () {
       return seed({
         'subscriptionPlan': 'bundle4',
         'bundleCourseIds': ['a', 'b', 'c', 'd'],
         'trialCourseId': 'e',
         'trialExpiry': inHours(24),
       }).then((_) async {
-        expect(await SubscriptionService.canAccessCourse('e'), isFalse);
+        expect(await SubscriptionService.canAccessCourse('e'), isTrue);
       });
     });
   });

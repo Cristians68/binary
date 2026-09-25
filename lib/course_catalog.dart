@@ -47,6 +47,9 @@ class CourseInfo {
   /// doing so invalidates every certificate already issued for the course.
   final String code;
 
+  /// One non-consumable per course, aligned with functions/purchase_catalog.js.
+  String get productId => 'binary_course_${code.toLowerCase()}';
+
   const CourseInfo({
     required this.id,
     required this.tag,
@@ -66,8 +69,7 @@ const List<CourseInfo> kCourseCatalog = [
     blurb:
         'How service organisations create value — service value systems, the '
         'four dimensions, guiding principles, and core practices.',
-    preparesFor:
-        'Covers the body of knowledge assessed by ITIL® 4 Foundation. '
+    preparesFor: 'Covers the body of knowledge assessed by ITIL® 4 Foundation. '
         'ITIL® is a registered trademark of PeopleCert/AXELOS Limited. '
         'This course is independent and is not accredited, affiliated with, '
         'or endorsed by them.',
@@ -80,8 +82,7 @@ const List<CourseInfo> kCourseCatalog = [
     blurb:
         'Agile delivery in practice — the Scrum framework, accountabilities, '
         'events, artifacts, and how teams scale it.',
-    preparesFor:
-        'Covers the body of knowledge assessed by entry-level Scrum '
+    preparesFor: 'Covers the body of knowledge assessed by entry-level Scrum '
         'certifications. Certified ScrumMaster® and CSM® are registered '
         'trademarks of Scrum Alliance, Inc. This course is independent and is '
         'not accredited, affiliated with, or endorsed by them.',
@@ -91,8 +92,7 @@ const List<CourseInfo> kCourseCatalog = [
     code: 'NETP',
     tag: 'Binary Network Pro',
     title: 'Network Professional',
-    blurb:
-        'Networking end to end — OSI and TCP/IP, subnetting, routing and '
+    blurb: 'Networking end to end — OSI and TCP/IP, subnetting, routing and '
         'switching, wireless, DNS/DHCP, and troubleshooting.',
     preparesFor:
         'Covers foundational networking concepts also assessed by vendor-'
@@ -105,8 +105,7 @@ const List<CourseInfo> kCourseCatalog = [
     code: 'SECP',
     tag: 'Binary Cyber Pro',
     title: 'Cybersecurity Professional',
-    blurb:
-        'Defensive security fundamentals — threats, cryptography, access '
+    blurb: 'Defensive security fundamentals — threats, cryptography, access '
         'control, network hardening, and incident response.',
     preparesFor:
         'Covers foundational security concepts also assessed by vendor-'
@@ -119,8 +118,7 @@ const List<CourseInfo> kCourseCatalog = [
     code: 'CLDF',
     tag: 'Binary Cloud',
     title: 'Cloud Fundamentals',
-    blurb:
-        'Cloud computing from first principles — service and deployment '
+    blurb: 'Cloud computing from first principles — service and deployment '
         'models, virtualisation, storage, and cost.',
   ),
   CourseInfo(
@@ -128,8 +126,7 @@ const List<CourseInfo> kCourseCatalog = [
     code: 'CLDA',
     tag: 'Binary Cloud Pro',
     title: 'Cloud Architecture',
-    blurb:
-        'Designing for the cloud — availability, scaling, networking, '
+    blurb: 'Designing for the cloud — availability, scaling, networking, '
         'identity, and well-architected trade-offs.',
   ),
   // Deliberately has no `preparesFor`. The AI certification landscape is
@@ -142,8 +139,7 @@ const List<CourseInfo> kCourseCatalog = [
     code: 'AIML',
     tag: 'Binary AI',
     title: 'AI & Machine Learning Foundations',
-    blurb:
-        'How modern AI actually works — machine learning, neural networks, '
+    blurb: 'How modern AI actually works — machine learning, neural networks, '
         'language models, prompting, model quality, and responsible use.',
   ),
 ];
@@ -157,15 +153,13 @@ final Map<String, CourseInfo> _byTag = {
 };
 
 /// Look up by Firestore id, falling back to tag.
-CourseInfo? courseInfo(String idOrTag) =>
-    _byId[idOrTag] ?? _byTag[idOrTag];
+CourseInfo? courseInfo(String idOrTag) => _byId[idOrTag] ?? _byTag[idOrTag];
 
 /// Trademark-safe title for any course id or internal tag.
 ///
 /// Falls back to the input so a newly seeded course that isn't in the
 /// catalogue yet still renders something sensible rather than blank.
-String displayTitle(String idOrTag) =>
-    courseInfo(idOrTag)?.title ?? idOrTag;
+String displayTitle(String idOrTag) => courseInfo(idOrTag)?.title ?? idOrTag;
 
 /// The subset of Firestore course documents that the app is allowed to show.
 ///

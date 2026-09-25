@@ -1,6 +1,10 @@
 # B1nary — security model and deploy runbook
 
-Last updated: 2026-07-26
+Last updated: 2026-09-24
+
+The purchase redesign is implemented locally, not deployed. See
+[`PURCHASES.md`](PURCHASES.md) for product setup, legacy receipt migration,
+the new private snapshot/binding documents, and required release checks.
 
 ## 1. The vulnerability this replaced
 
@@ -29,11 +33,11 @@ never trusted.**
 
 | Field | Written by | Client may write? |
 |---|---|---|
-| `subscriptionPlan` | `revenueCatWebhook` | No |
-| `subscribedCourseId` | `revenueCatWebhook` | No |
-| `bundleCourseIds` | `revenueCatWebhook` | No |
+| `subscriptionPlan` | server purchase reconciliation | No |
+| `subscribedCourseId`, `bundleCourseIds`, `purchasedCourseIds` | server purchase reconciliation | No |
 | `trialExpiry`, `trialCourseId`, `hasUsedTrial` | `startTrial` | No |
-| `pendingCourseId`, `pendingBundleCourseIds` | `setPendingPurchase` | No (function only) |
+| `purchaseState/current`, `purchaseIntents/{productId}` subcollections | server purchase reconciliation | No (no client reads either) |
+| `purchase_bindings/{receipt hash}` | server purchase reconciliation | No (no client reads either) |
 | `streak`, `fcmToken`, `enrolments`, `notificationsEnabled`, profile | client | Yes |
 
 Enforcement is in `firestore.rules` via `entitlementsUnchanged()`, which uses
@@ -54,6 +58,8 @@ writes those fields directly.
 ```
 1. Set the webhook secret (a long random string you generate):
    firebase functions:secrets:set REVENUECAT_WEBHOOK_SECRET
+   Also set the server-only RevenueCat v1 API key:
+   firebase functions:secrets:set REVENUECAT_SECRET_API_KEY
 
 2. Deploy functions FIRST — the webhook must exist before rules block the client.
    firebase deploy --only functions
@@ -90,10 +96,10 @@ Some of those may be self-granted. Before step 5, reconcile against RevenueCat:
 
 ## 5. Known remaining gaps
 
-- **`refreshEntitlement` is deliberately unimplemented.** It throws `unimplemented`
-  rather than shipping a stub that could silently grant access. Implementing it
-  properly needs a RevenueCat *secret* API key (`sk_...`) stored as its own
-  Firebase secret, then a server-side call to the RevenueCat REST API.
+- **Purchase reconciliation is implemented but not deployed.**
+  `refreshEntitlement` and the webhook use a server-only RevenueCat secret API
+  key. Deployment, rule-enforcement checks, any legacy receipt migration, and
+  device testing remain outstanding; see `PURCHASES.md`.
 - **`admins/{uid}` is checked by the rules but no documents exist yet.** Create
   them by hand in the console for anyone who needs to write the catalogue.
   Nobody can self-enrol.

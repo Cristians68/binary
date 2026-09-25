@@ -1,10 +1,57 @@
-# B1nary — handoff (last updated 2026-09-23)
+# B1nary — handoff (last updated 2026-09-24)
 
 Read this first. It records what is live, what is waiting on the owner, and
 the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 `docs/IOS-GOOGLE-SIGNIN-AUDIT.md`, `docs/SECURITY.md` and `docs/RELEASE.md`.
 
-## Can we resubmit? NO (assessed 2026-09-23, build `efe660b`)
+## Paused at the owner's request — 2026-09-24
+
+Work stopped after finishing the local purchase implementation and checks.
+At the owner's follow-up request, local `master` was fast-forwarded to the
+existing work at `1f534b9`, and this checkpoint is committed on **`master`**
+as "Complete server-verified course purchases and restores". Nothing was
+pushed, deployed, submitted, or built for TestFlight in this session.
+
+Completed locally:
+
+- One non-consumable per course (`binary_course_<lowercase course code>`),
+  with paywall selection and localized pricing using that course's product.
+  The old `binary_course_single` is restore-only. The two bundle IDs stay.
+- `refreshEntitlement` now verifies RevenueCat's current non-subscription
+  inventory using the server-only `REVENUECAT_SECRET_API_KEY` secret.
+- Every checkout verifies server readiness **before payment**, including All
+  Courses. Activation checks the exact course(s), so an older unrelated
+  purchase cannot produce a false success. Multiple course purchases coexist.
+- Restore verifies server state; launch/access checks no longer trigger an
+  implicit StoreKit restore. A bundle owner can also use a separate trial.
+- Webhooks reconcile refunds and both sides of transfers. The processed-event
+  marker is written after successful processing; older API snapshots cannot
+  undo newer access updates. Bundle choices are attached to a verified receipt
+  and stay the same when restored to another account.
+- Firestore rules protect the new profile field and read the always-private
+  purchase snapshot to authorize additional courses. Old client-written pending
+  fields are ignored. See [PURCHASES.md](PURCHASES.md) for the precise schema,
+  product IDs, legacy-purchase migration requirements, and deployment order.
+
+Verification on 2026-09-24:
+
+- `flutter analyze --no-pub`: **zero issues**.
+- `flutter test --no-pub --reporter expanded`: **619 passing**.
+- `cd functions && npm test`: **49 passing**.
+- `python -m unittest discover -s tools/ios -p 'test_*.py'`: **7 passing**.
+- No live purchase, iOS runtime, or updated Firestore-rules emulator test was
+  performed. The fake Firestore/transaction tests do not enforce rules.
+
+Apple sign-in is still unresolved. The owner said the error **does not give a
+`token:` diagnostic line**. Inspection confirmed that the current native path
+only appends it after a Firebase rejection with a received token. The welcome
+screen's copy button copies the displayed error. No Apple-flow or error-screen
+changes were made before the owner asked to pause. On resuming, verify the
+installed build first, then make the support details available for every failed
+stage (including when Apple returns no token), with installed build identity.
+Do not claim the Apple issue is fixed or request the same unavailable line again.
+
+## Can we resubmit? NO (local reassessment 2026-09-24)
 
 Certain App Review rejections: (1) purchases unlock nothing and (2) Delete
 account fails with `not-found`, both because zero Cloud Functions are
@@ -13,22 +60,23 @@ work because Google sign-in is offered (4.8). Also needed: App Privacy labels
 updated (profile photos, Crashlytics), device paywall screenshot, review
 notes, and a device test of the 2026-09-23 features.
 
-Order: Apple fix (needs the `token:` line from a device) → owner upgrades to
-Blaze + confirms Paid Apps Agreement/bank/tax → deploy functions → build the
-payment system (instant unlock via a server check against RevenueCat, one
-product per course; design awaiting the owner's yes) → sandbox purchase and
-restore on device → submission prep.
+Order: establish the installed Apple-sign-in build and expose usable failure
+details → owner upgrades to Blaze + confirms Paid Apps Agreement/bank/tax →
+configure products/secrets and review any legacy receipt bindings → deploy the
+locally implemented purchase functions and rules per `docs/PURCHASES.md` →
+sandbox purchase and restore on device → submission prep.
 
 ## Where things are
 
-- Work branch: `feature/notifications-and-streaks`. **`master` must be
-  fast-forwarded to it before every iOS build**: Codemagic's "Start new
-  build" defaults to `master`.
-  `git push origin feature/notifications-and-streaks:master`
+- Work branch: **`master`**, at the owner's explicit request on 2026-09-24.
+  The old feature branch remains at `1f534b9`; it does not contain this
+  purchase checkpoint. Codemagic's "Start new build" defaults to remote
+  `master`, so publish the intended master commit before any iOS build:
+  `git push origin master`.
 - iOS builds: Codemagic workflow **iOS → TestFlight**. Always confirm the
   build page shows the commit you expect before debugging a device report.
-- Checks: `flutter analyze` (zero issues) and `flutter test` (602 passing),
-  `cd functions && npm test` (23 passing),
+- Checks: `flutter analyze` (zero issues) and `flutter test` (619 passing),
+  `cd functions && npm test` (49 passing),
   `python -m unittest discover -s tools/ios -p 'test_*.py'`.
 - Live security probe: serve `build/web` on 127.0.0.1:8099, then
   `node tools/security/run_probe.js`. Last result: PC 5/5, AB 18/18.
@@ -53,7 +101,7 @@ restore on device → submission prep.
 
 ## Waiting on the owner (production writes; auto mode blocks the assistant)
 
-1. Fast-forward `master`, then build iOS → TestFlight (App Lock, profile
+1. Push the intended `master` commit, then build iOS → TestFlight (App Lock, profile
    photo and the Apple fixes are not on any device yet).
 
 ## Open work, in the owner's priority order
@@ -64,7 +112,9 @@ restore on device → submission prep.
    `com.cristians.b1nary` (a stale `com.example.binary` iOS app also exists).
    Built: on that failure the copied error now ends with
    `token: aud …, iss …, exp …, iat …, nonce …` (`apple_token_diagnostics.dart`).
-   **Next: get that line from the device, then fix what it names.** Note the
+   **2026-09-24 update: the owner says that line is not shown. Next, verify
+   the installed build and make complete support details visible for every
+   failure stage before requesting another device report.** Note the
    iOS path has no fallback to `_appleViaFirebaseProvider` (FlutterFire builds
    its own nonce/credential); a fallback on `invalid-credential` is an option
    if the nonce is the cause.
@@ -77,12 +127,15 @@ restore on device → submission prep.
    intro slide listing every course; no hardcoded accounts in `lib/`.
 4. Still outstanding from earlier: zero Cloud Functions deployed (needs the
    Blaze plan: purchases, restore and delete account are dead in production),
-   the purchase redesign, App Store screenshots/IAPs, Android Google sign-in
+   deploying/testing the local purchase redesign, App Store screenshots/IAPs, Android Google sign-in
    (`oauth_client: []` in `google-services.json`), and leftover legacy course
    docs `networking` and `binary-network-pro` (hidden by the catalogue
    allow-list).
 
 ## Paywall audit (2026-09-23)
+
+Historical production audit. The 2026-09-24 local implementation above fixes
+the code issues described below; production/store configuration is unchanged.
 
 Fixed in the app (`f945d86`): bundle course no longer locked in; a purchase
 whose entitlement never lands is no longer reported as success; every paywall
