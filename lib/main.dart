@@ -19,6 +19,7 @@ import 'screens/service_backend.dart';
 import 'security_service.dart';
 import 'crash_reporting.dart';
 import 'fresh_install.dart';
+import 'app_startup.dart';
 
 void main() {
   // Last-resort handling for uncaught Dart/plugin futures. The binding and
@@ -32,7 +33,7 @@ void main() {
   });
 }
 
-Future<void> _bootstrap() async {
+void _bootstrap() {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inter ships in the bundle (see pubspec `google_fonts/`), so no launch
@@ -47,31 +48,50 @@ Future<void> _bootstrap() async {
   // Keep the user's email and uid out of the release device log.
   debugPrint = debugPrintFor(kReleaseMode);
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  runApp(AppStartup(initialize: _initializeApp));
+}
+
+final _firebaseStartup = StartupTask(() =>
+    Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform));
+final _crashReportingStartup = StartupTask(CrashReporting.install);
+final _purchaseStartup = StartupTask(SubscriptionService.configure);
+final _notificationStartup = StartupTask(() async {
+  await NotificationService.init();
+  // Apply after the plugin really finishes, even if startup stopped waiting
+  // for it. Otherwise a slow initialization silently drops local reminders.
+  await NotificationPrefsService.applyAtStartup();
+});
+
+Future<Widget> _initializeApp() async {
+  // Retain an in-flight initialization if it times out. A retry must not
+  // create a second default Firebase app while the first is still starting.
+  await _firebaseStartup.run(timeout: const Duration(seconds: 20));
 
   // Immediately after Firebase and before anything that can fail, so a
   // crash during the rest of bootstrap is still reported.
-  await CrashReporting.install();
+  await runOptionalStartupTask('Crash reporting', _crashReportingStartup.run);
+
+  // Clear a restored Keychain session before RevenueCat identifies anyone.
+  if (!kIsWeb) {
+    await clearSessionRestoredFromKeychain(
+        signOut: () => ServiceBackend.auth.signOut());
+  }
 
   // RevenueCat must be configured before any purchase / entitlement check.
-  await SubscriptionService.configure();
+  await Future.wait([
+    runOptionalStartupTask('Purchases', _purchaseStartup.run),
+    runOptionalStartupTask('Notifications', _notificationStartup.run),
+  ]);
 
-  // Silently sync entitlements from RevenueCat → Firestore on launch.
-  // Fixes cross-device race conditions: if a purchase was made on Device A,
-  // Device B's Firestore catches up before the UI checks access.
-  // Does NOT mark trial as used — purely a passive sync.
-  await SubscriptionService.syncEntitlementsOnLaunch();
-
-  await NotificationService.init();
-
-  // ── Pre-load theme preference BEFORE runApp so there is zero flash ──
+  // Resolve both entry preferences inside the recoverable startup gate.
   final prefs = await SharedPreferences.getInstance();
   final isDark = prefs.getBool('isDarkMode') ?? false;
+  final showOnboarding =
+      !kIsWeb && !(prefs.getBool(kOnboardingCompleteKey) ?? false);
 
-  runApp(
-    SecurityGate(
-      child: BinaryApp(initialIsDark: isDark),
-    ),
+  return SecurityGate(
+    child:
+        BinaryApp(initialIsDark: isDark, initialShowOnboarding: showOnboarding),
   );
 }
 
@@ -118,7 +138,12 @@ DebugPrintCallback debugPrintFor(bool releaseMode) =>
 
 class BinaryApp extends StatefulWidget {
   final bool initialIsDark;
-  const BinaryApp({super.key, required this.initialIsDark});
+  final bool initialShowOnboarding;
+  const BinaryApp({
+    super.key,
+    required this.initialIsDark,
+    required this.initialShowOnboarding,
+  });
 
   @override
   State<BinaryApp> createState() => _BinaryAppState();
@@ -186,9 +211,9 @@ class _BinaryAppState extends State<BinaryApp> {
           ),
           // AppLock sits under the theme and around the navigator, so the
           // lock screen covers every route and the app keeps its place.
-          builder: (context, child) => AppTheme(
-              notifier: _themeNotifier, child: AppLock(child: child!)),
-          home: const _AppEntry(),
+          builder: (context, child) =>
+              AppTheme(notifier: _themeNotifier, child: AppLock(child: child!)),
+          home: _AppEntry(showOnboarding: widget.initialShowOnboarding),
         );
       },
     );
@@ -196,36 +221,22 @@ class _BinaryAppState extends State<BinaryApp> {
 }
 
 class _AppEntry extends StatefulWidget {
-  const _AppEntry();
+  const _AppEntry({required this.showOnboarding});
+  final bool showOnboarding;
   @override
   State<_AppEntry> createState() => _AppEntryState();
 }
 
 class _AppEntryState extends State<_AppEntry> {
-  bool? _showOnboarding;
+  late bool _showOnboarding;
 
   @override
   void initState() {
     super.initState();
-    _check();
-  }
-
-  Future<void> _check() async {
-    // Reminders are scheduled from the local mirror of the user's preferences,
-    // so this does not wait on Firestore and works offline.
-    unawaited(NotificationPrefsService.applyAtStartup());
-
-    if (kIsWeb) {
-      if (mounted) setState(() => _showOnboarding = false);
-      return;
-    }
-    // Before choosing a screen: a fresh install must not open whatever
-    // account iOS restored from the Keychain. See fresh_install.dart.
-    await clearSessionRestoredFromKeychain(
-        signOut: () => ServiceBackend.auth.signOut());
-    final prefs = await SharedPreferences.getInstance();
-    final done = prefs.getBool(kOnboardingCompleteKey) ?? false;
-    if (mounted) setState(() => _showOnboarding = !done);
+    _showOnboarding = widget.showOnboarding;
+    // This network repair can take 15 seconds or fail offline. It must run
+    // after choosing the entry screen, never hold the first frame hostage.
+    unawaited(SubscriptionService.syncEntitlementsOnLaunch());
   }
 
   Future<void> _completeOnboarding() async {
@@ -235,11 +246,7 @@ class _AppEntryState extends State<_AppEntry> {
 
   @override
   Widget build(BuildContext context) {
-    if (_showOnboarding == null) {
-      final theme = AppTheme.of(context);
-      return Scaffold(backgroundColor: theme.bg);
-    }
-    if (_showOnboarding!) {
+    if (_showOnboarding) {
       return OnboardingScreen(onComplete: _completeOnboarding);
     }
     // Resume registered accounts. A restored anonymous session must still

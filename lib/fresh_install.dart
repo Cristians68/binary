@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Set once this install has started with a clean session.
@@ -14,20 +13,15 @@ const String kInstallMarkerKey = 'installInitialised';
 ///
 /// An install that already finished onboarding predates this marker and is
 /// just updating, so it is marked without signing anyone out.
+/// A failed sign-out must reach the startup recovery screen: continuing would
+/// expose the previous account and could persist it as this install's owner.
 Future<void> clearSessionRestoredFromKeychain({
   required Future<void> Function() signOut,
 }) async {
   final prefs = await SharedPreferences.getInstance();
   if (prefs.getBool(kInstallMarkerKey) ?? false) return;
   if (!(prefs.getBool('onboardingComplete') ?? false)) {
-    try {
-      await signOut();
-    } catch (error) {
-      // Leave the marker unset so the next launch tries again, and let the
-      // app start rather than hang on a stuck Keychain.
-      debugPrint('Fresh install sign-out failed: $error');
-      return;
-    }
+    await signOut();
   }
   await prefs.setBool(kInstallMarkerKey, true);
 }

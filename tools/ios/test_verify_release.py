@@ -34,6 +34,9 @@ class ReleaseVerificationTests(unittest.TestCase):
         with zipfile.ZipFile(self.ipa, "w") as archive:
             archive.writestr("Payload/Runner.app/Info.plist",
                              plistlib.dumps(info, fmt=plistlib.FMT_BINARY))
+            archive.writestr("Payload/Runner.app/PrivacyInfo.xcprivacy",
+                             (Path(__file__).resolve().parents[2] /
+                              "ios/Runner/PrivacyInfo.xcprivacy").read_bytes())
             if service is not None:
                 archive.writestr("Payload/Runner.app/GoogleService-Info.plist", plistlib.dumps(service))
 
@@ -45,6 +48,21 @@ class ReleaseVerificationTests(unittest.TestCase):
         report = self.verify()
         self.assertEqual(report["BinarySourceRevision"], self.revision)
         self.assertEqual(report["CFBundleVersion"], "55")
+
+    def test_missing_packaged_privacy_manifest_is_rejected(self):
+        with zipfile.ZipFile(self.ipa, "w") as archive:
+            archive.writestr("Payload/Runner.app/Info.plist", plistlib.dumps(self.info))
+        with self.assertRaisesRegex(ValueError, "privacy manifest"):
+            self.verify()
+
+    def test_profile_photo_disclosure_must_be_in_the_shipped_manifest(self):
+        with zipfile.ZipFile(self.ipa, "w") as archive:
+            archive.writestr("Payload/Runner.app/Info.plist", plistlib.dumps(self.info))
+            archive.writestr("Payload/Runner.app/PrivacyInfo.xcprivacy", plistlib.dumps({
+                "NSPrivacyTracking": False, "NSPrivacyCollectedDataTypes": [],
+            }))
+        with self.assertRaisesRegex(ValueError, "profile photo"):
+            self.verify()
 
     def test_archive_overrides_cannot_hide_behind_correct_source(self):
         for key in ("GIDClientID", "CFBundleIdentifier", "CFBundleShortVersionString",

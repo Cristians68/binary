@@ -171,6 +171,31 @@ void main() {
     expect((env['vars'] as YamlMap)['BUNDLE_ID'], 'com.cristians.b1nary');
   });
 
+  test('both workflows enforce backend and real Firestore rules checks', () {
+    for (final id in ['verify', 'ios-testflight']) {
+      final workflow = workflows[id] as YamlMap;
+      final environment = workflow['environment'] as YamlMap;
+      expect(environment['node'], 22);
+      expect(environment['java'], 21);
+      final scripts = (workflow['scripts'] as YamlList)
+          .map((step) => (step as YamlMap)['script'].toString())
+          .toList();
+      for (final directory in ['functions', 'tools/security']) {
+        final step = scripts.indexWhere((s) => s.contains('cd $directory\n'));
+        expect(step, isNonNegative, reason: '$id must test $directory');
+        expect(scripts[step], contains('set -e'));
+        expect(scripts[step], contains('npm ci'));
+        expect(scripts[step], contains('npm test'));
+        if (id == 'ios-testflight') {
+          expect(
+              step,
+              lessThan(
+                  scripts.indexWhere((s) => s.contains('flutter build ipa'))));
+        }
+      }
+    }
+  });
+
   test('every workflow pins an exact Flutter version', () {
     // `stable` moved underneath this project and broke two builds:
     // CupertinoPageTransitionsBuilder was moved out of the material library,
@@ -205,8 +230,10 @@ void main() {
     expect(platform, isNotNull,
         reason: 'the platform line must be active, not commented out');
 
-    final pubspec = loadYaml(File('pubspec.yaml').readAsStringSync()) as YamlMap;
-    expect(pubspec['flutter']['config']['enable-swift-package-manager'], isFalse,
+    final pubspec =
+        loadYaml(File('pubspec.yaml').readAsStringSync()) as YamlMap;
+    expect(
+        pubspec['flutter']['config']['enable-swift-package-manager'], isFalse,
         reason: 'CI must use the same CocoaPods integration as this project');
   });
 

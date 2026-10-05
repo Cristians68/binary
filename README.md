@@ -3,7 +3,8 @@
 IT certification study app — flashcard lessons, timed quizzes, streaks and
 badges — built in Flutter, shipping to iOS with a Firebase backend.
 
-Version `1.0.0+52`. Primary target is iOS; Android, web, macOS and Windows
+Version `1.0.3+54` in `pubspec.yaml`; Codemagic derives the TestFlight build number.
+Primary target is iOS; Android, web, macOS and Windows
 targets exist and build, but only iOS and web are exercised.
 
 ---
@@ -106,6 +107,12 @@ pipeline (`codemagic.yaml`), or a streamed simulator.
 ```bash
 flutter test
 ```
+
+Release checks also include backend tests (`npm --prefix functions test`),
+the iOS archive verifier, and actual Firestore rules enforcement
+(`npm --prefix tools/security ci` then `npm --prefix tools/security test`,
+with Node 22+ and Java 21). See [docs/HANDOFF.md](docs/HANDOFF.md) for current
+verification and deployment blockers.
 
 ---
 

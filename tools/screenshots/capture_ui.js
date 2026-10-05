@@ -82,11 +82,22 @@ async function tap(page, label) {
       { name: '08-quiz', screen: 'quiz' },
       { name: '09-progress', screen: 'progress' },
       { name: '10-downloads', screen: 'offline' },
+      { name: '11-welcome', screen: 'welcome' },
+      { name: '12-paywall', screen: 'paywall' },
+      { name: '13-legal', screen: 'legal' },
+      { name: '14-startup-recovery', screen: 'startup-error' },
+      ...['welcome', 'home', 'courses', 'progress', 'paywall', 'onboarding', 'legal'].map(screen => ({
+        name: 'large-text-' + screen, screen, width: 320, height: 568, scale: 2,
+      })),
+      ...['welcome', 'paywall'].map(screen => ({
+        name: 'large-text-' + screen + '-actions', screen, width: 320,
+        height: 568, scale: 2, scrollEnd: true,
+      })),
     ];
     for (const fixture of fixtures.filter(f => !process.argv[2] || f.name === process.argv[2])) {
       await page.setViewport({ width: fixture.width || 440, height: fixture.height || 956, deviceScaleFactor: 3 });
       await page.goto('http://127.0.0.1:' + server.address().port + '/?screen=' + fixture.screen +
-        '&dark=' + (fixture.dark ? 1 : 0), { waitUntil: 'domcontentloaded' });
+        '&dark=' + (fixture.dark ? 1 : 0) + '&scale=' + (fixture.scale || 1), { waitUntil: 'domcontentloaded' });
       await page.waitForSelector('flt-glass-pane', { timeout: 30000 });
       await page.waitForFunction(() => {
         document.querySelector('flt-semantics-placeholder')?.click();
@@ -95,6 +106,34 @@ async function tap(page, label) {
       await sleep(1500);
       if (fixture.sample) await tap(page, 'Practice with a sample');
       if (fixture.advance) { await tap(page, 'Continue'); await tap(page, 'DNS'); }
+      if (fixture.scrollEnd) {
+        await page.mouse.move(160, 300);
+        const lastAction = fixture.screen === 'welcome'
+          ? 'Already learning with us? Log in' : 'Privacy Policy';
+        let visible = false;
+        // Flutter limits a single wheel event. A giant delta can leave the
+        // capture halfway down the screen, so verify the final control itself.
+        for (let attempt = 0; attempt < 70; attempt++) {
+          visible = await page.evaluate(label => {
+            const node = [...document.querySelectorAll('flt-semantics')].find(n =>
+              (n.getAttribute('aria-label') || n.textContent || '').trim() === label);
+            if (!node) return false;
+            const bounds = node.getBoundingClientRect();
+            return bounds.height > 0 && bounds.top >= 0 && bounds.bottom <= innerHeight;
+          }, lastAction);
+          if (visible) break;
+          await page.mouse.wheel({deltaY: 800});
+          await sleep(200);
+        }
+        if (!visible) {
+          await page.screenshot({path: path.join(out, fixture.name + '-failed.png')});
+          const bounds = await page.evaluate(label => [...document.querySelectorAll('flt-semantics')]
+            .filter(n => (n.getAttribute('aria-label') || n.textContent || '').trim() === label)
+            .map(n => ({label: n.getAttribute('aria-label') || n.textContent,
+              bounds: n.getBoundingClientRect().toJSON()})), lastAction);
+          throw new Error('Scroll check did not reach: ' + lastAction + ' ' + JSON.stringify(bounds));
+        }
+      }
       await page.screenshot({ path: path.join(out, fixture.name + '.png') });
       const labels = await page.evaluate(() => [...document.querySelectorAll('flt-semantics')]
         .map(n => n.getAttribute('aria-label') || n.textContent).filter(Boolean));

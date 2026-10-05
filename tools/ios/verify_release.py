@@ -41,7 +41,7 @@ def release_settings(root):
     settings["googlePlugin"] = match(r'^    version: "([\d.]+)"', package, "Google plugin version")
     pods = (root / "ios/Podfile.lock").read_text(encoding="utf-8")
     settings["googleSDK"] = match(r"^  - GoogleSignIn \(([\d.]+)\)", pods, "Google iOS SDK")
-    require(tuple(map(int, settings["googlePlugin"].split("."))) >= (6, 3, 3),
+    require(tuple(map(int, settings["googlePlugin"].split("."))) >= (6, 3, 5),
             "The resolved Google iOS plugin predates the scene/configuration fixes")
     require(tuple(map(int, settings["googleSDK"].split("."))) >= (9, 0, 0),
             "The resolved native Google SDK is older than expected")
@@ -76,6 +76,15 @@ def verify_ipa(ipa, settings, revision, build_number):
                  if re.fullmatch(r"Payload/[^/]+\.app/Info\.plist", name)]
         require(len(infos) == 1, "Expected exactly one app Info.plist in the IPA")
         info = plistlib.loads(archive.read(infos[0]))
+        privacy_path = infos[0].removesuffix("Info.plist") + "PrivacyInfo.xcprivacy"
+        require(privacy_path in archive.namelist(), "IPA is missing its app privacy manifest")
+        privacy = plistlib.loads(archive.read(privacy_path))
+        require(privacy.get("NSPrivacyTracking") is False,
+                "IPA privacy manifest must declare the app's no-tracking behavior")
+        data_types = {item.get("NSPrivacyCollectedDataType")
+                      for item in privacy.get("NSPrivacyCollectedDataTypes", [])}
+        require("NSPrivacyCollectedDataTypePhotosorVideos" in data_types,
+                "IPA privacy manifest is missing the profile photo disclosure")
         expected = {
             "CFBundleIdentifier": settings["iosBundleId"],
             "CFBundleShortVersionString": settings["version"],

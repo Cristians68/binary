@@ -1,7 +1,9 @@
 # Purchases — local implementation, 2026-09-24
 
 This code is tested locally and **not deployed**. Start with `HANDOFF.md`.
-Real StoreKit purchase/restore and Firestore rule enforcement still need testing.
+Real StoreKit purchase/restore still needs testing. On 2026-10-05, the actual
+Firestore rules passed 16 local emulator scenarios; see `tools/security/README.md`.
+The same day's live audit confirmed billing disabled and zero deployed functions.
 
 ## Products and store setup
 
@@ -89,12 +91,16 @@ checkpoint; cancellation-aware intent cleanup can improve the UX later.
 1. Confirm Blaze billing, Paid Apps Agreement, banking/tax, and all products in
    the offering. Configure Apple platform server notifications in RevenueCat
    so non-subscription refunds are detected.
-2. Verify the rules in a Firestore emulator, including: first module remains
+2. Run `npm --prefix tools/security ci` and `npm --prefix tools/security test`
+   with Node 22+ and Java 21. This exercises the checked-in rules in a local demo
+   project. Coverage includes: first module remains
    readable, each purchased course is readable, unrelated courses are denied,
    profile entitlement edits fail, and purchase-state/intent/binding documents
    cannot be read or written by a client. Include a preexisting forged
    `purchasedCourseIds` profile list with no private snapshot: it must not grant
-   content access. The local unit-test fake does not test these rules.
+   content access. This gate now passes locally and runs in CI. The Flutter
+   unit-test fake itself still does not enforce rules. After deployment, run
+   the separate live probe to verify the rules actually reached production.
 3. Complete any required legacy receipt binding review above.
 4. Set `REVENUECAT_SECRET_API_KEY` (a RevenueCat v1 secret `sk_...` key) and
    `REVENUECAT_WEBHOOK_SECRET` in Firebase Secret Manager. Never put them in the

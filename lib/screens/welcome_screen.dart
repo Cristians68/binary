@@ -274,19 +274,28 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   // ── Mobile single-column layout (unchanged) ─────────────────────────────────
 
   Widget _buildNarrowLayout(ThemeNotifier theme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Spacer(flex: 2),
-          _buildLogo(theme),
-          const SizedBox(height: 48),
-          _buildFeatures(theme),
-          const Spacer(flex: 3),
-          _buildButtons(theme),
-          const SizedBox(height: 32),
-        ],
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: IntrinsicHeight(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Spacer(flex: 2),
+                  _buildLogo(theme),
+                  const SizedBox(height: 36),
+                  _buildFeatures(theme),
+                  const SizedBox(height: 24),
+                  const Spacer(flex: 3),
+                  _buildButtons(theme),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -302,14 +311,18 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         // App icon — custom painted binary/circuit mark
         const AppIcon(size: 72),
         const SizedBox(height: 20),
-        Text(
-          'B1nary',
-          style: TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.w700,
-            color: theme.text,
-            letterSpacing: -2.0,
-            height: 1.0,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'B1nary',
+            style: TextStyle(
+              fontSize: 48,
+              fontWeight: FontWeight.w700,
+              color: theme.text,
+              letterSpacing: -2.0,
+              height: 1.0,
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -443,8 +456,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     ],
                     TextButton.icon(
                       onPressed: () async {
-                        await Clipboard.setData(
-                            ClipboardData(text: [
+                        await Clipboard.setData(ClipboardData(
+                            text: [
                           _authError!,
                           if (_authSupport != null) _authSupport!,
                         ].join('\n')));
@@ -500,10 +513,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             const SizedBox(height: 20),
             Row(children: [
               Expanded(child: Divider(color: theme.border)),
-              Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text('or use email',
-                      style: TextStyle(fontSize: 12, color: theme.subtext))),
+              Flexible(
+                flex: 3,
+                child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text('or use email',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12, color: theme.subtext))),
+              ),
               Expanded(child: Divider(color: theme.border)),
             ]),
             const SizedBox(height: 16),
@@ -764,13 +781,16 @@ class _GoogleButtonState extends State<_GoogleButton>
                   children: [
                     const _GoogleLogo(size: 22),
                     const SizedBox(width: 10),
-                    Text(
-                      'Continue with Google',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: widget.theme.text,
-                        letterSpacing: -0.2,
+                    Flexible(
+                      child: Text(
+                        'Continue with Google',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: widget.theme.text,
+                          letterSpacing: -0.2,
+                        ),
                       ),
                     ),
                   ],

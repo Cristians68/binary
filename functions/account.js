@@ -11,9 +11,8 @@
  * behind with no signed-in user left who could ever clean it up.
  *
  * The client must reauthenticate (re-enter password / Google sign-in)
- * immediately before calling this, same as before — this function trusts
- * `request.auth`, which Callable Functions populate from a verified, current
- * ID token.
+ * immediately before calling this. The server also checks the verified
+ * token's auth_time: refreshing an old session alone is not reauthentication.
  */
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
@@ -23,6 +22,17 @@ exports.deleteAccount = onCall(async (request) => {
   const uid = request.auth && request.auth.uid;
   if (!uid) {
     throw new HttpsError("unauthenticated", "Sign in first.");
+  }
+  const token = request.auth.token || {};
+  const anonymous = token.firebase?.sign_in_provider === "anonymous";
+  const now = Math.floor(Date.now() / 1000);
+  // Anonymous accounts have no password/provider to reconfirm. Every other
+  // account must have authenticated within five minutes, including callers
+  // that bypass the app's confirmation screen entirely.
+  if (!anonymous && (!Number.isFinite(token.auth_time) ||
+      token.auth_time < now - 300 || token.auth_time > now + 60)) {
+    throw new HttpsError("failed-precondition",
+      "Sign in again before deleting your account.");
   }
 
   const db = admin.firestore();

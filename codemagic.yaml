@@ -52,6 +52,8 @@ workflows:
     environment:
       # Pinned, not `stable`. See the note in ios-testflight.
       flutter: 3.47.2
+      node: 22
+      java: 21
     scripts:
       - name: Get packages
         script: flutter pub get
@@ -64,6 +66,21 @@ workflows:
 
       - name: Test the iOS archive verifier
         script: python3 -m unittest discover -s tools/ios -p 'test_*.py'
+
+      - name: Test Firestore access rules
+        script: |
+          set -e
+          cd tools/security
+          npm ci
+          npm test
+
+      - name: Test purchase and account services
+        script: |
+          set -e
+          cd functions
+          npm ci
+          npm run lint
+          npm test
 
   # ───────────────────────────────────────────────────────────────────────────
   # Signed iOS release → TestFlight.
@@ -88,6 +105,8 @@ workflows:
       # Bump this deliberately, after upgrading locally and seeing the suite
       # green on the new version.
       flutter: 3.47.2
+      node: 22
+      java: 21
       # `latest` tracks whatever Xcode Codemagic has provisioned. Pin this to a
       # specific version (e.g. `16.2`) once a build is green, so a future Xcode
       # major release cannot silently break a build months from now. Pinning to
@@ -130,6 +149,21 @@ workflows:
           set -e
           flutter analyze
           flutter test
+
+      - name: Test purchase and account services
+        script: |
+          set -e
+          cd functions
+          npm ci
+          npm run lint
+          npm test
+
+      - name: Test Firestore access rules
+        script: |
+          set -e
+          cd tools/security
+          npm ci
+          npm test
 
       - name: Install pods
         script: |

@@ -43,7 +43,7 @@ account and writes nothing to production. Use it to review the UI.
 
 ```
 flutter build web --no-pub --debug -t tools/screenshots/ui_preview.dart --output build/ui_preview
-node tools/screenshots/capture_ui.js            # all ten fixtures
+node tools/screenshots/capture_ui.js            # all 23 fixtures
 node tools/screenshots/capture_ui.js 08-quiz    # just one
 ```
 

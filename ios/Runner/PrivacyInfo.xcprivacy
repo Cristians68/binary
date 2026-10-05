@@ -19,8 +19,8 @@
 
 	<!--
 	  No tracking. The app has no advertising SDK, no attribution SDK, and no
-	  analytics SDK (verified: no firebase_analytics, no Crashlytics, no
-	  third-party ad network in pubspec.yaml). Nothing is linked with data from
+	  audience analytics SDK (no firebase_analytics or third-party ad network).
+	  Firebase Crashlytics is used for fault diagnosis. Nothing is linked with data from
 	  other companies' apps or sites, so ATT is not required and no tracking
 	  domains are declared.
 	-->
@@ -31,6 +31,21 @@
 
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
+		<!-- The optional profile picture is stored in the owner's private
+		     Firestore profile/photo document, alongside their account. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePhotosorVideos</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+
 		<!--
 		  Email address — held by Firebase Auth for email/password, Google, and
 		  Apple sign-in. Deliberately NOT duplicated into Firestore (see

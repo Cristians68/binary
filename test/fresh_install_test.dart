@@ -32,12 +32,19 @@ void main() {
     expect(prefs.getBool(kInstallMarkerKey), isTrue);
   });
 
-  test('a failed sign-out does not block startup and is retried', () async {
+  test('a failed sign-out blocks account entry and can be retried', () async {
     SharedPreferences.setMockInitialValues({});
-    await clearSessionRestoredFromKeychain(
-        signOut: () async => throw Exception('keychain busy'));
+    await expectLater(
+        clearSessionRestoredFromKeychain(
+            signOut: () async => throw StateError('keychain busy')),
+        throwsStateError);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getBool(kInstallMarkerKey), isNot(true),
         reason: 'the marker is only set once the session is really cleared');
+    var signedOut = false;
+    await clearSessionRestoredFromKeychain(
+        signOut: () async => signedOut = true);
+    expect(signedOut, isTrue);
+    expect(prefs.getBool(kInstallMarkerKey), isTrue);
   });
 }

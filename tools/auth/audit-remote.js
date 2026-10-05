@@ -1,4 +1,4 @@
-// Read-only Firebase Auth configuration audit. Uses the Firebase CLI's existing
+// Read-only Firebase release configuration audit. Uses the Firebase CLI's existing
 // login; prints only provider availability and configuration-presence flags.
 // No tokens, client secrets, private keys, or user records are printed.
 const path = require('node:path');
@@ -25,11 +25,37 @@ async function main() {
     return response.json();
   };
   const [config, providers] = await Promise.all([get('config'), get('defaultSupportedIdpConfigs')]);
+  const readStatus = async (url, summarize) => {
+    try {
+      const response = await fetch(url, {
+        headers: {Authorization: `Bearer ${token.access_token}`},
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!response.ok) return {status: `unverified: HTTP ${response.status}`};
+      return summarize(await response.json());
+    } catch (_) {
+      return {status: 'unverified: request failed'};
+    }
+  };
+  const [iosApps, billing, functions] = await Promise.all([
+    readStatus(`https://firebase.googleapis.com/v1beta1/projects/${project}/iosApps`,
+      data => ({apps: (data.apps || []).map(app => ({appId: app.appId, bundleId: app.bundleId}))})),
+    readStatus(`https://cloudbilling.googleapis.com/v1/projects/${project}/billingInfo`,
+      data => ({enabled: data.billingEnabled === true})),
+    readStatus(`https://cloudfunctions.googleapis.com/v2/projects/${project}/locations/-/functions?pageSize=1000`,
+      data => ({
+        functions: (data.functions || []).map(fn => ({name: fn.name.split('/').pop(), state: fn.state})),
+        complete: !data.nextPageToken && !(data.unreachable || []).length,
+      })),
+  ]);
   console.log(JSON.stringify({
     project,
     authorizedDomains: config.authorizedDomains || [],
     anonymousEnabled: config.signIn?.anonymous?.enabled === true,
     emailEnabled: config.signIn?.email?.enabled === true,
+    iosApps,
+    billing,
+    functions,
     providers: (providers.defaultSupportedIdpConfigs || []).map(p => ({
       id: p.name.split('/').pop(),
       enabled: p.enabled === true,

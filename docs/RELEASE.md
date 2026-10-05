@@ -1,13 +1,19 @@
 # B1nary — release runbook
 
-Two independent pipelines. Neither blocks the other.
+Current checkpoint: **2026-10-05**. Read [HANDOFF.md](HANDOFF.md) first; the
+platform setup instructions below retain their historical context.
 
-- **Part 1 — iOS → TestFlight.** Two Codemagic settings away from a green build.
-- **App Store submission.** Three non-code rejection items remain — see
-  "What still blocks the App Store". The License Agreement blocker is cleared.
-- **Part 2 — Firebase functions + rules.** Blocked on RevenueCat dashboard steps.
+- **Local release checks:** app tests, backend lint/tests, iOS archive tests,
+  real Firestore rules tests, and the JavaScript release build pass. Both
+  Codemagic workflows now gate on the rules emulator with Node 22 / Java 21.
+- **Firebase:** a read-only audit confirms billing is disabled and no Cloud
+  Functions are deployed. Enable billing, configure products/secrets, then
+  follow [PURCHASES.md](PURCHASES.md) for functions-before-rules deployment.
+- **iOS / App Store:** Apple sign-in, account deletion and real sandbox purchase
+  flows still require a device running the intended commit. Store metadata,
+  privacy answers and device screenshots also need review before submission.
 
-Last updated: 2026-08-31.
+Pushing source to GitHub is separate from starting the signed TestFlight build.
 
 ---
 

@@ -9,6 +9,8 @@
 # packages, and plugins designed to encourage good coding practices.
 analyzer:
   exclude:
+    # Firebase CLI dependencies contain their own Dart project templates.
+    - '**/node_modules/**'
     - build/**
     - android/**
     - ios/**

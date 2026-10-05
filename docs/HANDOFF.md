@@ -1,10 +1,66 @@
-# B1nary — handoff (last updated 2026-09-24)
+# B1nary — handoff (last updated 2026-10-05)
 
 Read this first. It records what is live, what is waiting on the owner, and
 the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 `docs/IOS-GOOGLE-SIGNIN-AUDIT.md`, `docs/SECURITY.md` and `docs/RELEASE.md`.
 
-## Paused at the owner's request — 2026-09-24
+## Current checkpoint — 2026-10-05
+
+The owner resumed work, selected **release readiness**, and explicitly requested
+that **all Binary Academy changes be committed and pushed to `origin/master`**.
+The September notes below are historical; this section takes precedence.
+
+Completed locally, including the unfinished October changes:
+
+- Startup paints immediately, shows recovery after failure or a 30-second wait,
+  and reuses pending native initialization on retry. Repeated taps cannot launch
+  duplicate work. Firebase and optional SDK initialization are reused across retries.
+- A failed fresh-install Keychain sign-out now keeps the previous account behind
+  recovery. Theme and onboarding preferences resolve inside that same gate; there
+  is no second asynchronous entry check that can leave a blank screen.
+- Notifications apply local reminders after initialization actually completes,
+  even when the app has already stopped waiting for the optional SDK.
+- Apple authentication uses the Apple-specific Firebase credential, preserves
+  the first authorized name, and requests a fresh token if a failed guest link
+  has consumed the original. iOS deletion reauthentication keeps the scene-safe
+  native presenter. These changes still need an actual iOS device check.
+- Account deletion requires recent authentication on the server and refreshes
+  the client token after reauthentication. The account, purchase and iOS archive
+  checks run in CI; the privacy manifest and policy include profile photos.
+- Small-screen welcome, paywall, deletion and progress layouts accommodate large
+  text. Screenshot checks include startup recovery and verify the final welcome
+  and paywall actions can actually be scrolled into view.
+- **16 real Firestore emulator tests pass**, covering two separate purchases,
+  bundles plus singles, trials, refunds/transfers, forged old profile fields,
+  private purchase records, owner progress, and profile-photo limits. Both CI
+  workflows run this gate with Node 22 and Java 21. See `tools/security/README.md`.
+
+Verification: Flutter analysis reports zero issues; the full Flutter suite passes
+653 tests, including the CI configuration checks. Backend lint and 49 tests pass;
+all 9 iOS verifier tests pass. All 23 preview captures passed the runtime/overflow
+gate, with the updated heading and final actions checked again visually.
+The JavaScript release web build succeeds. The optional Wasm probe still
+reports the existing `purchases_flutter` incompatibility; Wasm is not the built
+release target. Local visual captures live in `.dart_tool/ui-review/` (untracked).
+The test-only Firebase CLI has remaining transitive npm advisories documented in
+`tools/security/README.md`; these packages are not shipped in the app or functions.
+
+**Release is still blocked. Read-only production audit on 2026-10-05:**
+
+- Firebase billing is **disabled** and the complete Cloud Functions list is
+  **empty**. Purchases, restores and account deletion cannot work end to end.
+- Apple, Google, email and anonymous authentication providers are enabled.
+  This confirms provider configuration, not successful native Apple sign-in.
+- No production deployment, StoreKit transaction, TestFlight build or App Store
+  submission was performed. A Git push does not itself produce an iOS update.
+
+Next: the owner enables Blaze billing and confirms store agreements/product
+setup; configure RevenueCat secrets and any legacy receipt bindings, deploy
+functions then rules following `PURCHASES.md`, and test Apple sign-in, deletion,
+purchases/restores/refunds on the intended TestFlight revision. Update App Store
+privacy answers and real-device screenshots before submission.
+
+## Historical pause — 2026-09-24
 
 Work stopped after finishing the local purchase implementation and checks.
 At the owner's follow-up request, local `master` was fast-forwarded to the

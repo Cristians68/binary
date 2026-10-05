@@ -3,6 +3,7 @@
 // FakeFirebaseFirestore deliberately refuses release-mode platform mocks.
 // ignore_for_file: invalid_use_of_visible_for_testing_member
 import 'dart:convert';
+import 'package:binary/app_startup.dart';
 import 'package:binary/course_catalog.dart';
 import 'package:binary/screens/app_theme.dart';
 import 'package:binary/screens/courses_screen.dart';
@@ -13,6 +14,9 @@ import 'package:binary/screens/offline_downloads_screen.dart';
 import 'package:binary/screens/progress_screen.dart';
 import 'package:binary/screens/quiz_screen.dart';
 import 'package:binary/screens/onboarding_screen.dart';
+import 'package:binary/screens/welcome_screen.dart';
+import 'package:binary/screens/paywall_screen.dart';
+import 'package:binary/screens/legal_screen.dart';
 import 'package:binary/screens/service_backend.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
@@ -82,6 +86,14 @@ Future<void> main() async {
   final brightness = dark ? Brightness.dark : Brightness.light;
   final module = modules.first;
   final Widget page = switch (screen) {
+    'startup-error' =>
+      AppStartup(initialize: () async => throw StateError('offline')),
+    'welcome' => const WelcomeScreen(),
+    'legal' => const LegalScreen(),
+    'paywall' => PaywallScreen(
+        courseId: network,
+        courseTitle: 'Network Professional',
+        courseColor: Color(networkData['color'])),
     'onboarding' => OnboardingScreen(onComplete: () {}),
     'courses' => const CoursesScreen(),
     'progress' => const ProgressScreen(),

@@ -220,14 +220,19 @@ class _ProgressScreenState extends State<ProgressScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Progress',
-                style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w700,
-                  color: theme.text,
-                  letterSpacing: -1.2,
-                  height: 1.05,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Progress',
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w700,
+                    color: theme.text,
+                    letterSpacing: -1.2,
+                    height: 1.05,
+                  ),
                 ),
               ),
               const SizedBox(height: 6),
@@ -257,7 +262,12 @@ class _ProgressScreenState extends State<ProgressScreen>
             border:
                 Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
           ),
-          child: Row(
+          child: Flex(
+            direction: MediaQuery.sizeOf(context).width < 380 ||
+                    MediaQuery.textScalerOf(context).scale(16) > 20
+                ? Axis.vertical
+                : Axis.horizontal,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
                 width: 88,
@@ -286,44 +296,12 @@ class _ProgressScreenState extends State<ProgressScreen>
                   ],
                 ),
               ),
-              const SizedBox(width: 22),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Overall progress',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: theme.text,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _statRow(
-                      CupertinoIcons.checkmark_seal_fill,
-                      '$_lessonsCompleted lesson${_lessonsCompleted == 1 ? '' : 's'} completed',
-                      AppColors.green,
-                      theme,
-                    ),
-                    const SizedBox(height: 6),
-                    _statRow(
-                      CupertinoIcons.rosette,
-                      '$_badgeCount badge${_badgeCount == 1 ? '' : 's'} earned',
-                      AppColors.amber,
-                      theme,
-                    ),
-                    const SizedBox(height: 6),
-                    _statRow(
-                      CupertinoIcons.flame_fill,
-                      '$_streak day streak',
-                      AppColors.red,
-                      theme,
-                    ),
-                  ],
-                ),
-              ),
+              const SizedBox(width: 22, height: 22),
+              if (MediaQuery.sizeOf(context).width < 380 ||
+                  MediaQuery.textScalerOf(context).scale(16) > 20)
+                _buildProgressStats(theme)
+              else
+                Expanded(child: _buildProgressStats(theme)),
             ],
           ),
         ),
@@ -331,16 +309,54 @@ class _ProgressScreenState extends State<ProgressScreen>
     );
   }
 
+  Widget _buildProgressStats(ThemeNotifier theme) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Overall progress',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: theme.text,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _statRow(
+            CupertinoIcons.checkmark_seal_fill,
+            '$_lessonsCompleted lesson${_lessonsCompleted == 1 ? '' : 's'} completed',
+            AppColors.green,
+            theme,
+          ),
+          const SizedBox(height: 6),
+          _statRow(
+            CupertinoIcons.rosette,
+            '$_badgeCount badge${_badgeCount == 1 ? '' : 's'} earned',
+            AppColors.amber,
+            theme,
+          ),
+          const SizedBox(height: 6),
+          _statRow(
+            CupertinoIcons.flame_fill,
+            '$_streak day streak',
+            AppColors.red,
+            theme,
+          ),
+        ],
+      );
+
   Widget _statRow(
       IconData icon, String text, Color color, ThemeNotifier theme) {
     return Row(
       children: [
         Icon(icon, size: 13, color: color),
         const SizedBox(width: 6),
-        Text(
-          text,
-          style: TextStyle(
-              fontSize: 12, color: theme.subtext, letterSpacing: -0.1),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+                fontSize: 12, color: theme.subtext, letterSpacing: -0.1),
+          ),
         ),
       ],
     );

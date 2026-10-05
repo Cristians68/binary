@@ -361,6 +361,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);
+    final inlineCta = MediaQuery.sizeOf(context).height < 700 ||
+        MediaQuery.textScalerOf(context).scale(16) > 20;
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -404,11 +406,12 @@ class _PaywallScreenState extends State<PaywallScreen> {
                             const SizedBox(height: 20),
                             _buildNoticeBox(theme),
                             const SizedBox(height: 32),
+                            if (inlineCta) _buildCta(theme, inset: false),
                           ],
                         ),
                       ),
                     ),
-                    _buildCta(theme),
+                    if (!inlineCta) _buildCta(theme),
                   ],
                 )),
       ),
@@ -564,7 +567,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          spacing: 12,
+          runSpacing: 8,
           children: [
             Text(
               'WHICH COURSE?',
@@ -574,7 +580,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   color: theme.subtext,
                   letterSpacing: 1.2),
             ),
-            const Spacer(),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
@@ -675,7 +680,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          spacing: 12,
+          runSpacing: 8,
           children: [
             Text(
               'SELECT YOUR 4 COURSES',
@@ -685,7 +693,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   color: theme.subtext,
                   letterSpacing: 1.2),
             ),
-            const Spacer(),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
@@ -799,7 +806,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 
-  Widget _buildCta(ThemeNotifier theme) {
+  Widget _buildCta(ThemeNotifier theme, {bool inset = true}) {
     // CTA is disabled when the current plan's course choice is incomplete, or
     // when the store returned no packages to buy.
     final singleIncomplete =
@@ -813,7 +820,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
         : widget.courseColor;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      padding: EdgeInsets.fromLTRB(inset ? 24 : 0, 0, inset ? 24 : 0, 24),
       child: Column(
         children: [
           GestureDetector(
@@ -865,8 +872,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 16,
+            runSpacing: 8,
             children: [
               GestureDetector(
                 onTap: () => _openUrl(kTermsUrl),
@@ -876,11 +885,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
                         color: theme.subtext,
                         decoration: TextDecoration.underline,
                         decorationColor: theme.subtext.withValues(alpha: 0.5))),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text('·',
-                    style: TextStyle(fontSize: 11, color: theme.subtext)),
               ),
               GestureDetector(
                 onTap: () => _openUrl(kPrivacyUrl),
@@ -987,6 +991,15 @@ class _PaywallScreenState extends State<PaywallScreen> {
   }) {
     final selected = _selected == plan;
     final effectiveColor = unavailable ? theme.subtext : color;
+    final stacked = MediaQuery.sizeOf(context).width < 380 ||
+        MediaQuery.textScalerOf(context).scale(16) > 20;
+    final priceLabel = Text(price,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: selected ? effectiveColor : theme.subtext,
+          letterSpacing: -0.4,
+        ));
 
     return GestureDetector(
       onTap: unavailable || _purchasing
@@ -1032,21 +1045,19 @@ class _PaywallScreenState extends State<PaywallScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
                     children: [
-                      Flexible(
-                        child: Text(
-                          title,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: unavailable ? theme.subtext : theme.text,
-                            letterSpacing: -0.3,
-                          ),
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: unavailable ? theme.subtext : theme.text,
+                          letterSpacing: -0.3,
                         ),
                       ),
-                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 7, vertical: 2),
@@ -1068,18 +1079,14 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   const SizedBox(height: 2),
                   Text(subtitle,
                       style: TextStyle(fontSize: 12, color: theme.subtext)),
+                  if (stacked) ...[
+                    const SizedBox(height: 10),
+                    priceLabel,
+                  ],
                 ],
               ),
             ),
-            Text(
-              price,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: selected ? effectiveColor : theme.subtext,
-                letterSpacing: -0.4,
-              ),
-            ),
+            if (!stacked) ...[const SizedBox(width: 8), priceLabel],
           ],
         ),
       ),

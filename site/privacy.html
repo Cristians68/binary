@@ -40,7 +40,7 @@
     <p class="eyebrow">Legal</p>
     <h1 style="margin-top:var(--sp-4)">Privacy Policy</h1>
     <p style="color:var(--subtext);margin-top:var(--sp-3)">
-      Last updated: 24 April 2026 · Effective immediately
+      Last updated: 3 October 2026 · Effective immediately
     </p>
 
     <p style="margin-top:var(--sp-8)">
@@ -60,8 +60,13 @@
         <tbody>
           <tr>
             <td><strong>Account data</strong></td>
-            <td>Name and email address, when you create an account</td>
+            <td>Account identifier, plus name and email address when you create an account or share them through a sign-in provider. Guest study uses an anonymous account identifier.</td>
             <td>To identify you and restore your progress across devices</td>
+          </tr>
+          <tr>
+            <td><strong>Profile photo (optional)</strong></td>
+            <td>The photo you choose or take, or the profile image supplied by your sign-in provider</td>
+            <td>To display your avatar. An uploaded photo is stored in your private account profile; you can replace or remove it in Profile.</td>
           </tr>
           <tr>
             <td><strong>Usage data</strong></td>
@@ -70,8 +75,13 @@
           </tr>
           <tr>
             <td><strong>Device data</strong></td>
-            <td>Device type, operating system version and app version</td>
-            <td>Debugging and diagnosing faults</td>
+            <td>Crash reports, error information, app and operating system versions, device characteristics, and an app installation identifier collected by Firebase Crashlytics</td>
+            <td>Debugging crashes and diagnosing faults in released builds</td>
+          </tr>
+          <tr>
+            <td><strong>Notification preferences</strong></td>
+            <td>Your reminder choices, time-zone offset and a device notification token when available</td>
+            <td>To send study reminders you have enabled</td>
           </tr>
           <tr>
             <td><strong>Purchase data</strong></td>
@@ -88,25 +98,35 @@
       <li>Track your progress across courses and modules.</li>
       <li>Award badges and maintain streak records.</li>
       <li>Send push notifications about your streak and new content — only if you grant permission.</li>
-      <li>Improve the app based on aggregated usage data.</li>
+      <li>Diagnose errors and improve reliability using crash reports.</li>
     </ul>
 
     <h2 id="storage">Data storage</h2>
     <p>
-      Your data is stored using Google Firebase, hosted in the United States.
-      Firebase complies with GDPR and other major data protection regulations.
-      We retain your data for as long as your account is active.
+      Account and study data are stored using Google Firebase. Service providers
+      may process data outside your country. We retain account and study data
+      while your account is active, until you delete it or request deletion.
+      Crash reports and purchase records are also subject to the relevant
+      service provider's retention practices.
     </p>
 
     <h2 id="third-parties">Third-party services</h2>
     <ul>
-      <li><strong>Google Firebase</strong> — authentication and cloud database.</li>
+      <li><strong>Google Firebase</strong> — authentication, cloud database, push notifications and Crashlytics crash reporting. See <a href="https://firebase.google.com/support/privacy">Firebase privacy information</a>.</li>
       <li><strong>RevenueCat</strong> — in-app purchase management.</li>
       <li><strong>Apple App Store</strong> — payment processing.</li>
     </ul>
     <p>
       Each service has its own privacy policy. <strong>We do not sell your data
       to advertisers or any other third party.</strong>
+    </p>
+
+    <h2 id="local-data">Data kept on your device</h2>
+    <p>
+      Downloaded flashcards, display preferences and App Lock settings are stored
+      locally. If you enable App Lock, your device performs Face ID, Touch ID or
+      passcode verification. B1nary does not receive or store your biometric data
+      or device passcode. You can remove downloaded courses under Offline Downloads.
     </p>
 
     <h2 id="notifications">Push notifications</h2>
@@ -132,7 +152,9 @@
         To exercise any of these rights, email
         <a href="mailto:support@binaryapp.org">support@binaryapp.org</a>. Deleting
         your account from inside the app removes your account and the study data
-        attached to it.
+        attached to it, including your uploaded profile photo. It does not erase
+        Apple's purchase history. Purchase-processing records may remain with
+        Apple and RevenueCat under their own retention practices.
       </p>
     </div>
 

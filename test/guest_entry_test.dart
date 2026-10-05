@@ -98,7 +98,8 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const BinaryApp(initialIsDark: false));
+    await tester.pumpWidget(
+        const BinaryApp(initialIsDark: false, initialShowOnboarding: false));
     await tester.pumpAndSettle();
     expect(find.byType(WelcomeScreen), findsOneWidget);
     expect(find.byType(MainNavigation), findsNothing);
@@ -157,7 +158,8 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const BinaryApp(initialIsDark: false));
+    await tester.pumpWidget(
+        const BinaryApp(initialIsDark: false, initialShowOnboarding: false));
     await tester.pumpAndSettle();
     final logIn = find.text('Already learning with us? Log in');
     await tester.ensureVisible(logIn);

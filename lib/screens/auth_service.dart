@@ -203,7 +203,8 @@ class AuthService {
   /// If the current user is anonymous, linking keeps the SAME uid, so the
   /// streak, progress and any purchase they made as a guest survive. Plain
   /// signInWithCredential would mint a new uid and silently orphan all of it.
-  static Future<UserCredential> _signInOrLink(AuthCredential credential) async {
+  static Future<UserCredential> _signInOrLink(AuthCredential credential,
+      {Future<AuthCredential> Function()? freshCredential}) async {
     final current = _auth.currentUser;
     var signInCredential = credential;
     if (current != null && current.isAnonymous) {
@@ -219,7 +220,11 @@ class AuthService {
         // because merging two histories is not something we can do safely.
         debugPrint('Guest link failed (${e.code}) - signing in to the '
             'existing account instead');
-        signInCredential = credentialForExistingAccount(e, credential);
+        // Apple credentials are single-use. If Firebase does not return a
+        // replacement after a failed guest link, obtain a new authorization
+        // rather than replaying the token that the link just consumed.
+        signInCredential = e.credential ??
+            (freshCredential == null ? credential : await freshCredential());
       }
     }
     return current == null
@@ -323,10 +328,9 @@ class AuthService {
   /// code, and only a fresh Apple sign-in produces one, so this doubles as the
   /// re-authentication step.
   ///
-  /// Same chain as [signInWithApple]: the native sheet first, then Firebase's
-  /// own Apple flow if that fails for anything other than the user backing
-  /// out. `user-mismatch` also ends the chain — the sheet worked and the
-  /// person chose a different Apple ID, which a second sheet would not change.
+  /// iOS uses the same scene-anchored sheet as sign-in. The pinned FlutterFire
+  /// provider flow still uses UIApplication.keyWindow, which is unsafe with
+  /// UIScene, so an iOS failure must not fall through to that presenter.
   static Future<({AuthResult result, String? authorizationCode})>
       reauthenticateWithApple() async {
     final user = _auth.currentUser;
@@ -343,7 +347,8 @@ class AuthService {
             authorizationCode: null
           )
         : await _appleReauthViaNativeSdk(user);
-    if (native.result.isSuccess ||
+    if ((!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) ||
+        native.result.isSuccess ||
         native.result.isCancelled ||
         native.result.code == 'user-mismatch') {
       return native;
@@ -405,10 +410,8 @@ class AuthService {
         );
       }
       await user.reauthenticateWithCredential(
-        OAuthProvider('apple.com').credential(
-          idToken: identityToken,
-          rawNonce: rawNonce,
-        ),
+        AppleAuthProvider.credentialWithIDToken(
+            identityToken, rawNonce, AppleFullPersonName()),
       );
       return (
         result: const AuthResult.success(),
@@ -453,11 +456,13 @@ class AuthService {
 
     Future<AuthResult> fail(String? code, String? message,
         {Object? nativeDetails}) async {
-      final tokenCheck = diagToken == null || diagNonce == null
+      final token = diagToken;
+      final nonce = diagNonce;
+      final tokenCheck = token == null || nonce == null
           ? null
           : appleTokenDiagnostics(
-              idToken: diagToken,
-              rawNonce: diagNonce,
+              idToken: token,
+              rawNonce: nonce,
               expectedAudience:
                   DefaultFirebaseOptions.ios.iosBundleId ?? 'unknown',
               now: DateTime.now(),
@@ -502,9 +507,15 @@ class AuthService {
       }
       diagToken = identityToken;
 
-      final oauthCredential = OAuthProvider('apple.com').credential(
-        idToken: identityToken,
-        rawNonce: rawNonce,
+      // Use FlutterFire's Apple-specific native credential path, including
+      // the name Apple only shares on the first authorization.
+      final oauthCredential = AppleAuthProvider.credentialWithIDToken(
+        identityToken,
+        rawNonce,
+        AppleFullPersonName(
+          givenName: appleCredential.givenName,
+          familyName: appleCredential.familyName,
+        ),
       );
 
       // Apple only sends the name on the very first authorisation, so keep it
@@ -513,15 +524,48 @@ class AuthService {
       var fullName =
           appleFullName(appleCredential.givenName, appleCredential.familyName);
       if (fullName != null && appleUserId != null) {
-        await AppleNameStore.remember(appleUserId, fullName);
+        try {
+          await AppleNameStore.remember(appleUserId, fullName);
+        } catch (error) {
+          // A local profile cache failure must not prevent authentication.
+          debugPrint('Apple profile name cache unavailable: $error');
+        }
       }
 
       stage = AppleSignInStage.firebase;
-      final userCredential = await _signInOrLink(oauthCredential);
+      final userCredential =
+          await _signInOrLink(oauthCredential, freshCredential: () async {
+        stage = AppleSignInStage.appleSheet;
+        final freshNonce = _generateNonce();
+        diagNonce = freshNonce;
+        diagToken = null;
+        final fresh = await NativeAppleAuth.getCredential(
+            scopes: const [], nonce: _sha256ofString(freshNonce));
+        stage = AppleSignInStage.appleToken;
+        final token = fresh.identityToken;
+        if (token == null || token.isEmpty) {
+          throw PlatformException(code: 'missing-identity-token');
+        }
+        // Keep the retry tied to the Apple ID whose link failed. Switching
+        // accounts in a second sheet must never assign the first one's name.
+        if (appleUserId != null && fresh.userIdentifier != appleUserId) {
+          throw PlatformException(
+              code: 'user-mismatch',
+              message: 'Choose the same Apple account and try again.');
+        }
+        diagToken = token;
+        stage = AppleSignInStage.firebase;
+        return AppleAuthProvider.credentialWithIDToken(
+            token, freshNonce, AppleFullPersonName());
+      });
 
       stage = AppleSignInStage.profile;
       if (fullName == null && appleUserId != null) {
-        fullName = await AppleNameStore.recall(appleUserId);
+        try {
+          fullName = await AppleNameStore.recall(appleUserId);
+        } catch (error) {
+          debugPrint('Apple profile name cache unavailable: $error');
+        }
       }
       final user = userCredential.user;
       if (fullName != null &&
@@ -554,6 +598,7 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       // operation-not-allowed means Apple is not enabled in the Firebase
       // console, which the App ID capability alone does not cover.
+      if (_isCancellation(e.code)) return const AuthResult.cancelled();
       debugPrint('Apple Sign-In FirebaseAuthException: ${e.code} ${e.message}');
       return fail(e.code, e.message);
     } on PlatformException catch (e) {
