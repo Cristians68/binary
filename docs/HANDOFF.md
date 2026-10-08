@@ -1,8 +1,19 @@
-# B1nary — handoff (last updated 2026-10-05)
+# B1nary — handoff (last updated 2026-10-07)
 
 Read this first. It records what is live, what is waiting on the owner, and
 the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 `docs/IOS-GOOGLE-SIGNIN-AUDIT.md`, `docs/SECURITY.md` and `docs/RELEASE.md`.
+
+## 2026-10-07 — Codemagic dependency resolution fixed locally
+
+The 2026-10-06 Codemagic build failed in step 6, `Test purchase and account
+services`, at `npm ci` in `functions/`. `firebase-functions@5.1.1` requires
+`firebase-admin` `^11.10.0 || ^12.0.0`, but the root project requests
+`firebase-admin@^13.10.0`; npm reported `ERESOLVE`. Upgraded
+`firebase-functions` to `^6.6.0` and regenerated `functions/package-lock.json`.
+A clean `npm ci`, backend lint, and all 49 backend tests pass locally. A new
+Codemagic build is still needed to verify the hosted pipeline. Local verification
+used Node 24; Codemagic is configured for Node 22.
 
 ## Current checkpoint — 2026-10-05
 
