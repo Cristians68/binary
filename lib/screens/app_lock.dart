@@ -1,8 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../session_timeout.dart';
+import 'service_backend.dart';
 
 /// How long the app may sit in the background before it locks.
 const Duration kAppLockAfter = Duration(minutes: 2);
@@ -139,15 +140,24 @@ class AppLock extends StatefulWidget {
     LockAuthenticator? authenticator,
     DateTime Function()? now,
     bool Function()? isSignedIn,
+    bool Function()? shouldExpireSession,
+    required this.onSessionExpired,
   })  : authenticator = authenticator ?? DeviceLockAuthenticator(),
         now = now ?? DateTime.now,
         isSignedIn =
-            isSignedIn ?? (() => FirebaseAuth.instance.currentUser != null);
+            isSignedIn ?? (() => ServiceBackend.auth.currentUser != null),
+        shouldExpireSession = shouldExpireSession ??
+            (() {
+              final user = ServiceBackend.auth.currentUser;
+              return user != null && !user.isAnonymous;
+            });
 
   final Widget child;
   final LockAuthenticator authenticator;
   final DateTime Function() now;
   final bool Function() isSignedIn;
+  final bool Function() shouldExpireSession;
+  final Future<void> Function() onSessionExpired;
 
   static const lockScreenKey = ValueKey('app-lock-screen');
 
@@ -157,8 +167,11 @@ class AppLock extends StatefulWidget {
 
 class _AppLockState extends State<AppLock> with WidgetsBindingObserver {
   bool _locked = false;
+  bool _checking = true;
+  bool _expiryFailed = false;
   bool _prompting = false;
   bool _awayRecorded = false;
+  Future<void>? _recordingAway;
 
   @override
   void initState() {
@@ -192,34 +205,59 @@ class _AppLockState extends State<AppLock> with WidgetsBindingObserver {
   Future<void> _recordAway() async {
     if (_locked || _awayRecorded) return;
     _awayRecorded = true;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(
-        kAppLockBackgroundedAtKey, widget.now().millisecondsSinceEpoch);
+    final at = widget.now();
+    _recordingAway = () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(kAppLockBackgroundedAtKey, at.millisecondsSinceEpoch);
+      await SessionTimeout.recordActivity(at);
+    }();
+    await _recordingAway;
   }
 
   Future<void> _evaluate() async {
     _awayRecorded = false;
-    final prefs = await SharedPreferences.getInstance();
-    final enabled = prefs.getBool(kAppLockEnabledKey) ?? false;
-    final at = prefs.getInt(kAppLockBackgroundedAtKey);
-    final backgroundedAt =
-        at == null ? null : DateTime.fromMillisecondsSinceEpoch(at);
-    final lock = enabled &&
-        shouldLock(
-          signedIn: widget.isSignedIn(),
-          backgroundedAt: backgroundedAt,
-          now: widget.now(),
-        ) &&
-        await widget.authenticator.isAvailable();
-    if (!lock) {
-      // A short trip away: forget it, so a later cold start isn't judged
-      // against a stale time.
-      if (!_locked) await prefs.remove(kAppLockBackgroundedAtKey);
-      return;
+    if (mounted) setState(() => _checking = true);
+    try {
+      await _recordingAway;
+      final prefs = await SharedPreferences.getInstance();
+      final expired = await SessionTimeout.expireIfNeeded(
+        now: widget.now(),
+        signedIn: widget.shouldExpireSession(),
+        signOut: widget.onSessionExpired,
+      );
+      if (!mounted) return;
+      if (expired) {
+        await prefs.remove(kAppLockBackgroundedAtKey);
+        setState(() {
+          _locked = false;
+          _expiryFailed = false;
+        });
+        return;
+      }
+      final enabled = prefs.getBool(kAppLockEnabledKey) ?? false;
+      final at = prefs.getInt(kAppLockBackgroundedAtKey);
+      final backgroundedAt =
+          at == null ? null : DateTime.fromMillisecondsSinceEpoch(at);
+      final lock = enabled &&
+          shouldLock(
+            signedIn: widget.isSignedIn(),
+            backgroundedAt: backgroundedAt,
+            now: widget.now(),
+          ) &&
+          await widget.authenticator.isAvailable();
+      if (!mounted) return;
+      if (!lock) {
+        if (!_locked) await prefs.remove(kAppLockBackgroundedAtKey);
+        return;
+      }
+      setState(() => _locked = true);
+      await _unlock();
+    } catch (error) {
+      debugPrint('Session timeout check failed: $error');
+      if (mounted) setState(() => _expiryFailed = true);
+    } finally {
+      if (mounted) setState(() => _checking = false);
     }
-    if (!mounted) return;
-    setState(() => _locked = true);
-    await _unlock();
   }
 
   Future<void> _unlock() async {
@@ -238,16 +276,44 @@ class _AppLockState extends State<AppLock> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final concealed = _locked || _checking || _expiryFailed;
     return Stack(
       children: [
         Offstage(
-          offstage: _locked,
-          child: TickerMode(enabled: !_locked, child: widget.child),
+          offstage: concealed,
+          child: TickerMode(enabled: !concealed, child: widget.child),
         ),
-        if (_locked) _LockScreen(onUnlock: _unlock),
+        if (_checking)
+          const ColoredBox(color: Colors.black)
+        else if (_expiryFailed)
+          _SessionExpiredScreen(onRetry: _evaluate)
+        else if (_locked)
+          _LockScreen(onUnlock: _unlock),
       ],
     );
   }
+}
+
+class _SessionExpiredScreen extends StatelessWidget {
+  const _SessionExpiredScreen({required this.onRetry});
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Your session has expired.'),
+                const SizedBox(height: 16),
+                FilledButton(onPressed: onRetry, child: const Text('Continue')),
+              ],
+            ),
+          ),
+        ),
+      );
 }
 
 class _LockScreen extends StatelessWidget {

@@ -14,12 +14,15 @@ import 'screens/subscription_service.dart';
 import 'screens/notification_prefs_service.dart';
 import 'screens/notification_service.dart';
 import 'screens/app_lock.dart';
+import 'screens/auth_service.dart';
+import 'screens/app_router.dart';
 import 'screens/main_navigation.dart';
 import 'screens/service_backend.dart';
 import 'security_service.dart';
 import 'crash_reporting.dart';
 import 'fresh_install.dart';
 import 'app_startup.dart';
+import 'session_timeout.dart';
 
 void main() {
   // Last-resort handling for uncaught Dart/plugin futures. The binding and
@@ -76,6 +79,15 @@ Future<Widget> _initializeApp() async {
     await clearSessionRestoredFromKeychain(
         signOut: () => ServiceBackend.auth.signOut());
   }
+
+  // Firebase persists credentials indefinitely. Expire an account before
+  // choosing the first screen so an old session cannot flash on cold launch.
+  final restoredUser = ServiceBackend.auth.currentUser;
+  await SessionTimeout.expireIfNeeded(
+    now: DateTime.now(),
+    signedIn: restoredUser != null && !restoredUser.isAnonymous,
+    signOut: AuthService.signOut,
+  );
 
   // RevenueCat must be configured before any purchase / entitlement check.
   await Future.wait([
@@ -151,6 +163,15 @@ class BinaryApp extends StatefulWidget {
 
 class _BinaryAppState extends State<BinaryApp> {
   late final ThemeNotifier _themeNotifier;
+  final _navigatorKey = GlobalKey<NavigatorState>();
+
+  Future<void> _signOutExpiredSession() async {
+    await AuthService.signOut();
+    _navigatorKey.currentState?.pushAndRemoveUntil(
+      AppRouter.fade(const WelcomeScreen()),
+      (route) => false,
+    );
+  }
 
   @override
   void initState() {
@@ -172,6 +193,7 @@ class _BinaryAppState extends State<BinaryApp> {
       builder: (context, _) {
         final isDark = _themeNotifier.isDark;
         return MaterialApp(
+          navigatorKey: _navigatorKey,
           title: 'B1nary',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
@@ -211,8 +233,13 @@ class _BinaryAppState extends State<BinaryApp> {
           ),
           // AppLock sits under the theme and around the navigator, so the
           // lock screen covers every route and the app keeps its place.
-          builder: (context, child) =>
-              AppTheme(notifier: _themeNotifier, child: AppLock(child: child!)),
+          builder: (context, child) => AppTheme(
+            notifier: _themeNotifier,
+            child: AppLock(
+              onSessionExpired: _signOutExpiredSession,
+              child: child!,
+            ),
+          ),
           home: _AppEntry(showOnboarding: widget.initialShowOnboarding),
         );
       },

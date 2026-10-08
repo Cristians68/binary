@@ -4,6 +4,16 @@ Read this first. It records what is live, what is waiting on the owner, and
 the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 `docs/IOS-GOOGLE-SIGNIN-AUDIT.md`, `docs/SECURITY.md` and `docs/RELEASE.md`.
 
+## 2026-10-07 — session expiry
+
+The owner confirmed Apple sign-in now works on the installed iOS build, but
+noticed that Face ID only unlocked an indefinitely persisted Firebase session.
+Registered accounts now sign out after 24 hours away, including on a cold
+launch; App Lock still uses Face ID after two minutes. Anonymous guests keep
+their identity so their progress remains recoverable. The app version is
+`1.0.6+60`. Confirm the installed TestFlight build's revision includes this
+change before checking it on a device.
+
 ## 2026-10-07 — Codemagic dependency resolution fixed locally
 
 The 2026-10-06 Codemagic build failed in step 6, `Test purchase and account

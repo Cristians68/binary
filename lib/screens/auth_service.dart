@@ -18,6 +18,7 @@ import 'native_apple_auth.dart';
 import 'native_google_auth.dart';
 import 'service_backend.dart';
 import '../crash_reporting.dart';
+import '../session_timeout.dart';
 
 class AuthService {
   static FirebaseAuth get _auth => ServiceBackend.auth;
@@ -39,6 +40,7 @@ class AuthService {
       }
       await _auth.signOut();
     });
+    await SessionTimeout.clear();
   }
 
   static Future<AuthResult> signInWithGoogle() async {
