@@ -21,6 +21,7 @@ const out = option('--output', path.join(root, '.dart_tool/app-store'));
 const input = option('--input', null);
 const raw = path.join(out, 'raw');
 const upload = path.join(out, 'iphone-1320x2868');
+const screens = path.join(out, 'iphone-screens');
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const escape = value => value.replace(/[&<>"']/g, character =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
@@ -52,6 +53,39 @@ const fonts = [
 ].map(([file, weight]) => `@font-face{font-family:Inter;font-weight:${weight};src:url(data:font/otf;base64,${
   fs.readFileSync(path.join(root, 'google_fonts', file)).toString('base64')})}`).join('\n');
 
+// OS chrome is a local rendering, not evidence of a physical device capture.
+// Do not overlay it on supplied native images: their pixels stay untouched.
+function iphoneScreen(slide, screenshot) {
+  return `<!doctype html><html><head><style>${fonts}
+    *{box-sizing:border-box}body{margin:0;background:#000}
+    .screen{position:relative;width:440px;height:956px;transform:scale(3);
+      transform-origin:top left;color:${slide.dark ? '#fff' : '#000'};overflow:hidden}
+    img{position:absolute;inset:0;width:440px;height:956px}
+    .time{position:absolute;left:41px;top:18px;font:600 17px Inter,sans-serif;letter-spacing:-.5px}
+    .island{position:absolute;left:157px;top:11px;width:126px;height:37px;
+      background:#000;border-radius:22px}
+    .camera{position:absolute;right:12px;top:12px;width:12px;height:12px;
+      border-radius:50%;background:radial-gradient(circle at 45% 40%,#0c1830 0,#070c17 45%,#020308 70%);
+      border:1px solid #0c111a}
+    .status{position:absolute;right:32px;top:21px;display:flex;gap:6px;align-items:center;height:14px}
+    .signal{display:flex;align-items:flex-end;gap:1.5px;height:12px}
+    .signal i{width:3px;background:currentColor;border-radius:1px}
+    .signal i:nth-child(1){height:4px}.signal i:nth-child(2){height:6px}
+    .signal i:nth-child(3){height:9px}.signal i:nth-child(4){height:12px}
+    .wifi{width:16px;height:13px}
+    .battery{width:25px;height:12px;border:1px solid currentColor;border-radius:3px;position:relative}
+    .battery::before{content:'';position:absolute;inset:1.5px;border-radius:1px;background:currentColor}
+    .battery::after{content:'';position:absolute;right:-3px;top:3px;width:2px;height:4px;
+      background:currentColor;border-radius:0 1px 1px 0;opacity:.5}
+    .home{position:absolute;left:153px;bottom:8px;width:134px;height:5px;background:currentColor;border-radius:3px}
+  </style></head><body><main class="screen"><img src="${screenshot}" alt="App screen">
+    <div class="time">9:41</div><div class="island"><div class="camera"></div></div>
+    <div class="status"><div class="signal"><i></i><i></i><i></i><i></i></div>
+      <svg class="wifi" viewBox="0 0 16 13" fill="currentColor"><path d="M0 3.2a12.6 12.6 0 0 1 16 0l-1.8 2A9.8 9.8 0 0 0 1.8 5.2ZM3 6.5a7.8 7.8 0 0 1 10 0l-1.8 2a5.1 5.1 0 0 0-6.4 0ZM6 10a3.1 3.1 0 0 1 4 0L8 12.3Z"/></svg>
+      <div class="battery"></div></div><div class="home"></div>
+  </main></body></html>`;
+}
+
 function poster(slide, index, screenshot) {
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     ${fonts}
@@ -80,16 +114,24 @@ function poster(slide, index, screenshot) {
     .subtitle{position:absolute;top:482px;left:105px;right:85px;margin:0;
       font-size:34px;line-height:1.45;letter-spacing:-.5px;color:var(--muted)}
     .device{position:absolute;left:140px;top:620px;width:1040px;padding:17px;
-      border:3px solid #8791a8;border-radius:82px;background:#17202d;
-      box-shadow:0 28px 70px rgba(4,15,39,.26),inset 0 0 0 3px #303a4b}
-    .device img{display:block;width:1000px;height:auto;border-radius:62px}
+      border:3px solid #9099a8;border-radius:135px;background:#080a0e;
+      box-shadow:0 28px 70px rgba(4,15,39,.26),inset 0 0 0 3px #333e51,
+        inset 0 0 0 6px #131a28}
+    .device img{display:block;width:1000px;height:auto;border-radius:116px}
+    .button{position:absolute;background:linear-gradient(90deg,#344258,#8d96a3,#263346);
+      width:6px;border-radius:3px;left:-7px;border:1px solid #46546a}
+    .action{top:230px;height:62px}.volume-up{top:343px;height:130px}
+    .volume-down{top:498px;height:130px}.power{left:auto;right:-7px;top:410px;height:178px}
+    .camera-control{left:auto;right:-6px;top:1390px;height:105px;width:5px}
   </style></head><body><main class="poster ${slide.theme}">
     <div class="orbit"></div><div class="dot"></div>
     <div class="brand"><span class="mark">b1</span>B1NARY ACADEMY</div>
     <div class="count">${String(index + 1).padStart(2, '0')} / 06</div>
     <h1>${escape(slide.title[0])}<br><span>${escape(slide.title[1])}</span></h1>
     <p class="subtitle">${escape(slide.subtitle)}</p>
-    <div class="device"><img src="${screenshot}" alt="${escape(slide.screen)} screen from B1nary"></div>
+    <div class="device"><i class="button action"></i><i class="button volume-up"></i>
+      <i class="button volume-down"></i><i class="button power"></i><i class="button camera-control"></i>
+      <img src="${screenshot}" alt="${escape(slide.screen)} screen from B1nary"></div>
   </main></body></html>`;
 }
 
@@ -117,6 +159,7 @@ function localServer() {
   try {
     fs.mkdirSync(raw, { recursive: true });
     fs.mkdirSync(upload, { recursive: true });
+    fs.mkdirSync(screens, { recursive: true });
     if (!input) {
       if (!fs.existsSync(path.join(build, 'index.html'))) throw new Error('Build ui_preview.dart first.');
       server = localServer();
@@ -189,7 +232,17 @@ function localServer() {
     if (failures.length) throw new Error(failures.join('\n'));
     await page.setViewport({ width: 1320, height: 2868, deviceScaleFactor: 1 });
     for (const [index, slide] of slides.entries()) {
-      await page.setContent(poster(slide, index, dataUri(path.join(raw, slide.file + '.png'))));
+      const rawFile = path.join(raw, slide.file + '.png');
+      const screenFile = path.join(screens, slide.file + '.png');
+      if (input) {
+        fs.copyFileSync(rawFile, screenFile);
+      } else {
+        await page.setContent(iphoneScreen(slide, dataUri(rawFile)));
+        await page.evaluate(() => document.fonts.ready);
+        await page.waitForFunction(() => [...document.images].every(image => image.complete && image.naturalWidth > 0));
+        await page.screenshot({ path: screenFile, omitBackground: false });
+      }
+      await page.setContent(poster(slide, index, dataUri(screenFile)));
       await page.evaluate(() => document.fonts.ready);
       await page.waitForFunction(() => [...document.images].every(image => image.complete && image.naturalWidth > 0));
       const dimensions = await page.$eval('.device img', image => ({width: image.naturalWidth, height: image.naturalHeight}));
@@ -206,7 +259,7 @@ function localServer() {
       main{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:25px}figure{margin:0}img{width:100%;border-radius:16px}figcaption{margin:10px 0 24px;font-weight:600}
       @media(max-width:800px){main{grid-template-columns:repeat(2,minmax(0,1fr))}}</style></head><body>
       <h1>B1nary Academy</h1><p>App Store screenshot collection · 1320 × 2868 pixels · Upload the six numbered PNGs in order.</p>
-      <p>${input ? 'Source: supplied iPhone captures.' : 'Source: actual Flutter screens rendered in Chrome with published free lesson content and a fictional learner. Compare with the intended iPhone build before submission.'}</p>
+      <p>${input ? 'Source: supplied iPhone captures.' : 'Source: actual Flutter screens rendered in Chrome with published free lesson content and a fictional learner. iPhone 17 Pro Max styling, Dynamic Island and status bar are rendered; these are not physical-device captures.'}</p>
       <main>${cards}</main></body></html>`);
     await page.setViewport({ width: 1500, height: 2300, deviceScaleFactor: 1 });
     const contact = slides.map(slide => `<figure><img src="${dataUri(path.join(upload, slide.file + '.png'))}"><figcaption>${escape(slide.file)}</figcaption></figure>`).join('');
@@ -216,6 +269,8 @@ function localServer() {
     fs.writeFileSync(path.join(out, 'capture-manifest.json'), JSON.stringify({
       capturedAt: new Date().toISOString(), source: input ? 'supplied iPhone captures' : 'Flutter web preview with iOS theme',
       dimensions: { width: 1320, height: 2868 }, slides,
+      devicePresentation: 'iPhone 17 Pro Max',
+      systemChrome: input ? 'Unmodified supplied image' : 'Rendered Dynamic Island, 9:41 status bar, home indicator; safe areas 62/34 logical pixels',
       content: input ? 'Supplied images; check that only fictional account data is visible.' :
         'Published free first-module content. Fictional learner Alex; no real account data. Quiz shows answer feedback.',
       nativeDeviceVerified: false,

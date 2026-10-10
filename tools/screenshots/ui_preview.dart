@@ -153,7 +153,16 @@ Future<void> main() async {
         notifier: theme,
         child: MediaQuery(
             data: MediaQuery.of(context).copyWith(
-                textScaler: TextScaler.linear(scale), disableAnimations: true),
+                textScaler: TextScaler.linear(scale),
+                disableAnimations: true,
+                // Native-like safe areas for the local 440 x 956 store preview.
+                // The renderer adds OS chrome inside these reserved regions.
+                padding: storeCapture
+                    ? const EdgeInsets.only(top: 62, bottom: 34)
+                    : null,
+                viewPadding: storeCapture
+                    ? const EdgeInsets.only(top: 62, bottom: 34)
+                    : null),
             child: child!)),
     home: hasTabs
         ? Scaffold(

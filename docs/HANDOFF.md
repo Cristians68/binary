@@ -28,6 +28,12 @@ The owner requested release readiness, remaining bug fixes, a commit/push to
   verified against the intended iPhone/TestFlight build. The renderer accepts
   `--input` to replace them with corresponding native iPhone captures. See
   `tools/screenshots/README.md` for the workflow and upload order.
+- The owner requested an iPhone 17 Pro Max appearance, then explicitly accepted
+  rendered previews. The fixture reserves top/bottom safe areas and the renderer
+  adds Dynamic Island, status icons and home indicator. Both plain screen images
+  (`iphone-screens`) and framed marketing images (`iphone-1320x2868`) are exported.
+  Native `--input` images receive no system overlays. These remain rendered
+  previews, not verified physical-device captures.
 
 No Firebase deployment, TestFlight build, screenshot upload or App Store
 submission was performed. The billing/functions blockers below were last

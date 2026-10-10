@@ -91,6 +91,9 @@ widget to show its feedback. Capturing has no production writes.
 Output is in `.dart_tool/app-store/`:
 
 - `iphone-1320x2868/`: six numbered RGB PNGs with headlines and device framing.
+- `iphone-screens/`: six full-size screen images without headlines or an outer
+  frame. Local previews include rendered Dynamic Island, 9:41 status icons and
+  a home indicator, with native-like top and bottom safe areas.
 - `raw/`: the full, untouched screen captures and their accessibility labels.
 - `contact-sheet.png` and `preview.html`: a review of the whole collection.
 - `capture-manifest.json`: capture source, dimensions and native-verification status.
@@ -102,8 +105,12 @@ Dynamic Island iPhones. The current Xcode target is iPhone only, so this set
 does not include iPad images. Check [Apple's screenshot specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications/)
 when preparing another device family.
 
-These are Flutter web captures with the iOS theme, **not iPhone runtime
-captures**. Compare their layout and content with the exact TestFlight build
+The device presentation follows iPhone 17 Pro Max proportions, with rounded
+screen corners, slim bezels and side buttons. OS chrome is rendered separately
+from the app widgets, and is not added to supplied `--input` captures.
+
+These are Flutter web captures with the iOS theme and rendered system chrome,
+**not iPhone runtime captures**. Compare their layout and content with the exact TestFlight build
 before submitting. To render native screenshots in the same design, place
 six portrait PNGs named `01-home.png`, `02-courses.png`, `03-flashcards.png`,
 `04-quiz.png`, `05-progress.png`, and `06-dark-mode.png` in a local folder:
