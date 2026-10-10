@@ -114,6 +114,10 @@ the iOS archive verifier, and actual Firestore rules enforcement
 with Node 22+ and Java 21). See [docs/HANDOFF.md](docs/HANDOFF.md) for current
 verification and deployment blockers.
 
+The App Store screenshot generator captures actual Flutter screens and exports
+six framed 1320 × 2868 images. See [tools/screenshots/README.md](tools/screenshots/README.md)
+for capture, native iPhone replacement, and upload order.
+
 ---
 
 ## App Store notes

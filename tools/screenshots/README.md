@@ -70,7 +70,53 @@ screenshot still got written. Two real defects it caught on 2026-09-19:
 Both were invisible to the analyzer and to all 494 tests.
 
 **Regenerate the fixture** with `node tools/screenshots/export_content.js`.
-It strips quiz answers; check what it kept before committing it.
+It reads published catalogue metadata and free first-module content through a
+temporary guest identity, then deletes that identity. The generated
+`fixture_content.dart` is deliberately gitignored; do not commit it.
+
+## App Store screenshot collection
+
+```powershell
+node tools/screenshots/export_content.js
+flutter build web --no-pub --debug -t tools/screenshots/ui_preview.dart --output build/ui_preview
+node tools/screenshots/store_screenshots.js
+```
+
+The `store=1` preview seeds the published free flashcards and quizzes into fake
+Firestore, so it renders the **actual lesson and quiz screens**, rather than
+the sample fallback used by the older design fixtures. Home and progress use
+fictional learner Alex. The quiz capture selects an answer through the actual
+widget to show its feedback. Capturing has no production writes.
+
+Output is in `.dart_tool/app-store/`:
+
+- `iphone-1320x2868/`: six numbered RGB PNGs with headlines and device framing.
+- `raw/`: the full, untouched screen captures and their accessibility labels.
+- `contact-sheet.png` and `preview.html`: a review of the whole collection.
+- `capture-manifest.json`: capture source, dimensions and native-verification status.
+
+Upload order: home → courses → flashcards → quiz → progress → dark mode. Upload
+only the six PNGs in `iphone-1320x2868`, not the contact sheet or raw captures.
+The output uses Apple's accepted **1320 × 2868** portrait size for large
+Dynamic Island iPhones. The current Xcode target is iPhone only, so this set
+does not include iPad images. Check [Apple's screenshot specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications/)
+when preparing another device family.
+
+These are Flutter web captures with the iOS theme, **not iPhone runtime
+captures**. Compare their layout and content with the exact TestFlight build
+before submitting. To render native screenshots in the same design, place
+six portrait PNGs named `01-home.png`, `02-courses.png`, `03-flashcards.png`,
+`04-quiz.png`, `05-progress.png`, and `06-dark-mode.png` in a local folder:
+
+```powershell
+node tools/screenshots/store_screenshots.js --input C:/path/to/iphone-captures --output C:/path/to/store-assets
+```
+
+Use the corresponding full iPhone screen captures with matching aspect ratio
+and fictional account information. The tool frames the images without changing
+their contents and refuses incompatible aspect ratios. `CHROME_PATH` can point
+to another installed Chrome executable. Generated assets remain local; do not
+commit exported course content to this public repository.
 
 ## Reading the backend
 

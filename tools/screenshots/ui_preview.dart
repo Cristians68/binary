@@ -35,6 +35,7 @@ Future<void> main() async {
   SharedPreferences.setMockInitialValues({});
   final db = FakeFirebaseFirestore();
   ServiceBackend.useFake(db, uid: 'design-preview');
+  final storeCapture = Uri.base.queryParameters['store'] == '1';
   const network = 'binary-network-professional';
   final data = jsonDecode(fixtureContentJson) as Map<String, dynamic>;
   final courses = (data['courses'] as List).cast<Map<String, dynamic>>();
@@ -52,6 +53,20 @@ Future<void> main() async {
       await db
           .doc('courses/${course['id']}/modules/${module['id']}')
           .set(module);
+      if (storeCapture) {
+        // Render the real lesson/quiz widgets with published FREE content.
+        // The export stays local; no user data or paid course body is bundled.
+        for (final kind in ['flashcards', 'quiz']) {
+          for (final item in (raw[kind] as List? ?? [])) {
+            final card = Map<String, dynamic>.from(item as Map);
+            final id = card.remove('id');
+            await db
+                .doc(
+                    'courses/${course['id']}/modules/${module['id']}/$kind/$id')
+                .set(card);
+          }
+        }
+      }
     }
   }
   final today = Timestamp.fromDate(DateTime.now());
@@ -110,7 +125,7 @@ Future<void> main() async {
         color: Color(networkData['color']),
         moduleId: module['id'],
         courseId: network,
-        practiceOnly: true),
+        practiceOnly: !storeCapture),
     _ => const HomeScreen(learnerName: 'Alex'),
   };
   final hasTabs = ['home', 'courses', 'progress'].contains(screen);

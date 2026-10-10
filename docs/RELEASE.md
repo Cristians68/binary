@@ -1,17 +1,19 @@
 # B1nary — release runbook
 
-Current checkpoint: **2026-10-05**. Read [HANDOFF.md](HANDOFF.md) first; the
+Current checkpoint: **2026-10-09**. Read [HANDOFF.md](HANDOFF.md) first; the
 platform setup instructions below retain their historical context.
 
 - **Local release checks:** app tests, backend lint/tests, iOS archive tests,
   real Firestore rules tests, and the JavaScript release build pass. Both
   Codemagic workflows now gate on the rules emulator with Node 22 / Java 21.
-- **Firebase:** a read-only audit confirms billing is disabled and no Cloud
-  Functions are deployed. Enable billing, configure products/secrets, then
+- **Firebase:** the October 5 read-only audit found billing disabled and no Cloud
+  Functions deployed; this has not been rechecked on October 9. Enable billing, configure products/secrets, then
   follow [PURCHASES.md](PURCHASES.md) for functions-before-rules deployment.
-- **iOS / App Store:** Apple sign-in, account deletion and real sandbox purchase
-  flows still require a device running the intended commit. Store metadata,
-  privacy answers and device screenshots also need review before submission.
+- **iOS / App Store:** the owner confirmed Apple sign-in working on October 7.
+  Session recovery, account deletion and real sandbox purchase flows still need
+  a device running the intended commit. Six styled screenshot images are prepared
+  from actual Flutter screens; compare them with that iPhone build before upload.
+  Store metadata and privacy answers also need review before submission.
 
 Pushing source to GitHub is separate from starting the signed TestFlight build.
 

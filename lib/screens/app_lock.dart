@@ -169,6 +169,8 @@ class _AppLockState extends State<AppLock> with WidgetsBindingObserver {
   bool _locked = false;
   bool _checking = true;
   bool _expiryFailed = false;
+  bool _evaluating = false;
+  bool _sessionExpiryPending = false;
   bool _prompting = false;
   bool _awayRecorded = false;
   Future<void>? _recordingAway;
@@ -203,7 +205,9 @@ class _AppLockState extends State<AppLock> with WidgetsBindingObserver {
   }
 
   Future<void> _recordAway() async {
-    if (_locked || _awayRecorded) return;
+    // A recovery screen is not account activity. Keep the expired timestamp
+    // until sign-out and navigation have both finished successfully.
+    if (_locked || _checking || _expiryFailed || _awayRecorded) return;
     _awayRecorded = true;
     final at = widget.now();
     _recordingAway = () async {
@@ -215,22 +219,40 @@ class _AppLockState extends State<AppLock> with WidgetsBindingObserver {
   }
 
   Future<void> _evaluate() async {
+    // Face ID and rapid app switching can each emit another resume while a
+    // check is awaiting native work. Never run two account transitions.
+    if (_evaluating || !mounted) return;
+    _evaluating = true;
     _awayRecorded = false;
-    if (mounted) setState(() => _checking = true);
+    setState(() => _checking = true);
     try {
       await _recordingAway;
       final prefs = await SharedPreferences.getInstance();
-      final expired = await SessionTimeout.expireIfNeeded(
-        now: widget.now(),
-        signedIn: widget.shouldExpireSession(),
-        signOut: widget.onSessionExpired,
-      );
+      bool expired;
+      if (_sessionExpiryPending) {
+        // Firebase may already have cleared its credentials before a later
+        // cleanup/navigation failure. Finish that transition on retry even
+        // when shouldExpireSession now returns false.
+        await widget.onSessionExpired();
+        await SessionTimeout.clear();
+        expired = true;
+      } else {
+        expired = await SessionTimeout.expireIfNeeded(
+          now: widget.now(),
+          signedIn: widget.shouldExpireSession(),
+          signOut: () async {
+            _sessionExpiryPending = true;
+            await widget.onSessionExpired();
+          },
+        );
+      }
       if (!mounted) return;
       if (expired) {
         await prefs.remove(kAppLockBackgroundedAtKey);
         setState(() {
           _locked = false;
           _expiryFailed = false;
+          _sessionExpiryPending = false;
         });
         return;
       }
@@ -248,14 +270,19 @@ class _AppLockState extends State<AppLock> with WidgetsBindingObserver {
       if (!mounted) return;
       if (!lock) {
         if (!_locked) await prefs.remove(kAppLockBackgroundedAtKey);
+        if (mounted) setState(() => _expiryFailed = false);
         return;
       }
-      setState(() => _locked = true);
+      setState(() {
+        _locked = true;
+        _expiryFailed = false;
+      });
       await _unlock();
     } catch (error) {
       debugPrint('Session timeout check failed: $error');
       if (mounted) setState(() => _expiryFailed = true);
     } finally {
+      _evaluating = false;
       if (mounted) setState(() => _checking = false);
     }
   }
@@ -266,9 +293,24 @@ class _AppLockState extends State<AppLock> with WidgetsBindingObserver {
     try {
       final ok = await widget.authenticator.authenticate();
       if (!ok || !mounted) return;
+      // The native prompt can stay pending across backgrounding. Its result
+      // proves device ownership, but must not extend an expired app session.
+      await SessionTimeout.expireIfNeeded(
+        now: widget.now(),
+        signedIn: widget.shouldExpireSession(),
+        signOut: () async {
+          _sessionExpiryPending = true;
+          await widget.onSessionExpired();
+        },
+      );
+      if (!mounted) return;
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(kAppLockBackgroundedAtKey);
-      setState(() => _locked = false);
+      if (!mounted) return;
+      setState(() {
+        _locked = false;
+        _sessionExpiryPending = false;
+      });
     } finally {
       _prompting = false;
     }
@@ -288,7 +330,7 @@ class _AppLockState extends State<AppLock> with WidgetsBindingObserver {
         else if (_expiryFailed)
           _SessionExpiredScreen(onRetry: _evaluate)
         else if (_locked)
-          _LockScreen(onUnlock: _unlock),
+          _LockScreen(onUnlock: _evaluate),
       ],
     );
   }

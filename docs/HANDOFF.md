@@ -1,8 +1,38 @@
-# B1nary — handoff (last updated 2026-10-07)
+# B1nary — handoff (last updated 2026-10-09)
 
 Read this first. It records what is live, what is waiting on the owner, and
 the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 `docs/IOS-GOOGLE-SIGNIN-AUDIT.md`, `docs/SECURITY.md` and `docs/RELEASE.md`.
+
+## 2026-10-09 — release recovery and App Store screenshots
+
+The owner requested release readiness, remaining bug fixes, a commit/push to
+`origin/master`, and polished screenshots of the actual app screens.
+
+- Session checks now run one at a time, including when Face ID emits another
+  resume. A failed expiry keeps its timestamp across backgrounding; retry finishes
+  the account transition even if Firebase already cleared its credentials.
+- Successful recovery clears the error screen. Unlock checks expiry again, so
+  leaving the lock screen open cannot revive an expired account through Face ID.
+  The same check runs after a native prompt that stayed pending in the background.
+- Six new regression tests reproduced these failures before the fix. All
+  **665 Flutter tests**, **49 backend tests**, **16 Firestore emulator tests**,
+  and **9 iOS verifier tests** pass. Analysis has zero issues; the JavaScript
+  release web build succeeds. The existing optional Wasm probe warning remains.
+- `tools/screenshots/store_screenshots.js` produces six coordinated **1320 × 2868
+  RGB PNGs**, plus untouched raw captures, a contact sheet, preview page and
+  capture manifest. The screens are actual Flutter widgets, with current
+  published free-module content and a fictional learner. No generated UI or
+  real learner information is used. Exported content and output stay untracked.
+- Captures use Chrome with the iOS theme on Windows. They have **not** been
+  verified against the intended iPhone/TestFlight build. The renderer accepts
+  `--input` to replace them with corresponding native iPhone captures. See
+  `tools/screenshots/README.md` for the workflow and upload order.
+
+No Firebase deployment, TestFlight build, screenshot upload or App Store
+submission was performed. The billing/functions blockers below were last
+audited on October 5 and have not been rechecked in production this session.
+Apple sign-in was confirmed working by the owner on October 7.
 
 ## 2026-10-07 — session expiry
 

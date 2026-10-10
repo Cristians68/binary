@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:binary/screens/app_lock.dart';
 import 'package:binary/session_timeout.dart';
 import 'package:flutter/material.dart';
@@ -8,12 +10,19 @@ class _FakeAuth implements LockAuthenticator {
   _FakeAuth({this.available = true, this.result = true});
   bool available;
   bool result;
+  bool failAvailability = false;
+  Completer<bool>? pendingAuthentication;
   int prompts = 0;
   @override
-  Future<bool> isAvailable() async => available;
+  Future<bool> isAvailable() async {
+    if (failAvailability) throw StateError('Device authentication unavailable');
+    return available;
+  }
+
   @override
   Future<bool> authenticate() async {
     prompts++;
+    if (pendingAuthentication != null) return pendingAuthentication!.future;
     return result;
   }
 }
@@ -60,6 +69,7 @@ void main() {
     late DateTime now;
     late _FakeAuth auth;
     late int expiredSessions;
+    Future<void> Function()? expireSession;
 
     Widget app({bool signedIn = true, bool registered = true}) => MaterialApp(
           home: AppLock(
@@ -69,6 +79,7 @@ void main() {
             shouldExpireSession: () => signedIn && registered,
             onSessionExpired: () async {
               expiredSessions++;
+              await expireSession?.call();
               signedIn = false;
             },
             child: const Text('SECRET PROGRESS'),
@@ -81,6 +92,7 @@ void main() {
       now = t0;
       auth = _FakeAuth();
       expiredSessions = 0;
+      expireSession = null;
     });
 
     Future<void> leaveFor(WidgetTester tester, Duration away) async {
@@ -188,6 +200,123 @@ void main() {
       await tester.pumpAndSettle();
       await leaveFor(tester, const Duration(days: 2));
       expect(expiredSessions, 0);
+      expect(auth.prompts, 1);
+    });
+
+    testWidgets('repeated resumes share one pending session sign-out',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({
+        kSessionLastActiveAtKey:
+            t0.subtract(const Duration(days: 2)).millisecondsSinceEpoch,
+      });
+      final pending = Completer<void>();
+      expireSession = () => pending.future;
+      await tester.pumpWidget(app());
+      await tester.pump();
+      expect(expiredSessions, 1);
+      for (var i = 0; i < 3; i++) {
+        tester.binding
+            .handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+        tester.binding
+            .handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+        await tester.pump();
+      }
+      expect(expiredSessions, 1);
+      expect(find.text('SECRET PROGRESS'), findsNothing);
+      pending.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('SECRET PROGRESS'), findsOneWidget);
+    });
+
+    testWidgets('a failed expiry keeps its timestamp when backgrounded',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      expireSession = () async => throw StateError('Sign-out failed');
+      await leaveFor(tester, const Duration(days: 2));
+      expect(expiredSessions, 1);
+      expect(find.text('SECRET PROGRESS'), findsNothing);
+      expireSession = null;
+      await leaveFor(tester, const Duration(minutes: 1));
+      expect(expiredSessions, 2);
+      expect(find.text('SECRET PROGRESS'), findsOneWidget);
+    });
+
+    testWidgets('retry finishes navigation even if credentials were cleared',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({
+        kSessionLastActiveAtKey:
+            t0.subtract(const Duration(days: 2)).millisecondsSinceEpoch,
+      });
+      var registered = true;
+      var calls = 0;
+      await tester.pumpWidget(MaterialApp(
+        home: AppLock(
+          now: () => now,
+          authenticator: auth,
+          isSignedIn: () => registered,
+          shouldExpireSession: () => registered,
+          onSessionExpired: () async {
+            registered = false;
+            calls++;
+            if (calls == 1) throw StateError('Cleanup interrupted');
+          },
+          child: const Text('SECRET PROGRESS'),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('SECRET PROGRESS'), findsNothing);
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(calls, 2);
+      expect(find.text('SECRET PROGRESS'), findsOneWidget);
+    });
+
+    testWidgets('a successful check clears a transient recovery error',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({
+        kAppLockEnabledKey: true,
+        kAppLockBackgroundedAtKey:
+            t0.subtract(const Duration(minutes: 10)).millisecondsSinceEpoch,
+      });
+      auth.failAvailability = true;
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      expect(find.text('SECRET PROGRESS'), findsNothing);
+      auth.failAvailability = false;
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(auth.prompts, 1);
+      expect(find.text('SECRET PROGRESS'), findsOneWidget);
+    });
+
+    testWidgets('Unlock checks whether a waiting session has expired',
+        (tester) async {
+      auth.result = false;
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      await leaveFor(tester, const Duration(minutes: 3));
+      expect(find.byKey(AppLock.lockScreenKey), findsOneWidget);
+      now = now.add(const Duration(days: 2));
+      auth.result = true;
+      await tester.tap(find.text('Unlock'));
+      await tester.pumpAndSettle();
+      expect(expiredSessions, 1);
+      expect(auth.prompts, 1, reason: 'an expired account must sign in again');
+    });
+
+    testWidgets('Face ID finishing after a day away cannot revive a session',
+        (tester) async {
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      auth.pendingAuthentication = Completer<bool>();
+      await leaveFor(tester, const Duration(minutes: 3));
+      expect(auth.prompts, 1);
+      await leaveFor(tester, const Duration(days: 2));
+      auth.pendingAuthentication!.complete(true);
+      await tester.pumpAndSettle();
+      expect(expiredSessions, 1);
       expect(auth.prompts, 1);
     });
   });
