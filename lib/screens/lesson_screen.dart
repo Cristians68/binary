@@ -1757,9 +1757,9 @@ class _LessonScreenState extends State<LessonScreen> {
               'label': 'Networking',
               'term': 'Subnets in the Cloud',
               'definition':
-                  'A subnet is a range of IP addresses within your VPC. Public subnets have a route to an internet gateway. Private subnets do not — they are isolated from the internet.',
+                  'A subnet is a range of IP addresses within your VPC. In AWS, a public subnet has a direct route to an internet gateway. A private subnet does not, but can use a NAT gateway for outbound internet access.',
               'example':
-                  'Your web tier lives in a public subnet with a public IP. Your database lives in a private subnet — it can only be reached from the web tier, never directly from the internet.',
+                  'Place a public-facing web tier in a public subnet and the database in a private subnet. Security rules control which application resources can reach the database; the subnet alone does not define that access.',
             },
             {
               'label': 'Networking',
@@ -2248,7 +2248,7 @@ class _LessonScreenState extends State<LessonScreen> {
               'definition':
                   'A subnet mask defines which bits are the network portion. Written as dotted decimal (255.255.255.0) or CIDR prefix notation (/24). CIDR (Classless Inter-Domain Routing) counts the consecutive 1-bits in the mask. /24 = 255.255.255.0. /16 = 255.255.0.0. /8 = 255.0.0.0.',
               'example':
-                  'Common subnets to memorise: /24 = 256 addresses, 254 hosts. /25 = 128 addresses, 126 hosts. /26 = 64 addresses, 62 hosts. /27 = 32 addresses, 30 hosts. /28 = 16 addresses, 14 hosts. Formula: hosts = 2^(32-prefix) - 2.',
+                  'Conventional IPv4 subnet counts: /24 = 254 hosts; /25 = 126; /26 = 62; /27 = 30; /28 = 14. Use 2^(32-prefix) - 2 when reserving network and broadcast addresses. A /31 point-to-point link instead uses both addresses as endpoints.',
             },
             {
               'label': 'Addressing',
@@ -2262,7 +2262,7 @@ class _LessonScreenState extends State<LessonScreen> {
               'label': 'Addressing',
               'term': 'Special IP Addresses',
               'definition':
-                  '127.0.0.1 = loopback (localhost — tests local TCP/IP stack). 169.254.x.x = APIPA (Automatic Private IP Addressing — assigned when DHCP fails). 0.0.0.0 = default route. 255.255.255.255 = limited broadcast. x.x.x.0 = network address. x.x.x.255 (in /24) = directed broadcast.',
+                  '127.0.0.1 = loopback for testing the local TCP/IP stack. 169.254.0.0/16 = IPv4 link-local addressing, often used when DHCP is unavailable. 0.0.0.0/0 = the default route. 255.255.255.255 = limited broadcast. Network and directed-broadcast addresses depend on the prefix: for 192.168.1.0/24 they are .0 and .255.',
               'example':
                   'Exam scenario: "A user\'s IP address shows 169.254.23.45. They cannot reach the network." Diagnosis: DHCP failure. The device fell back to APIPA. Fix: restore DHCP server or manually assign IP. Seeing 169.254.x.x is always a DHCP failure indicator.',
             },
@@ -2310,7 +2310,7 @@ class _LessonScreenState extends State<LessonScreen> {
               'label': 'Exam prep',
               'term': 'Module 2 — Top Exam Traps',
               'definition':
-                  '1) Private ranges: 10.x, 172.16-31.x, 192.168.x. 2) 169.254.x = APIPA = DHCP failure. 3) Usable hosts = 2^(32-prefix) - 2. 4) IPv6 has NO broadcast. 5) :: can appear only ONCE in IPv6. 6) /30 = 4 addresses, 2 usable — standard WAN link subnet. 7) VLSM allows different-sized subnets.',
+                  '1) Private IPv4 ranges: 10/8, 172.16/12, 192.168/16. 2) Link-local addressing can indicate unavailable DHCP. 3) Conventional subnet hosts = 2^(32-prefix) - 2; /31 point-to-point links use both addresses. 4) IPv6 has no broadcast. 5) :: can appear only once in IPv6. 6) /30 has two usable hosts. 7) VLSM allows different subnet sizes.',
               'example':
                   'Quick subnetting drill: How many usable hosts in /28? (14). What is the broadcast of 10.0.0.0/30? (10.0.0.3). What is the network address for 172.16.5.200/24? (172.16.5.0). Is 172.20.5.1 a private address? (Yes — 172.16-31.x range).',
             },
@@ -3785,7 +3785,7 @@ class _LessonScreenState extends State<LessonScreen> {
               'label': 'Event',
               'term': 'Sprint Planning — Purpose and Time-box',
               'definition':
-                  'Sprint Planning initiates the Sprint by defining the work to be done. It addresses: Why is this Sprint valuable? (Sprint Goal), What can be done? (items selected from Product Backlog), How will chosen work get done? (plan created by Developers). Time-box: maximum 8 hours for a one-month Sprint (proportionally less for shorter Sprints).',
+                  'Sprint Planning starts the Sprint: establish its value and goal, select work, and plan delivery. It lasts at most eight hours for a one-month Sprint; shorter Sprints usually need less time.',
               'example':
                   'Exam trap: Sprint Planning answers THREE questions — why (goal), what (selection), how (plan). All three must be addressed. A Sprint Planning that only selects items without creating a Sprint Goal or a plan is incomplete. The Sprint Goal is created DURING Sprint Planning — it is not set beforehand.',
             },
@@ -3841,7 +3841,7 @@ class _LessonScreenState extends State<LessonScreen> {
               'label': 'Event',
               'term': 'Time-boxes — Summary',
               'definition':
-                  'Sprint: 1–4 weeks (chosen by team). Sprint Planning: max 8 hours (1-month Sprint). Daily Scrum: 15 minutes (every day). Sprint Review: max 4 hours (1-month Sprint). Sprint Retrospective: max 3 hours (1-month Sprint). For shorter Sprints, time-boxes are proportionally shorter.',
+                  'Sprints last one month or less. For a one-month Sprint, Planning lasts at most eight hours, Review four, and Retrospective three. These events are usually shorter for shorter Sprints; no exact ratio is required. The Daily Scrum remains 15 minutes each working day.',
               'example':
                   'Exam question: "A team running 2-week Sprints needs to time-box their Sprint Planning. What is the maximum?" Answer: approximately 4 hours (half of the 8-hour maximum for a 1-month Sprint). Proportional calculation is tested.',
             },

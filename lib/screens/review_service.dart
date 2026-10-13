@@ -33,6 +33,13 @@ class ReviewService {
       'review_queue_v2_${Uri.encodeComponent(uid)}';
   static Future<void> _pending = Future<void>.value();
 
+  /// Completed futures retain their originating async zone. Tests must not
+  /// reuse a serialization tail from a disposed widget-test clock.
+  @visibleForTesting
+  static void resetForTesting() {
+    _pending = Future<void>.value();
+  }
+
   /// One session is capped so a long backlog does not present an unfinishable
   /// wall of questions. The rest stay due and come back next time.
   static const int maxSessionLength = 20;
@@ -43,12 +50,7 @@ class ReviewService {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_key(uid));
       if (raw == null || raw.isEmpty) return [];
-      final decoded = jsonDecode(raw);
-      if (decoded is! List) return [];
-      return decoded
-          .whereType<Map>()
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
+      return parseReviewQueue(jsonDecode(raw));
     } catch (e) {
       // Corrupt or unreadable storage must not take down the screen that asked.
       debugPrint('ReviewService: could not read the review queue: $e');
@@ -134,13 +136,16 @@ class ReviewService {
   static Future<void> submitResult({
     required String id,
     required bool correct,
+    String? userId,
   }) =>
-      _mutate((items) => applyReviewResult(
-            items,
-            id: id,
-            correct: correct,
-            now: DateTime.now(),
-          ));
+      userId != null && userId != ServiceBackend.uid
+          ? Future<void>.value()
+          : _mutate((items) => applyReviewResult(
+                items,
+                id: id,
+                correct: correct,
+                now: DateTime.now(),
+              ));
 
   /// Drops everything. Used by the profile screen and on account deletion, so
   /// a device handed to someone else does not carry the previous user's

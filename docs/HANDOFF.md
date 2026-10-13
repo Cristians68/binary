@@ -1,8 +1,23 @@
-# B1nary — handoff (last updated 2026-10-09)
+# B1nary — handoff (last updated 2026-10-13)
 
 Read this first. It records what is live, what is waiting on the owner, and
 the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 `docs/IOS-GOOGLE-SIGNIN-AUDIT.md`, `docs/SECURITY.md` and `docs/RELEASE.md`.
+
+## 2026-10-13 — learning and review audit
+
+Version **1.0.8+62** adds course skill summaries and search, clearer onboarding,
+robust account-scoped review sessions, accessible review layouts and corrected
+sample/seed wording. Both CI workflows now enforce stricter content validation.
+All 674 Flutter, 49 backend, 16 Firestore emulator and 9 iOS verifier tests pass;
+the analyzer is clean. All 504 seed flashcards and 504 questions pass validation,
+and 14 injected content fault classes are detected.
+
+See [REVIEW-READINESS.md](REVIEW-READINESS.md) for the concrete reviewer route,
+verification scope and unresolved production/device submission gates. No live
+content, Firebase deployment, TestFlight upload or App Store submission ran.
+The October 5 billing/functions findings below remain unresolved, not freshly
+verified. Seed corrections must be compared with live IDs before publication.
 
 ## 2026-10-09 — release recovery and App Store screenshots
 

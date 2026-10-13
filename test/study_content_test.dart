@@ -30,6 +30,10 @@ void main() {
       ...question,
       'options': ['Same', ' Same ']
     },
+    {
+      ...question,
+      'options': ['DNS', 'dns']
+    },
     {...question, 'question': ' '},
     {
       ...question,

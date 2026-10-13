@@ -37,6 +37,53 @@ const List<Duration> kReviewIntervals = [
 /// queue. Equal to `kReviewIntervals.length`.
 const int kRetiredBox = 5;
 
+/// Recover readable questions independently, so one damaged entry cannot
+/// break a session or hide the rest of a learner's queue.
+List<Map<String, dynamic>> parseReviewQueue(dynamic decoded) {
+  if (decoded is! List) return [];
+  final items = <Map<String, dynamic>>[];
+  final seen = <String>{};
+  for (final raw in decoded) {
+    if (raw is! Map || raw.keys.any((key) => key is! String)) continue;
+    final item = Map<String, dynamic>.from(raw);
+    final answers = item['answers'];
+    final correct = item['correct'];
+    final box = item['box'];
+    if (['id', 'courseId', 'moduleId', 'question'].any((key) =>
+            item[key] is! String || (item[key] as String).trim().isEmpty) ||
+        answers is! List ||
+        answers.length < 2 ||
+        answers.any((answer) => answer is! String || answer.trim().isEmpty) ||
+        correct is! int ||
+        correct < 0 ||
+        correct >= answers.length ||
+        box is! int ||
+        box < 0 ||
+        box >= kRetiredBox) {
+      continue;
+    }
+    final normalized = answers.cast<String>().map((a) => a.trim()).toList();
+    if (normalized.map((a) => a.toLowerCase()).toSet().length !=
+            normalized.length ||
+        !seen.add(item['id'] as String)) {
+      continue;
+    }
+    final due = item['dueAt'];
+    final misses = item['misses'];
+    items.add({
+      ...item,
+      'answers': normalized,
+      'courseTag':
+          item['courseTag'] is String ? item['courseTag'] : item['courseId'],
+      'explanation': item['explanation'] is String ? item['explanation'] : '',
+      // An unusable schedule is due now; never discard a healthy question.
+      'dueAt': due is int && due.abs() <= 8640000000000000 ? due : 0,
+      'misses': misses is int && misses > 0 ? misses : 1,
+    });
+  }
+  return items;
+}
+
 /// Stable identity for a question.
 ///
 /// Quiz documents are keyed by position (`q-1`, `q-2`), and reordering or
@@ -74,7 +121,9 @@ bool isReviewDue(Map<String, dynamic> item, DateTime now) {
   final box = item['box'];
   if (box is! int || box >= kRetiredBox) return false;
   final dueAt = item['dueAt'];
-  if (dueAt is! int) return true; // Missing schedule: show it rather than lose it.
+  if (dueAt is! int) {
+    return true; // Missing schedule: show it rather than lose it.
+  }
   return !DateTime.fromMillisecondsSinceEpoch(dueAt).isAfter(now);
 }
 

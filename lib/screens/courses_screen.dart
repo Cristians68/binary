@@ -81,13 +81,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
   }
 
   String _category(Map<String, dynamic> course) {
-    final tag = (course['tag'] ?? courseInfo(course['id'] as String)?.tag ?? '')
-        .toString();
-    if (tag.contains('Network')) return 'Networking';
-    if (tag.contains('Cyber')) return 'Security';
-    if (tag.contains('Cloud')) return 'Cloud';
-    if (tag.contains('AI')) return 'AI';
-    return 'Business';
+    return courseInfo(course['id'] as String)?.category ?? 'Business';
   }
 
   List<Map<String, dynamic>> get _visible {
@@ -99,8 +93,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
               ? _enrolledIds.contains(id)
               : _category(course) == _filter);
       final text = '${displayTitle(id)} ${course['subtitle'] ?? ''} '
+          '${displayBlurb(id)} ${courseInfo(id)?.skills.join(' ') ?? ''} '
           '${courseInfo(id)?.preparesFor ?? ''}';
-      return matches && text.toLowerCase().contains(query);
+      return matches &&
+          query.split(RegExp(r'\s+')).every(text.toLowerCase().contains);
     }).toList();
   }
 
@@ -450,6 +446,28 @@ class _CoursesScreenState extends State<CoursesScreen> {
                     Text(courseInfo(id)?.blurb ?? course['subtitle'] ?? '',
                         style: TextStyle(
                             color: theme.subtext, fontSize: 13, height: 1.6)),
+                    const SizedBox(height: 18),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final skill
+                            in courseInfo(id)?.skills ?? <String>[])
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: .08),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(skill,
+                                style: TextStyle(
+                                    color: theme.text,
+                                    fontSize: 12,
+                                    height: 1.4)),
+                          ),
+                      ],
+                    ),
                     const SizedBox(height: 18),
                     Wrap(spacing: 8, runSpacing: 8, children: [
                       StudyLabel(

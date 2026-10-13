@@ -67,6 +67,12 @@ workflows:
       - name: Test the iOS archive verifier
         script: python3 -m unittest discover -s tools/ios -p 'test_*.py'
 
+      - name: Validate learning content
+        script: |
+          set -e
+          node admin/seed/validate-content.js
+          node admin/seed/validate-content.selftest.js
+
       - name: Test Firestore access rules
         script: |
           set -e
@@ -174,6 +180,12 @@ workflows:
           # committed Podfile pins the platform to match
           # IPHONEOS_DEPLOYMENT_TARGET in the Xcode project.
           cd ios && pod install
+
+      - name: Validate learning content
+        script: |
+          set -e
+          node admin/seed/validate-content.js
+          node admin/seed/validate-content.selftest.js
 
       - name: Set up signing profiles on the Xcode project
         script: xcode-project use-profiles

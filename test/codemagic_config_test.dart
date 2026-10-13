@@ -196,6 +196,17 @@ void main() {
     }
   });
 
+  test('both workflows validate learning content before release', () {
+    for (final id in ['verify', 'ios-testflight']) {
+      expect(scriptText(id), contains('node admin/seed/validate-content.js'));
+      expect(scriptText(id),
+          contains('node admin/seed/validate-content.selftest.js'));
+    }
+    final text = scriptText('ios-testflight');
+    expect(text.indexOf('node admin/seed/validate-content.selftest.js'),
+        lessThan(text.indexOf('flutter build ipa')));
+  });
+
   test('every workflow pins an exact Flutter version', () {
     // `stable` moved underneath this project and broke two builds:
     // CupertinoPageTransitionsBuilder was moved out of the material library,

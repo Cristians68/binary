@@ -164,7 +164,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           (i) => Expanded(
                                 child: Container(
                                   height: 4,
-                                  margin: EdgeInsets.only(right: i < _last ? 6 : 0),
+                                  margin:
+                                      EdgeInsets.only(right: i < _last ? 6 : 0),
                                   decoration: BoxDecoration(
                                     color: i <= _page
                                         ? AppColors.primary
@@ -295,11 +296,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                      child: Text(course.title,
+                      child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(course.title,
                           style: TextStyle(
                               color: theme.text,
                               fontSize: 15,
-                              fontWeight: FontWeight.w600))),
+                              fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      Text(course.skills.join(' · '),
+                          style: TextStyle(
+                              color: theme.subtext, fontSize: 12, height: 1.5)),
+                    ],
+                  )),
                 ]),
               ),
           ]),

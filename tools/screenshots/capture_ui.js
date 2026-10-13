@@ -86,6 +86,11 @@ async function tap(page, label) {
       { name: '12-paywall', screen: 'paywall' },
       { name: '13-legal', screen: 'legal' },
       { name: '14-startup-recovery', screen: 'startup-error' },
+      { name: '15-review', screen: 'review' },
+      { name: '16-review-feedback', screen: 'review', reviewAnswer: true },
+      { name: '17-review-summary', screen: 'review', reviewAnswer: true, reviewFinish: true },
+      { name: '18-review-empty', screen: 'review-empty' },
+      { name: '19-onboarding-skills', screen: 'onboarding', onboardingSkills: true },
       ...['welcome', 'home', 'courses', 'progress', 'paywall', 'onboarding', 'legal'].map(screen => ({
         name: 'large-text-' + screen, screen, width: 320, height: 568, scale: 2,
       })),
@@ -93,6 +98,12 @@ async function tap(page, label) {
         name: 'large-text-' + screen + '-actions', screen, width: 320,
         height: 568, scale: 2, scrollEnd: true,
       })),
+      { name: 'large-text-review', screen: 'review', width: 320, height: 568, scale: 2 },
+      { name: 'large-text-onboarding-skills', screen: 'onboarding', onboardingSkills: true,
+        width: 320, height: 568, scale: 2 },
+      { name: 'large-text-review-empty', screen: 'review-empty', width: 320, height: 568, scale: 2 },
+      { name: 'large-text-review-summary', screen: 'review', width: 320, height: 568, scale: 2,
+        reviewAnswer: true, reviewFinish: true },
     ];
     for (const fixture of fixtures.filter(f => !process.argv[2] || f.name === process.argv[2])) {
       await page.setViewport({ width: fixture.width || 440, height: fixture.height || 956, deviceScaleFactor: 3 });
@@ -106,6 +117,21 @@ async function tap(page, label) {
       await sleep(1500);
       if (fixture.sample) await tap(page, 'Practice with a sample');
       if (fixture.advance) { await tap(page, 'Continue'); await tap(page, 'DNS'); }
+      if (fixture.onboardingSkills) { await tap(page, 'Continue'); await tap(page, 'Continue'); }
+      if (fixture.reviewAnswer) {
+        // At large text sizes, answers are below the initial viewport.
+        await page.mouse.move(160, 320);
+        for (let attempt = 0; attempt < 25; attempt++) {
+          const visible = await page.evaluate(() => [...document.querySelectorAll('flt-semantics')]
+            .some(n => n.getAttribute('aria-label') === 'Use feedback to adapt' &&
+              n.getBoundingClientRect().bottom <= innerHeight && n.getBoundingClientRect().top >= 0));
+          if (visible) break;
+          await page.mouse.wheel({deltaY: 300});
+          await sleep(150);
+        }
+        await tap(page, 'Use feedback to adapt');
+      }
+      if (fixture.reviewFinish) await tap(page, 'Finish');
       if (fixture.scrollEnd) {
         await page.mouse.move(160, 300);
         const lastAction = fixture.screen === 'welcome'

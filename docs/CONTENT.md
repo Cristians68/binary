@@ -1,6 +1,26 @@
 # Course content — accuracy pass and seeding
 
-Last updated: 2026-09-09
+Last updated: 2026-10-13
+
+## October 13 review pass
+
+All seven seed scripts pass offline validation: **504 flashcards and 504 quiz
+questions**, with zero errors and warnings. The validator rejects invalid or
+fractional answer keys, non-string/duplicate options, missing explanations,
+invalid/duplicate ordering, duplicate document writes and scripts that emit no
+content. Its mutation self-test catches 14 fault classes; both CI workflows
+run both commands before release.
+
+Targeted factual corrections cover private cloud subnet routing, IPv4 /31
+exceptions, Product Owner delegation and Scrum release/timebox wording. The
+sample lesson/quiz text and relevant seeds are updated locally. See
+[REVIEW-READINESS.md](REVIEW-READINESS.md) for source references and audit scope.
+These changes do not update existing Firestore documents. Compare live IDs
+and use targeted updates before publishing; do not run the quarantined network
+seed over the existing course.
+
+The earlier review below is historical and does not certify all current live
+course material or external exam alignment.
 
 ## 1. What was reviewed
 
@@ -42,9 +62,9 @@ It reports:
   the answer, a warning otherwise)
 - empty question, answer, or option text
 - a duplicate `order` value within a module, which the quiz screen sorts by
-- a missing explanation (warning — the score screen shows a blank rationale)
+- a missing explanation (error — every newly published question needs a rationale)
 
-Current status: **0 errors, 0 warnings** across all six scripts.
+Current status: **0 errors, 0 warnings** across all seven scripts.
 
 A validator nobody has watched fail is not evidence of anything, so
 `validate-content.selftest.js` injects each fault class into a temporary copy

@@ -13,6 +13,8 @@ import 'package:binary/screens/lesson_screen.dart';
 import 'package:binary/screens/offline_downloads_screen.dart';
 import 'package:binary/screens/progress_screen.dart';
 import 'package:binary/screens/quiz_screen.dart';
+import 'package:binary/screens/review_screen.dart';
+import 'package:binary/screens/review_service.dart';
 import 'package:binary/screens/onboarding_screen.dart';
 import 'package:binary/screens/welcome_screen.dart';
 import 'package:binary/screens/paywall_screen.dart';
@@ -96,6 +98,20 @@ Future<void> main() async {
 
   final dark = Uri.base.queryParameters['dark'] == '1';
   final screen = Uri.base.queryParameters['screen'] ?? 'onboarding';
+  if (screen == 'review') {
+    await ReviewService.recordMiss(
+      courseId: 'itil-v4',
+      moduleId: 'module-1',
+      courseTag: 'ITIL V4',
+      question: {
+        'question': 'How do teams improve a service?',
+        'answers': ['Use feedback to adapt', 'Ignore measured outcomes'],
+        'correct': 0,
+        'explanation':
+            'Feedback helps a team choose useful changes and learn from the results.',
+      },
+    );
+  }
   final scale = double.tryParse(Uri.base.queryParameters['scale'] ?? '') ?? 1;
   final theme = ThemeNotifier(initialIsDark: dark);
   final brightness = dark ? Brightness.dark : Brightness.light;
@@ -111,6 +127,7 @@ Future<void> main() async {
         courseColor: Color(networkData['color'])),
     'onboarding' => OnboardingScreen(onComplete: () {}),
     'courses' => const CoursesScreen(),
+    'review' || 'review-empty' => const ReviewScreen(),
     'progress' => const ProgressScreen(),
     'offline' => const OfflineDownloadsScreen(),
     'lesson' => LessonScreen(

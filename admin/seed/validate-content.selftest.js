@@ -59,14 +59,47 @@ const mutations = [
     name: "a quiz question with no explanation",
     apply: (s) => s.replace(/explanation: "([^"]*)"/, 'explanation: ""'),
     expect: /no explanation/,
-    // A blank rationale is a content-quality problem, not a broken answer
-    // key, so the validator reports it without failing the run.
-    severity: "warning",
   },
   {
     name: "a duplicate quiz order value",
     apply: (s) => s.replace("{ order: 2, question:", "{ order: 1, question:"),
     expect: /duplicate order/,
+  },
+  {
+    name: 'a fractional answer key',
+    apply: s => s.replace('correctIndex: 1', 'correctIndex: 1.5'),
+    expect: /finite integer/,
+  },
+  {
+    name: 'a non-finite answer key',
+    apply: s => s.replace('correctIndex: 1', 'correctIndex: NaN'),
+    expect: /finite integer/,
+  },
+  {
+    name: 'a non-string option',
+    apply: s => s.replace(/options: \["([^"]*)", /, 'options: [null, '),
+    expect: /not a string/,
+  },
+  {
+    name: 'a duplicate pair of distractors',
+    apply: s => s.replace(/options: \["([^"]*)", "([^"]*)", "([^"]*)", "([^"]*)"\], correctIndex: 1/,
+      'options: ["$1", "$2", "$1", "$4"], correctIndex: 1'),
+    expect: /same text/,
+  },
+  {
+    name: 'a negative order',
+    apply: s => s.replace('{ order: 1, question:', '{ order: -1, question:'),
+    expect: /positive integer/,
+  },
+  {
+    name: 'an empty seed script',
+    apply: () => '// no content',
+    expect: /no flashcards or quiz questions captured/,
+  },
+  {
+    name: 'a duplicate document write',
+    apply: s => s.replace('col.doc(`q-${i + 1}`)', 'col.doc(`q-1`)'),
+    expect: /duplicate document write/,
   },
 ];
 

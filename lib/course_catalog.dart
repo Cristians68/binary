@@ -35,6 +35,10 @@ class CourseInfo {
   /// One-line description for cards and the paywall.
   final String blurb;
 
+  /// Skills learners can discover before choosing a course.
+  final List<String> skills;
+  final String category;
+
   /// Factual, nominative statement of what the material maps to.
   /// Null where the course maps to no specific external exam.
   final String? preparesFor;
@@ -55,6 +59,8 @@ class CourseInfo {
     required this.tag,
     required this.title,
     required this.blurb,
+    required this.skills,
+    required this.category,
     required this.code,
     this.preparesFor,
   });
@@ -64,6 +70,8 @@ const List<CourseInfo> kCourseCatalog = [
   CourseInfo(
     id: 'itil-v4',
     code: 'ITSM',
+    category: 'Business',
+    skills: ['Service value', 'Incident management', 'Continual improvement'],
     tag: 'ITIL V4',
     title: 'IT Service Management Foundations',
     blurb:
@@ -77,6 +85,8 @@ const List<CourseInfo> kCourseCatalog = [
   CourseInfo(
     id: 'csm',
     code: 'SCRM',
+    category: 'Business',
+    skills: ['Scrum events', 'Team accountabilities', 'Agile delivery'],
     tag: 'CSM',
     title: 'Agile & Scrum Foundations',
     blurb:
@@ -90,6 +100,8 @@ const List<CourseInfo> kCourseCatalog = [
   CourseInfo(
     id: 'binary-network-professional',
     code: 'NETP',
+    category: 'Networking',
+    skills: ['Subnetting', 'DNS & DHCP', 'Troubleshooting'],
     tag: 'Binary Network Pro',
     title: 'Network Professional',
     blurb: 'Networking end to end — OSI and TCP/IP, subnetting, routing and '
@@ -103,6 +115,8 @@ const List<CourseInfo> kCourseCatalog = [
   CourseInfo(
     id: 'binary-cybersecurity-professional',
     code: 'SECP',
+    category: 'Security',
+    skills: ['Threat analysis', 'Access control', 'Incident response'],
     tag: 'Binary Cyber Pro',
     title: 'Cybersecurity Professional',
     blurb: 'Defensive security fundamentals — threats, cryptography, access '
@@ -116,6 +130,8 @@ const List<CourseInfo> kCourseCatalog = [
   CourseInfo(
     id: 'binary-cloud-fundamentals',
     code: 'CLDF',
+    category: 'Cloud',
+    skills: ['Cloud models', 'Virtualisation', 'Storage & cost'],
     tag: 'Binary Cloud',
     title: 'Cloud Fundamentals',
     blurb: 'Cloud computing from first principles — service and deployment '
@@ -124,6 +140,8 @@ const List<CourseInfo> kCourseCatalog = [
   CourseInfo(
     id: 'binary-cloud-professional',
     code: 'CLDA',
+    category: 'Cloud',
+    skills: ['High availability', 'Scaling', 'Architecture trade-offs'],
     tag: 'Binary Cloud Pro',
     title: 'Cloud Architecture',
     blurb: 'Designing for the cloud — availability, scaling, networking, '
@@ -137,6 +155,8 @@ const List<CourseInfo> kCourseCatalog = [
   CourseInfo(
     id: 'binary-ai-fundamentals',
     code: 'AIML',
+    category: 'AI',
+    skills: ['Machine learning', 'Prompting', 'Responsible AI'],
     tag: 'Binary AI',
     title: 'AI & Machine Learning Foundations',
     blurb: 'How modern AI actually works — machine learning, neural networks, '

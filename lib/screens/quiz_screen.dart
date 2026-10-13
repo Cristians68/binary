@@ -1937,7 +1937,7 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 2,
             'explanation':
-                'The Product Owner is solely accountable for the Product Backlog and maximising product value. Cannot be delegated.',
+                'The Product Owner retains accountability for the Product Backlog and product value, even when backlog work is delegated.',
           },
           {
             'question':
@@ -2116,7 +2116,7 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 2,
             'explanation':
-                'The Product Owner is solely responsible for ordering the Product Backlog. Cannot be delegated. PO may take input but owns the final ordering.',
+                'The Product Owner retains accountability for Product Backlog ordering. The work may be delegated; accountability stays with the PO.',
           },
           {
             'question': 'What is the Sprint Backlog?',
@@ -2410,7 +2410,8 @@ class _QuizScreenState extends State<QuizScreen> {
                 'PO represents ALL stakeholders and must balance their needs while maximising the product\'s overall value.',
           },
           {
-            'question': 'Can the PO delegate backlog prioritisation?',
+            'question':
+                'Can the PO delegate accountability for Product Backlog ordering?',
             'answers': [
               'Yes, to the Scrum Master',
               'Yes, to the most senior developer',
@@ -2419,7 +2420,7 @@ class _QuizScreenState extends State<QuizScreen> {
             ],
             'correct': 2,
             'explanation':
-                'PO may take input from others but cannot delegate accountability for backlog ordering.',
+                'Backlog work may be delegated. Accountability for its ordering remains with the Product Owner.',
           },
           {
             'question':
@@ -3444,16 +3445,17 @@ class _QuizScreenState extends State<QuizScreen> {
                 'VPC = your own isolated network environment. You define network topology, subnets, route tables, internet gateways, and security.',
           },
           {
-            'question': 'Key difference between public and private subnet?',
+            'question':
+                'In an AWS VPC, what distinguishes a public subnet from a private subnet?',
             'answers': [
               'Public subnets are faster',
-              'Public subnets have internet access; private subnets are isolated from the internet',
+              'Public subnets have a direct route to an internet gateway; private subnets do not',
               'Private subnets cost more',
               'No practical security difference',
             ],
             'correct': 1,
             'explanation':
-                'Public subnet = has internet gateway route → internet-facing. Private subnet = no internet gateway → internal-only. Fundamental VPC security design.',
+                'A private subnet has no direct internet-gateway route, but can use a NAT gateway for outbound access. Public-subnet resources still need suitable addressing and security rules for internet access.',
           },
           {
             'question':

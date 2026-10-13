@@ -43,7 +43,7 @@ account and writes nothing to production. Use it to review the UI.
 
 ```
 flutter build web --no-pub --debug -t tools/screenshots/ui_preview.dart --output build/ui_preview
-node tools/screenshots/capture_ui.js            # all 23 fixtures
+node tools/screenshots/capture_ui.js            # all 32 fixtures
 node tools/screenshots/capture_ui.js 08-quiz    # just one
 ```
 
@@ -73,6 +73,12 @@ Both were invisible to the analyzer and to all 494 tests.
 It reads published catalogue metadata and free first-module content through a
 temporary guest identity, then deletes that identity. The generated
 `fixture_content.dart` is deliberately gitignored; do not commit it.
+
+The October 13 fixtures also cover course skill summaries, onboarding's skills
+preview, and the review question/feedback/results/empty screens. Review layouts
+include 320px captures at doubled text. Their questions and local queue are
+synthetic. `large-text-review-summary` verifies the Finish action through the
+real widget, while widget tests verify storage recovery and account changes.
 
 ## App Store screenshot collection
 

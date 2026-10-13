@@ -8,18 +8,9 @@
  * an out-of-range answer key, two identical options in one question, or a
  * question whose "correct" option is a duplicate string.
  *
- * That last one is not hypothetical. QuizScreen._shuffleQuestions does:
- *
- *     final correctAnswer = answers[q['correct']];
- *     answers.shuffle(rng);
- *     final newCorrectIndex = answers.indexOf(correctAnswer);
- *
- * `indexOf` returns the FIRST match. If a question contains the same option
- * text twice and that text is the correct answer, a user who taps the second
- * copy is marked wrong for choosing a string that is character-for-character
- * the right answer. And `answers[q['correct']]` throws RangeError on an
- * out-of-range key, which drops the whole module into the hardcoded-question
- * fallback with no visible error.
+ * Checks agree with the app parser: quiz answers must be distinct strings,
+ * answer keys must be integers, and a malformed module must never turn into
+ * a shorter, easier quiz. Missing explanations also block publication.
  *
  * Run:  node admin/seed/validate-content.js
  * Exits non-zero if any ERROR-level problem is found, so it can gate a commit.
@@ -84,9 +75,10 @@ function warn(where, msg) {
 }
 
 function checkQuiz(where, q) {
+  checkOrder(where, q.order);
   const opts = q.options;
-  if (!Array.isArray(opts) || opts.length === 0) {
-    err(where, `no options array`);
+  if (!Array.isArray(opts) || opts.length < 2) {
+    err(where, `options must contain at least two answers`);
     return;
   }
   if (opts.length !== 4) {
@@ -96,40 +88,42 @@ function checkQuiz(where, q) {
     err(where, `correctIndex is ${JSON.stringify(q.correctIndex)}, not a number`);
     return;
   }
-  // RangeError in QuizScreen._shuffleQuestions -> silent fallback to hardcoded questions.
+  if (!Number.isInteger(q.correctIndex)) {
+    err(where, `correctIndex must be a finite integer`);
+  }
   if (q.correctIndex < 0 || q.correctIndex >= opts.length) {
     err(where, `correctIndex ${q.correctIndex} is out of range for ${opts.length} options`);
   }
-  // Duplicate options break indexOf() after the shuffle.
+  // Case-only differences do not make meaningful distractors.
   const seen = new Map();
   opts.forEach((o, i) => {
     const key = String(o).trim().toLowerCase();
     if (seen.has(key)) {
       const first = seen.get(key);
-      const involvesAnswer = q.correctIndex === i || q.correctIndex === first;
       const detail = `options ${first} and ${i} are the same text: ${JSON.stringify(o)}`;
-      if (involvesAnswer) {
-        err(where, `${detail} — and one of them is the answer, so indexOf() after the shuffle can mark a correct tap wrong`);
-      } else {
-        warn(where, detail);
-      }
+      err(where, detail);
     } else {
       seen.set(key, i);
     }
   });
-  if (!q.question || !String(q.question).trim()) err(where, `empty question text`);
-  if (!q.explanation || !String(q.explanation).trim()) {
-    warn(where, `no explanation — the score screen shows a blank rationale`);
+  if (typeof q.question !== 'string' || !q.question.trim()) err(where, `empty question text or question is not a string`);
+  if (typeof q.explanation !== 'string' || !q.explanation.trim()) {
+    err(where, `no explanation — every published question needs a rationale`);
   }
   opts.forEach((o, i) => {
-    if (!String(o).trim()) err(where, `option ${i} is empty`);
+    if (typeof o !== 'string') err(where, `option ${i} is not a string`);
+    else if (!o.trim()) err(where, `option ${i} is empty`);
   });
 }
 
 function checkFlashcard(where, c) {
-  if (!c.question || !String(c.question).trim()) err(where, `empty question`);
-  if (!c.answer || !String(c.answer).trim()) err(where, `empty answer`);
-  if (typeof c.order !== "number") err(where, `order is not a number`);
+  if (typeof c.question !== 'string' || !c.question.trim()) err(where, `empty question or question is not a string`);
+  if (typeof c.answer !== 'string' || !c.answer.trim()) err(where, `empty answer or answer is not a string`);
+  checkOrder(where, c.order);
+}
+
+function checkOrder(where, order) {
+  if (!Number.isInteger(order) || order < 1) err(where, `order must be a positive integer`);
 }
 
 // ── Drive the seed scripts ──────────────────────────────────────────────────
@@ -151,6 +145,9 @@ const scripts = process.argv.slice(2).length
   : DEFAULT_SCRIPTS;
 
 (async () => {
+  console.log('Offline seed validation only: Firebase writes are intercepted.');
+  let totalCards = 0;
+  let totalQuizzes = 0;
   for (const s of scripts) {
     writes.length = 0;
     const file = path.isAbsolute(s) ? s : path.join(__dirname, s);
@@ -170,10 +167,14 @@ const scripts = process.argv.slice(2).length
     let cards = 0;
     let modules = 0;
     const orderSeen = new Map();
+    const paths = new Set();
 
     for (const w of writes) {
       const p = w.pathParts;
       const label = `${s} :: ${p.join("/")}`;
+      const documentPath = p.join('/');
+      if (paths.has(documentPath)) err(label, 'duplicate document write would overwrite content');
+      paths.add(documentPath);
       const kind = p.length >= 6 ? p[4] : null; // courses/<id>/modules/<mid>/<kind>/<docid>
       if (kind === "quiz") {
         quizzes++;
@@ -195,10 +196,14 @@ const scripts = process.argv.slice(2).length
         modules++;
       }
     }
+    if (cards === 0 || quizzes === 0) err(s, 'no flashcards or quiz questions captured');
+    totalCards += cards;
+    totalQuizzes += quizzes;
     console.log(`${s.padEnd(24)} ${String(modules).padStart(3)} modules  ${String(cards).padStart(4)} flashcards  ${String(quizzes).padStart(4)} quiz questions`);
   }
 
   console.log("");
+  console.log(`Validated ${scripts.length} scripts: ${totalCards} flashcards, ${totalQuizzes} quiz questions.`);
   for (const w of warnings) console.log(w);
   if (warnings.length) console.log("");
   for (const e of errors) console.log(e);

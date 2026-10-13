@@ -3,7 +3,7 @@
 IT certification study app — flashcard lessons, timed quizzes, streaks and
 badges — built in Flutter, shipping to iOS with a Firebase backend.
 
-Version `1.0.7+61` in `pubspec.yaml`; Codemagic derives the TestFlight build number.
+Version `1.0.8+62` in `pubspec.yaml`; Codemagic derives the TestFlight build number.
 Primary target is iOS; Android, web, macOS and Windows
 targets exist and build, but only iOS and web are exercised.
 
@@ -29,6 +29,7 @@ docs/SECURITY.md            Security model and the mandatory deploy runbook
 docs/CONTENT.md             Content accuracy pass, seeding rules, validator
 docs/REVIEW.md              Spaced-repetition review feature
 docs/STUDY-FLOW.md          Content recovery, offline study, and quiz save behavior
+docs/REVIEW-READINESS.md    Current verification and remaining submission gates
 firestore.rules             Firestore authorization rules
 test/                       Flutter tests
 ```

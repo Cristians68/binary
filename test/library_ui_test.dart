@@ -90,6 +90,22 @@ void main() {
     expect(data['displayName'], 'Alex');
   });
 
+  testWidgets('skill search uses course content and multiple terms',
+      (tester) async {
+    await db.doc('courses/$network').update({'tag': 'legacy-unknown-tag'});
+    await pump(tester, const CoursesScreen());
+    await tester.enterText(find.byType(TextField), '  subnetting   dns ');
+    await tester.pumpAndSettle();
+    expect(find.text('Network Professional'), findsOneWidget);
+    expect(find.text('Cloud Fundamentals'), findsNothing);
+    expect(find.text('Subnetting'), findsOneWidget);
+    await tap(tester, 'Networking');
+    expect(find.text('1 course to explore'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'does-not-exist');
+    await tester.pumpAndSettle();
+    expect(find.text('Room for something new'), findsOneWidget);
+  });
+
   testWidgets('continue learning follows live personal course progress',
       (tester) async {
     await db.doc('users/learner').set({

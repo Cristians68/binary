@@ -38,7 +38,8 @@ List<Map<String, dynamic>> parseQuizQuestions(
         throw const FormatException('Invalid quiz question');
       }
       final answers = options.cast<String>().map((s) => s.trim()).toList();
-      if (answers.toSet().length != answers.length) {
+      if (answers.map((answer) => answer.toLowerCase()).toSet().length !=
+          answers.length) {
         throw const FormatException('Duplicate quiz answers');
       }
       return {
