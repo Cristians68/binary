@@ -43,8 +43,9 @@ account and writes nothing to production. Use it to review the UI.
 
 ```
 flutter build web --no-pub --debug -t tools/screenshots/ui_preview.dart --output build/ui_preview
-node tools/screenshots/capture_ui.js            # all 32 fixtures
+node tools/screenshots/capture_ui.js            # all 41 fixtures
 node tools/screenshots/capture_ui.js 08-quiz    # just one
+node tools/screenshots/capture_ui.js --quiz-feedback # nine quiz feedback/result/review fixtures
 ```
 
 Screenshots and the semantics-label dump for each land in
@@ -79,6 +80,13 @@ preview, and the review question/feedback/results/empty screens. Review layouts
 include 320px captures at doubled text. Their questions and local queue are
 synthetic. `large-text-review-summary` verifies the Finish action through the
 real widget, while widget tests verify storage recovery and account changes.
+
+The October 16 quiz fixtures answer two synthetic published questions through
+the real quiz screen, open its results and inspect the missed-answer review.
+They cover light and dark mode plus 320px doubled text. No production quiz data
+or learner state is changed. They also inspect immediate answer feedback,
+scroll to the final result/review actions at doubled text, and activate
+**Try again** to verify that a fresh attempt starts at the top.
 
 ## App Store screenshot collection
 

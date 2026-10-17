@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:confetti/confetti.dart';
 import 'app_theme.dart';
 import 'quiz_logic.dart';
+import 'quiz_results_dialog.dart';
 import 'review_service.dart';
 import 'progress_service.dart';
 import 'service_backend.dart';
@@ -93,6 +94,9 @@ class _QuizScreenState extends State<QuizScreen> {
   ContentOrigin _origin = ContentOrigin.unavailable;
   bool _showingResults = false;
   bool _saving = false;
+  bool _confirmingExit = false;
+  final _scroll = ScrollController();
+  final _responses = <QuizAnswer>[];
   String _attemptId = newAttemptId();
   bool get _isPractice =>
       widget.practiceOnly || _origin == ContentOrigin.substitute;
@@ -102,6 +106,42 @@ class _QuizScreenState extends State<QuizScreen> {
     super.initState();
     _learnerUid = ServiceBackend.uid;
     _loadQuestions();
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  Future<void> _requestExit() async {
+    if (_saving || _showingResults || _confirmingExit) return;
+    final navigator = Navigator.of(context);
+    if (_responses.isEmpty) {
+      navigator.pop();
+      return;
+    }
+    _confirmingExit = true;
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Leave this quiz?'),
+        content: const Text('Your current answers will be cleared. '
+            'You can keep going from this question.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Keep going'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Leave quiz'),
+          ),
+        ],
+      ),
+    );
+    _confirmingExit = false;
+    if (mounted && leave == true) navigator.pop();
   }
 
   Future<void> _loadQuestions() async {
@@ -136,10 +176,19 @@ class _QuizScreenState extends State<QuizScreen> {
     HapticFeedback.selectionClick();
     final question = _questions[_currentQuestion];
     final correct = index == question['correct'];
+    final answers = question['answers'] as List<String>;
     setState(() {
       _selectedAnswer = index;
       _answered = true;
       if (correct) _score++;
+      _responses.add(QuizAnswer(
+        number: _currentQuestion + 1,
+        question: question['question'] as String,
+        selectedAnswer: answers[index],
+        correctAnswer: answers[question['correct'] as int],
+        isCorrect: correct,
+        explanation: question['explanation'] as String,
+      ));
     });
 
     // File a missed question for spaced repetition. Deliberately not awaited:
@@ -164,6 +213,7 @@ class _QuizScreenState extends State<QuizScreen> {
         _selectedAnswer = null;
         _answered = false;
       });
+      if (_scroll.hasClients) _scroll.jumpTo(0);
     } else {
       _showResults();
     }
@@ -173,10 +223,8 @@ class _QuizScreenState extends State<QuizScreen> {
   Future<void> _showResults() async {
     if (!mounted || _showingResults) return;
     _showingResults = true;
-    final theme = AppTheme.of(context);
     // Capture navigator BEFORE any async work or dialog dismissal
     final navigator = Navigator.of(context);
-    final percent = quizScorePercent(_score, _questions.length);
     final passed = quizPassed(_score, _questions.length);
 
     if (passed && !_isPractice) {
@@ -213,130 +261,14 @@ class _QuizScreenState extends State<QuizScreen> {
     final leave = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => PopScope(
-        canPop: false,
-        child: Dialog(
-          backgroundColor: theme.card,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          clipBehavior: Clip.antiAlias,
-          child: Stack(
-            alignment: Alignment.topCenter,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(28),
-                child: SingleChildScrollView(
-                    child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: passed
-                            ? AppColors.green.withValues(alpha: 0.15)
-                            : const Color(0xFFF59E0B).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(
-                        passed
-                            ? CupertinoIcons.checkmark_seal_fill
-                            : CupertinoIcons.book_fill,
-                        color:
-                            passed ? AppColors.green : const Color(0xFFF59E0B),
-                        size: 34,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      _isPractice
-                          ? 'Practice complete'
-                          : passed
-                              ? 'Great work!'
-                              : 'Keep studying!',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: theme.text,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (_isPractice)
-                      Text('Sample results do not count toward your course.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: theme.subtext, fontSize: 13)),
-                    Text(
-                      'You scored $_score out of ${_questions.length}',
-                      style: TextStyle(fontSize: 15, color: theme.subtext),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '$percent%',
-                      style: TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.w700,
-                        color:
-                            passed ? AppColors.green : const Color(0xFFF59E0B),
-                        letterSpacing: -1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    // ── Back to course ────────────────────────────────────────────
-                    GestureDetector(
-                      onTap: () => navigator.pop(true),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        decoration: BoxDecoration(
-                          color: widget.color,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Text(
-                          'Back to course',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    // ── Try again ─────────────────────────────────────────────────
-                    GestureDetector(
-                      onTap: () => navigator.pop(false),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        decoration: BoxDecoration(
-                          color: theme.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: theme.border),
-                        ),
-                        child: Text(
-                          'Try again',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: theme.subtext,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                )),
-              ),
-              if (passed &&
-                  !_isPractice &&
-                  !MediaQuery.disableAnimationsOf(context))
-                _QuizCelebration(color: widget.color),
-            ],
-          ),
-        ),
+      builder: (_) => QuizResultsDialog(
+        answers: List.unmodifiable(_responses),
+        practiceOnly: _isPractice,
+        color: widget.color,
+        celebration:
+            passed && !_isPractice && !MediaQuery.disableAnimationsOf(context)
+                ? _QuizCelebration(color: widget.color)
+                : null,
       ),
     );
     if (!mounted) return;
@@ -346,10 +278,12 @@ class _QuizScreenState extends State<QuizScreen> {
         _selectedAnswer = null;
         _answered = false;
         _score = 0;
+        _responses.clear();
         _attemptId = newAttemptId();
         _questions = shuffleQuizQuestions(_questions);
         _showingResults = false;
       });
+      if (_scroll.hasClients) _scroll.jumpTo(0);
       return;
     }
     var courseComplete = false;
@@ -369,6 +303,42 @@ class _QuizScreenState extends State<QuizScreen> {
                 courseId: widget.courseId,
               )));
     }
+  }
+
+  Widget _answerFeedback(ThemeNotifier theme, List<String> answers, int correct,
+      String explanation) {
+    final isCorrect = _selectedAnswer == correct;
+    return Semantics(
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: theme.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(isCorrect ? 'Correct' : 'Keep practicing',
+                style:
+                    TextStyle(color: theme.text, fontWeight: FontWeight.w700)),
+            if (!isCorrect) ...[
+              const SizedBox(height: 8),
+              Text('Correct answer: ${answers[correct]}',
+                  style: TextStyle(
+                      color: theme.text, fontWeight: FontWeight.w600)),
+            ],
+            if (explanation.trim().isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(explanation,
+                  style: TextStyle(
+                      fontSize: 14, color: theme.subtext, height: 1.5)),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -397,299 +367,306 @@ class _QuizScreenState extends State<QuizScreen> {
     final correct = q['correct'] as int;
     final answers = q['answers'] as List<String>;
 
-    return Scaffold(
-      backgroundColor: theme.bg,
-      body: SafeArea(
-        child: WebContentBounds(
-            maxWidth: 720,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: LayoutBuilder(
-                  builder: (context, constraints) => SingleChildScrollView(
-                      child: ConstrainedBox(
-                          constraints:
-                              BoxConstraints(minHeight: constraints.maxHeight),
-                          child: IntrinsicHeight(
-                              child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (_isPractice ||
-                                  _origin == ContentOrigin.cached) ...[
-                                ContentNotice(
-                                    origin: _isPractice
-                                        ? ContentOrigin.substitute
-                                        : _origin),
-                                const SizedBox(height: 12),
-                              ],
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  GestureDetector(
-                                    onTap: () {
-                                      HapticFeedback.lightImpact();
-                                      Navigator.pop(context);
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: widget.color
-                                            .withValues(alpha: 0.10),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
+    return PopScope(
+      canPop: _responses.isEmpty && !_saving && !_showingResults,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _requestExit();
+      },
+      child: Scaffold(
+        backgroundColor: theme.bg,
+        body: SafeArea(
+          child: WebContentBounds(
+              maxWidth: 720,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                        controller: _scroll,
+                        child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                                minHeight: constraints.maxHeight),
+                            child: IntrinsicHeight(
+                                child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (_isPractice ||
+                                    _origin == ContentOrigin.cached) ...[
+                                  ContentNotice(
+                                      origin: _isPractice
+                                          ? ContentOrigin.substitute
+                                          : _origin),
+                                  const SizedBox(height: 12),
+                                ],
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    TextButton(
+                                      onPressed: _saving || _showingResults
+                                          ? null
+                                          : _requestExit,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
                                           color: widget.color
-                                              .withValues(alpha: 0.20),
+                                              .withValues(alpha: 0.10),
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                          border: Border.all(
+                                            color: widget.color
+                                                .withValues(alpha: 0.20),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.arrow_back_ios_new_rounded,
+                                              size: 13,
+                                              color: widget.color,
+                                            ),
+                                            const SizedBox(width: 5),
+                                            Text(
+                                              'Lesson',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: widget.color,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.arrow_back_ios_new_rounded,
-                                            size: 13,
-                                            color: widget.color,
-                                          ),
-                                          const SizedBox(width: 5),
-                                          Text(
-                                            'Lesson',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: widget.color,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
+                                    ),
+                                    Expanded(
+                                        child: Text(
+                                      'Question ${_currentQuestion + 1} of ${_questions.length}',
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: theme.subtext,
+                                        fontWeight: FontWeight.w500,
                                       ),
+                                    )),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: LinearProgressIndicator(
+                                    value: (_currentQuestion + 1) /
+                                        _questions.length,
+                                    backgroundColor: theme.isDark
+                                        ? Colors.white.withValues(alpha: 0.08)
+                                        : AppColors.lightBorder,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        widget.color),
+                                    minHeight: 5,
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: widget.color.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color:
+                                          widget.color.withValues(alpha: 0.20),
                                     ),
                                   ),
-                                  Expanded(
-                                      child: Text(
-                                    'Question ${_currentQuestion + 1} of ${_questions.length}',
-                                    textAlign: TextAlign.right,
+                                  child: Text(
+                                    _isPractice
+                                        ? 'Sample practice'
+                                        : '${displayTitle(widget.courseTag)} · ${widget.moduleTitle}',
                                     style: TextStyle(
-                                      fontSize: 12,
-                                      color: theme.subtext,
+                                      fontSize: 11,
+                                      color: widget.color,
                                       fontWeight: FontWeight.w500,
                                     ),
-                                  )),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: (_currentQuestion + 1) /
-                                      _questions.length,
-                                  backgroundColor: theme.isDark
-                                      ? Colors.white.withValues(alpha: 0.08)
-                                      : AppColors.lightBorder,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      widget.color),
-                                  minHeight: 5,
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: widget.color.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: widget.color.withValues(alpha: 0.20),
                                   ),
                                 ),
-                                child: Text(
-                                  _isPractice
-                                      ? 'Sample practice'
-                                      : '${displayTitle(widget.courseTag)} · ${widget.moduleTitle}',
+                                const SizedBox(height: 20),
+                                Text(
+                                  q['question'],
                                   style: TextStyle(
-                                    fontSize: 11,
-                                    color: widget.color,
-                                    fontWeight: FontWeight.w500,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.text,
+                                    height: 1.4,
+                                    letterSpacing: -0.3,
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 20),
-                              Text(
-                                q['question'],
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: theme.text,
-                                  height: 1.4,
-                                  letterSpacing: -0.3,
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              ...List.generate(answers.length, (i) {
-                                Color borderColor = theme.border;
-                                Color bgColor = theme.surface;
-                                Color textColor = theme.subtext;
-                                Widget? trailingIcon;
+                                const SizedBox(height: 24),
+                                ...List.generate(answers.length, (i) {
+                                  Color borderColor = theme.border;
+                                  Color bgColor = theme.surface;
+                                  Widget? trailingIcon;
 
-                                if (_answered) {
-                                  if (i == correct) {
+                                  if (_answered) {
+                                    if (i == correct) {
+                                      borderColor = AppColors.green
+                                          .withValues(alpha: 0.5);
+                                      bgColor = AppColors.green
+                                          .withValues(alpha: 0.10);
+                                      trailingIcon = Icon(
+                                        CupertinoIcons.checkmark_circle_fill,
+                                        color: theme.isDark
+                                            ? AppColors.mint
+                                            : AppColors.green,
+                                        size: 18,
+                                      );
+                                    } else if (i == _selectedAnswer &&
+                                        i != correct) {
+                                      borderColor =
+                                          AppColors.red.withValues(alpha: 0.5);
+                                      bgColor =
+                                          AppColors.red.withValues(alpha: 0.10);
+                                      trailingIcon = Icon(
+                                        CupertinoIcons.xmark_circle_fill,
+                                        color: AppColors.red,
+                                        size: 18,
+                                      );
+                                    }
+                                  } else if (_selectedAnswer == i) {
                                     borderColor =
-                                        AppColors.green.withValues(alpha: 0.5);
+                                        widget.color.withValues(alpha: 0.5);
                                     bgColor =
-                                        AppColors.green.withValues(alpha: 0.10);
-                                    textColor = AppColors.green;
-                                    trailingIcon = Icon(
-                                      CupertinoIcons.checkmark_circle_fill,
-                                      color: AppColors.green,
-                                      size: 18,
-                                    );
-                                  } else if (i == _selectedAnswer &&
-                                      i != correct) {
-                                    borderColor =
-                                        AppColors.red.withValues(alpha: 0.5);
-                                    bgColor =
-                                        AppColors.red.withValues(alpha: 0.10);
-                                    textColor = AppColors.red;
-                                    trailingIcon = Icon(
-                                      CupertinoIcons.xmark_circle_fill,
-                                      color: AppColors.red,
-                                      size: 18,
-                                    );
+                                        widget.color.withValues(alpha: 0.10);
                                   }
-                                } else if (_selectedAnswer == i) {
-                                  borderColor =
-                                      widget.color.withValues(alpha: 0.5);
-                                  bgColor =
-                                      widget.color.withValues(alpha: 0.10);
-                                  textColor = widget.color;
-                                }
 
-                                return GestureDetector(
-                                  onTap: () => _selectAnswer(i),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    margin: const EdgeInsets.only(bottom: 10),
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: bgColor,
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(color: borderColor),
-                                      boxShadow: theme.isDark
+                                  return Semantics(
+                                    button: true,
+                                    selected: _selectedAnswer == i,
+                                    enabled: !_answered,
+                                    excludeSemantics: true,
+                                    onTap: _answered
+                                        ? null
+                                        : () => _selectAnswer(i),
+                                    label: _answered && i == correct
+                                        ? '${answers[i]}. Correct answer'
+                                        : _answered && i == _selectedAnswer
+                                            ? '${answers[i]}. Your answer, incorrect'
+                                            : answers[i],
+                                    child: InkWell(
+                                      onTap: _answered
                                           ? null
-                                          : [
-                                              BoxShadow(
-                                                color: Colors.black
-                                                    .withValues(alpha: 0.03),
-                                                blurRadius: 6,
-                                                offset: const Offset(0, 1),
-                                              ),
-                                            ],
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            answers[i],
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: textColor,
-                                              letterSpacing: -0.1,
-                                            ),
-                                          ),
-                                        ),
-                                        if (trailingIcon != null) ...[
-                                          const SizedBox(width: 8),
-                                          trailingIcon,
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }),
-                              if (_answered &&
-                                  q['explanation'] != null &&
-                                  (q['explanation'] as String).isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Container(
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: theme.surface,
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(color: theme.border),
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Icon(
-                                        CupertinoIcons.lightbulb_fill,
-                                        size: 14,
-                                        color: Color(0xFFF59E0B),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          q['explanation'],
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: theme.subtext,
-                                            height: 1.5,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                              const Spacer(),
-                              if (_answered)
-                                GestureDetector(
-                                  onTap: _saving ? null : _nextQuestion,
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
-                                    decoration: BoxDecoration(
-                                      color: widget.color,
+                                          : () => _selectAnswer(i),
                                       borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Flexible(
-                                            child: Text(
-                                          _saving
-                                              ? 'Saving your score…'
-                                              : _currentQuestion <
-                                                      _questions.length - 1
-                                                  ? 'Next question'
-                                                  : 'See results',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 15,
-                                            letterSpacing: -0.2,
-                                          ),
-                                        )),
-                                        const SizedBox(width: 6),
-                                        Icon(
-                                          _currentQuestion <
-                                                  _questions.length - 1
-                                              ? Icons.arrow_forward_ios_rounded
-                                              : Icons.emoji_events_rounded,
-                                          size: 14,
-                                          color: Colors.white,
+                                      child: AnimatedContainer(
+                                        duration:
+                                            const Duration(milliseconds: 200),
+                                        margin:
+                                            const EdgeInsets.only(bottom: 10),
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: bgColor,
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                          border:
+                                              Border.all(color: borderColor),
+                                          boxShadow: theme.isDark
+                                              ? null
+                                              : [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withValues(
+                                                            alpha: 0.03),
+                                                    blurRadius: 6,
+                                                    offset: const Offset(0, 1),
+                                                  ),
+                                                ],
                                         ),
-                                      ],
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                answers[i],
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: theme.text,
+                                                  letterSpacing: -0.1,
+                                                ),
+                                              ),
+                                            ),
+                                            if (trailingIcon != null) ...[
+                                              const SizedBox(width: 8),
+                                              trailingIcon,
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                                if (_answered) ...[
+                                  const SizedBox(height: 4),
+                                  _answerFeedback(theme, answers, correct,
+                                      q['explanation'] as String),
+                                ],
+                                const SizedBox(height: 20),
+                                const Spacer(),
+                                if (_answered)
+                                  FilledButton(
+                                    onPressed: _saving ? null : _nextQuestion,
+                                    style: FilledButton.styleFrom(
+                                      padding: EdgeInsets.zero,
+                                      backgroundColor: widget.color,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 16),
+                                      decoration: BoxDecoration(
+                                        color: widget.color,
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Flexible(
+                                              child: Text(
+                                            _saving
+                                                ? 'Saving your score…'
+                                                : _currentQuestion <
+                                                        _questions.length - 1
+                                                    ? 'Next question'
+                                                    : 'See results',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15,
+                                              letterSpacing: -0.2,
+                                            ),
+                                          )),
+                                          const SizedBox(width: 6),
+                                          Icon(
+                                            _currentQuestion <
+                                                    _questions.length - 1
+                                                ? Icons
+                                                    .arrow_forward_ios_rounded
+                                                : Icons.emoji_events_rounded,
+                                            size: 14,
+                                            color: Colors.white,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                            ],
-                          ))))),
-            )),
+                              ],
+                            ))))),
+              )),
+        ),
       ),
     );
   }

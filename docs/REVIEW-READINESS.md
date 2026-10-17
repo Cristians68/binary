@@ -1,11 +1,21 @@
-# Binary Academy review readiness — 2026-10-13
+# Binary Academy review readiness — 2026-10-16
 
-Version: **1.0.8+62**. Local code is ready for review. App Store submission still
+Version: **1.0.9+63**. Local code is ready for review. App Store submission still
 requires production and physical-device verification. Codemagic determines the
 actual TestFlight build number and stamps the source revision.
 
 ## Changes to review
 
+- Quiz results show the pass mark and offer mistake review with the selected
+  answer, correct answer and explanation. Perfect attempts offer all-answer
+  review. Retakes clear old answers and reshuffle options; reviewing
+  does not resubmit scores or change spaced-repetition schedules.
+- Quiz feedback announces correctness and identifies the correct answer without
+  relying on color. Dark-mode answer text and result actions have clearer
+  contrast. Results and review scroll at doubled text on small phones.
+- Questions and retakes reset scrolling. Leaving an answered quiz requires
+  confirmation, and back navigation is blocked while saving. System back from
+  mistake review returns to the summary with the results intact.
 - Courses show three concrete skills each. Search matches skill summaries,
   descriptions and multiple words; subject filters use canonical metadata even
   when a stored course tag is outdated. Onboarding previews those skills.
@@ -29,20 +39,22 @@ actual TestFlight build number and stamps the source revision.
 | Check | Result |
 | --- | --- |
 | Flutter analyzer | Zero issues |
-| Full Flutter suite | 674 passing |
-| Backend suite | 49 passing |
-| Firestore emulator | 16 passing |
-| iOS archive verifier tests | 9 passing |
-| Offline seed validation | 7 scripts, 504 flashcards and 504 questions; zero errors/warnings |
-| Validator mutation self-tests | 14 fault classes detected; clean control passes |
-| UI preview gate | 32 captures; zero runtime exceptions or overflows |
+| Full Flutter suite | 682 passing |
+| Backend suite | 49 passing on October 15; backend unchanged |
+| Firestore emulator | 16 passing on October 15; rules unchanged |
+| iOS archive verifier tests | 9 passing on October 15; native files unchanged |
+| Offline seed validation | October 15: 7 scripts, 504 flashcards and 504 questions; zero errors/warnings |
+| Validator mutation self-tests | October 15: 14 fault classes detected; clean control passes |
+| UI preview gate | 9 targeted quiz captures; zero runtime exceptions or overflows |
 | JavaScript release web build | Success |
 
 Visual evidence is local under `.dart_tool/ui-review/`. Chrome uses actual
 Flutter widgets, fake Firestore and fictional learner data. It checks runtime
 exceptions and overflow, including onboarding, course cards, review feedback,
-review results and empty states at 320px with doubled text. This does not prove
-VoiceOver behavior, StoreKit, Face ID or iOS-native authentication.
+review results and empty states at 320px with doubled text. The 32 earlier
+captures passed on October 13; this pass refreshes nine quiz feedback, results,
+review and action captures, including dark mode and 320px doubled text. This
+does not prove VoiceOver behavior, StoreKit, Face ID or iOS-native authentication.
 
 The JavaScript web release is the supported web build. The existing optional
 Wasm probe warning comes from `purchases_flutter`; no Wasm release is claimed.
@@ -90,6 +102,9 @@ deletion must work end to end before submission.
 For the build containing these changes, a reviewer can skip onboarding and use
 **Continue as guest**, then open **Courses**, select a course, and study its
 free first module. Reveal flashcards, take its quiz, and read the explanations.
+On the result screen, open **Review mistakes** (or **Review answers** after a
+perfect attempt), return to the summary, and try again. After answering one
+question, use **Lesson** and **Keep going** to verify that answers are retained.
 Missed published questions become available in **Review** from Home. Review
 practice does not award course completion.
 

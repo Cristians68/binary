@@ -30,6 +30,40 @@ async function tap(page, label) {
   await page.mouse.click(bounds.x, bounds.y);
   await sleep(500);
 }
+async function reveal(page, label) {
+  await page.mouse.move(160, 300);
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const bounds = await page.evaluate(label => {
+      const node = [...document.querySelectorAll('flt-semantics')].find(n =>
+        (n.getAttribute('aria-label') || n.textContent || '').trim() === label);
+      if (!node) return null;
+      const r = node.getBoundingClientRect();
+      return { top: r.top, bottom: r.bottom, height: r.height };
+    }, label);
+    if (bounds && bounds.height > 0 && bounds.top >= 0 && bounds.bottom <= page.viewport().height) {
+      await sleep(500);
+      return;
+    }
+    await page.mouse.wheel({ deltaY: bounds && bounds.top < 0 ? -200 : 200 });
+    await sleep(150);
+  }
+  throw new Error('Could not reach control: ' + label);
+}
+async function tapVisible(page, label) {
+  await reveal(page, label);
+  await tap(page, label);
+}
+async function scrollQuizToEnd(page) {
+  // Flutter may expose only the visible part of a clipped semantics node.
+  // Scroll these bounded, synthetic fixtures fully before capturing their
+  // final controls, then verify the control by actually activating it.
+  await page.mouse.move(160, 300);
+  for (let i = 0; i < 20; i++) {
+    await page.mouse.wheel({ deltaY: 600 });
+    await sleep(100);
+  }
+  await sleep(500);
+}
 (async () => {
   let browser;
   try {
@@ -91,6 +125,20 @@ async function tap(page, label) {
       { name: '17-review-summary', screen: 'review', reviewAnswer: true, reviewFinish: true },
       { name: '18-review-empty', screen: 'review-empty' },
       { name: '19-onboarding-skills', screen: 'onboarding', onboardingSkills: true },
+      { name: '20-quiz-results', screen: 'quiz-feedback', quizFeedback: true },
+      { name: '21-quiz-mistakes', screen: 'quiz-feedback', quizFeedback: true, quizMistakes: true },
+      { name: '22-quiz-mistakes-dark', screen: 'quiz-feedback', quizFeedback: true, quizMistakes: true, dark: true },
+      { name: '23-quiz-answer-dark', screen: 'quiz-feedback', quizAnswer: true, dark: true },
+      { name: 'large-text-quiz-answer', screen: 'quiz-feedback', quizAnswer: true,
+        width: 320, height: 568, scale: 2 },
+      { name: 'large-text-quiz-results', screen: 'quiz-feedback', quizFeedback: true,
+        width: 320, height: 568, scale: 2 },
+      { name: 'large-text-quiz-mistakes', screen: 'quiz-feedback', quizFeedback: true, quizMistakes: true,
+        width: 320, height: 568, scale: 2 },
+      { name: 'large-text-quiz-results-actions', screen: 'quiz-feedback', quizFeedback: true,
+        quizActions: true, width: 320, height: 568, scale: 2 },
+      { name: 'large-text-quiz-mistakes-actions', screen: 'quiz-feedback', quizFeedback: true,
+        quizMistakes: true, quizActions: true, width: 320, height: 568, scale: 2 },
       ...['welcome', 'home', 'courses', 'progress', 'paywall', 'onboarding', 'legal'].map(screen => ({
         name: 'large-text-' + screen, screen, width: 320, height: 568, scale: 2,
       })),
@@ -105,7 +153,8 @@ async function tap(page, label) {
       { name: 'large-text-review-summary', screen: 'review', width: 320, height: 568, scale: 2,
         reviewAnswer: true, reviewFinish: true },
     ];
-    for (const fixture of fixtures.filter(f => !process.argv[2] || f.name === process.argv[2])) {
+    for (const fixture of fixtures.filter(f => !process.argv[2] || f.name === process.argv[2] ||
+      (process.argv[2] === '--quiz-feedback' && (f.quizFeedback || f.quizAnswer)))) {
       await page.setViewport({ width: fixture.width || 440, height: fixture.height || 956, deviceScaleFactor: 3 });
       await page.goto('http://127.0.0.1:' + server.address().port + '/?screen=' + fixture.screen +
         '&dark=' + (fixture.dark ? 1 : 0) + '&scale=' + (fixture.scale || 1), { waitUntil: 'domcontentloaded' });
@@ -118,6 +167,18 @@ async function tap(page, label) {
       if (fixture.sample) await tap(page, 'Practice with a sample');
       if (fixture.advance) { await tap(page, 'Continue'); await tap(page, 'DNS'); }
       if (fixture.onboardingSkills) { await tap(page, 'Continue'); await tap(page, 'Continue'); }
+      if (fixture.quizAnswer) {
+        await tapVisible(page, 'DHCP');
+        if (fixture.scale) await scrollQuizToEnd(page);
+      }
+      if (fixture.quizFeedback) {
+        await tapVisible(page, 'DHCP');
+        await tapVisible(page, 'Next question');
+        await tapVisible(page, 'Check the cable and link lights');
+        await tapVisible(page, 'See results');
+        if (fixture.quizMistakes) await tapVisible(page, 'Review mistakes (1)');
+        if (fixture.quizActions) await scrollQuizToEnd(page);
+      }
       if (fixture.reviewAnswer) {
         // At large text sizes, answers are below the initial viewport.
         await page.mouse.move(160, 320);
@@ -165,6 +226,12 @@ async function tap(page, label) {
         .map(n => n.getAttribute('aria-label') || n.textContent).filter(Boolean));
       fs.writeFileSync(path.join(out, fixture.name + '.json'), JSON.stringify(labels, null, 2));
       console.log('Captured ' + fixture.name);
+      if (fixture.quizActions) {
+        await tap(page, 'Try again');
+        await page.waitForFunction(() => [...document.querySelectorAll('flt-semantics')]
+          .some(n => (n.getAttribute('aria-label') || n.textContent || '').trim() === 'Question 1 of 2' &&
+            n.getBoundingClientRect().top >= 0 && n.getBoundingClientRect().bottom <= innerHeight));
+      }
     }
     if (engineFontFetches.size) {
       console.log('[web-only engine fallback fonts, not shipped on iOS] ' +

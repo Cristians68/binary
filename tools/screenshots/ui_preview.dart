@@ -38,6 +38,7 @@ Future<void> main() async {
   final db = FakeFirebaseFirestore();
   ServiceBackend.useFake(db, uid: 'design-preview');
   final storeCapture = Uri.base.queryParameters['store'] == '1';
+  final screen = Uri.base.queryParameters['screen'] ?? 'onboarding';
   const network = 'binary-network-professional';
   final data = jsonDecode(fixtureContentJson) as Map<String, dynamic>;
   final courses = (data['courses'] as List).cast<Map<String, dynamic>>();
@@ -97,7 +98,25 @@ Future<void> main() async {
   await db.doc('users/design-preview/progress/$network').set({'progress': .4});
 
   final dark = Uri.base.queryParameters['dark'] == '1';
-  final screen = Uri.base.queryParameters['screen'] ?? 'onboarding';
+  if (screen == 'quiz-feedback') {
+    for (var i = 1; i <= 2; i++) {
+      await db
+          .doc('courses/$network/modules/${modules.first['id']}/quiz/feedback-$i')
+          .set({
+        'order': i,
+        'question': i == 1
+            ? 'Which service translates a website name into an IP address?'
+            : 'What should you check first when a wired connection is down?',
+        'options': i == 1
+            ? ['DNS', 'DHCP']
+            : ['Check the cable and link lights', 'Replace every device'],
+        'correctIndex': 0,
+        'explanation': i == 1
+            ? 'DNS resolves names to IP addresses. DHCP leases network settings to devices.'
+            : 'Start with the physical connection before changing network settings.',
+      });
+    }
+  }
   if (screen == 'review') {
     await ReviewService.recordMiss(
       courseId: 'itil-v4',
@@ -136,13 +155,13 @@ Future<void> main() async {
         color: Color(networkData['color']),
         moduleId: module['id'],
         courseId: network),
-    'quiz' => QuizScreen(
+    'quiz' || 'quiz-feedback' => QuizScreen(
         moduleTitle: displayModuleTitle(module['title']),
         courseTag: 'Binary Network Pro',
         color: Color(networkData['color']),
         moduleId: module['id'],
         courseId: network,
-        practiceOnly: !storeCapture),
+        practiceOnly: screen == 'quiz' && !storeCapture),
     _ => const HomeScreen(learnerName: 'Alex'),
   };
   final hasTabs = ['home', 'courses', 'progress'].contains(screen);

@@ -1,8 +1,56 @@
-# B1nary — handoff (last updated 2026-10-13)
+# B1nary — handoff (last updated 2026-10-16)
 
 Read this first. It records what is live, what is waiting on the owner, and
 the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 `docs/IOS-GOOGLE-SIGNIN-AUDIT.md`, `docs/SECURITY.md` and `docs/RELEASE.md`.
+
+## 2026-10-16 — quiz feedback and navigation, version 1.0.9+63
+
+The owner resumed the October 15 work, including the previously requested
+version bump and commit/push to master. Remote master matched the starting
+revision `d63ff4d` when fetched on October 16.
+
+- Results show the pass mark and offer mistake review with the selected
+  answer, correct answer and explanation. Perfect attempts offer all-answer
+  review. Viewing feedback cannot resubmit scores or change review schedules.
+- Retakes clear old answers, reshuffle options and reset scrolling. Each new
+  question also starts at the top. Leaving an answered quiz requires
+  confirmation; back navigation is blocked during saving.
+- Immediate feedback announces correctness and names the correct answer after
+  a miss. Options expose descriptive accessibility labels and support focus.
+  System back from result review returns to the summary without losing scores.
+- Visual inspection caught low-contrast dark-mode result controls and answer
+  labels; these now use readable text colors. The nine quiz browser fixtures
+  cover feedback, results, review, dark mode and 320px doubled text, including
+  scrolling to the final actions and starting a fresh attempt.
+- Eight quiz widget regressions cover review accuracy, unchanged schedules,
+  retakes, scrolling, exits, system back and screen-reader feedback. Their
+  storage helper drains both real and fake async clocks; reset the review
+  queue between tests to avoid retaining callbacks from a disposed test clock.
+
+Verification on October 16: all **682 Flutter tests** pass, analysis reports
+zero issues, and JavaScript release and debug preview web builds succeed.
+The existing optional Wasm probe warning remains in `purchases_flutter`.
+The targeted browser captures check runtime errors/overflows and are inspected
+visually. They use fake Firestore and synthetic questions, not learner data.
+
+Unchanged components retain the October 15 verification: backend lint and
+**49 backend tests**, **16 Firestore emulator tests**, **9 iOS archive-verifier
+tests**, 504 flashcards and 504 quiz questions with zero validation errors or
+warnings, and all 14 injected content fault classes detected. See
+[REVIEW-READINESS.md](REVIEW-READINESS.md) for scope and the reviewer route.
+
+Local evidence stays ignored under `.dart_tool/ui-review/`,
+`.dart_tool/release-tests-1.0.9.log` and `.dart_tool/security-tests-1.0.9.log`.
+Flutter requires SDK-cache access outside the sandbox on this machine. Use
+`C:\flutter\bin\flutter.bat`; direct formatting uses
+`C:\flutter\bin\cache\dart-sdk\bin\dart.exe`.
+
+Next release work: verify the unresolved production billing/functions setup,
+then build the intended source revision in Codemagic and perform the iPhone
+purchase/restore/deletion, session and accessibility checks listed below.
+No production deployment, content writes, TestFlight build or App Store
+submission ran. The October 5 production findings were not rechecked here.
 
 ## 2026-10-13 — learning and review audit
 
