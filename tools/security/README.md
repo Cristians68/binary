@@ -24,7 +24,7 @@ file refuses a missing or non-loopback emulator host. All accounts and course
 content are synthetic. Production data and configuration are untouched.
 
 `firestore.rules.test.js` loads the real root rules and clears the demo database
-between its 16 scenarios. Positive controls exercise real document and query
+between its 20 scenarios. Positive controls exercise real document and query
 reads, so a broken fixture cannot masquerade as secure access denial. Coverage:
 
 - Guest metadata and both preview module IDs; signed-out and unpaid denials.
@@ -32,6 +32,14 @@ reads, so a broken fixture cannot masquerade as secure access denial. Coverage:
 - Refund/transfer revocation and denial of unresolved receipts/pending checkouts.
 - Old forged profile lists, protected field writes/removals, private purchase data.
 - Owner progress/attempts, private photo shape and byte limits, admin-only content.
+
+Four scenarios also execute `functions/purchase_reconciliation.js` with the
+Admin SDK against the emulator before checking access as an authenticated
+learner. These cover purchase-to-unlock, profile-cache restoration, partial
+refunds, bundle receipt transfers, All Courses with an independent purchase,
+and unbound receipts. Only the RevenueCat responses are synthetic. The test-only
+`firebase-admin` dependency lets these run without installing `functions/`
+dependencies first. Loopback and demo-project guards run before Admin initializes.
 
 Both Codemagic workflows run this gate before an iOS archive can be produced.
 The local suite complements the deployed-rule probe below; it cannot establish
@@ -43,7 +51,10 @@ version. After compatible fixes on 2026-10-05, npm still reports 11 transitive
 CLI advisories (7 high, 4 moderate, involving braces, proxy/FTP handling,
 OpenTelemetry and uuid). These are not part of the Flutter or Functions package.
 Do not use `npm audit fix --force` to downgrade Firebase or the CLI; review
-upstream updates and rerun this suite when adjusting the lockfile.
+upstream updates and rerun this suite when adjusting the lockfile. Adding the
+test-only Admin SDK on October 18 produced 17 reported tooling advisories
+(7 high, 10 moderate); no forced dependency downgrade was applied. This does
+not describe the separate production `functions/` dependency tree.
 
 Reference: [Firebase rules testing](https://firebase.google.com/docs/rules/unit-tests)
 and [the Firestore emulator](https://firebase.google.com/docs/emulator-suite/connect_firestore).

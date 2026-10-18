@@ -106,6 +106,52 @@ void main() {
     expect(find.text('Room for something new'), findsOneWidget);
   });
 
+  testWidgets('search ignores case and clearing restores the current category',
+      (tester) async {
+    await pump(tester, const CoursesScreen());
+    await tester.enterText(find.byType(TextField), '  CLOuD  ');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(find.text('Cloud Fundamentals'), findsOneWidget);
+    expect(find.text('Network Professional'), findsNothing);
+    await tester.tap(find.byTooltip('Clear search'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 courses to explore'), findsOneWidget);
+    expect(find.byTooltip('Clear search'), findsNothing);
+    await tap(tester, 'Networking');
+    await tester.enterText(find.byType(TextField), 'no-such-course');
+    await tester.pumpAndSettle();
+    expect(find.text('Room for something new'), findsOneWidget);
+    await tester.tap(find.byTooltip('Clear search'));
+    await tester.pumpAndSettle();
+    expect(find.text('Network Professional'), findsOneWidget);
+    expect(find.text('Cloud Fundamentals'), findsNothing);
+    expect(find.text('1 course to explore'), findsOneWidget);
+  });
+
+  testWidgets('search finds every catalogue course by its title',
+      (tester) async {
+    for (var index = 0; index < kCourseCatalog.length; index++) {
+      final course = kCourseCatalog[index];
+      await db.doc('courses/${course.id}').set({
+        'order': index,
+        'tag': course.tag,
+        'totalModules': 8,
+      });
+    }
+    await pump(tester, const CoursesScreen());
+    for (final course in kCourseCatalog) {
+      await tester.enterText(find.byType(TextField), course.title);
+      await tester.pumpAndSettle();
+      expect(
+          find.byWidgetPredicate(
+              (widget) => widget is Text && widget.data == course.title),
+          findsOneWidget,
+          reason: 'Searching ${course.title} must return its course card');
+      // Search also matches skills/descriptions, so related courses may match.
+    }
+  });
+
   testWidgets('continue learning follows live personal course progress',
       (tester) async {
     await db.doc('users/learner').set({

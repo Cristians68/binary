@@ -81,10 +81,11 @@ Use targeted updates that preserve document IDs and learner progress, following
 
 ## Remaining submission gates
 
-The last production audit, **2026-10-05**, found Firebase billing disabled and
-zero deployed Cloud Functions. Those findings were not refreshed in this pass;
-treat them as unresolved until verified. Purchases, restores and account
-deletion must work end to end before submission.
+The production audit on **2026-10-18** confirmed Firebase billing disabled,
+zero deployed Cloud Functions, Secret Manager disabled, and older deployed
+Firestore rules lacking multiple-course purchase authorization. See
+[PAYMENT-AUDIT-2026-10-18.md](PAYMENT-AUDIT-2026-10-18.md). Purchases, restores
+and account deletion must work end to end before submission.
 
 1. Confirm Blaze billing, store agreements/products, RevenueCat configuration,
    secrets and any legacy receipt bindings. Follow [PURCHASES.md](PURCHASES.md)

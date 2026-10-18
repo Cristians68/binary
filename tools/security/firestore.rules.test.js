@@ -10,7 +10,10 @@ const {
   doc, collection, getDocFromServer, getDocsFromServer, setDoc, updateDoc,
   deleteDoc, deleteField, writeBatch, Timestamp, Bytes, setLogLevel,
 } = require('firebase/firestore');
-const {COURSE_IDS} = require('../../functions/purchase_catalog');
+const {COURSE_IDS, COURSE_PRODUCTS, BUNDLE4, ALL} = require('../../functions/purchase_catalog');
+const {createPurchaseService} = require('../../functions/purchase_reconciliation');
+const {initializeApp, deleteApp} = require('firebase-admin/app');
+const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 
 const projectId = 'demo-binary-release';
 const courses = [...COURSE_IDS];
@@ -20,6 +23,8 @@ let environment;
 let learner;
 let other;
 let signedOut;
+let adminApp;
+let adminDb;
 
 const contentPath = (course, module = 'module-2', kind = 'body') =>
   `courses/${course}/modules/${module}/${kind}/example`;
@@ -61,6 +66,9 @@ before(async () => {
   learner = environment.authenticatedContext('learner').firestore();
   other = environment.authenticatedContext('other').firestore();
   signedOut = environment.unauthenticatedContext().firestore();
+  // Only initialize Admin after the loopback/demo-project guards above pass.
+  adminApp = initializeApp({projectId}, 'purchase-emulator');
+  adminDb = getFirestore(adminApp);
 });
 
 beforeEach(async () => {
@@ -79,7 +87,11 @@ beforeEach(async () => {
   await seed(entries);
 });
 
-after(async () => environment?.cleanup());
+after(async () => {
+  await adminDb?.terminate();
+  if (adminApp) await deleteApp(adminApp);
+  await environment?.cleanup();
+});
 
 test('a guest can browse metadata and every preview content collection', async () => {
   const guest = environment.authenticatedContext('guest', {
@@ -282,4 +294,110 @@ test('only an allowlisted administrator can edit shared course content', async (
   await seed([['admins/editor', {enabled: true}]]);
   const editor = environment.authenticatedContext('editor').firestore();
   for (const documentPath of targets) await assertSucceeds(save(editor, documentPath, {title: 'Changed'}));
+});
+
+// These scenarios run the shipping reconciliation code and Admin transactions.
+// Only RevenueCat's HTTP response is synthetic; access is read through the real
+// rules with learner credentials, never through the Admin SDK.
+function paymentHarness() {
+  const inventories = new Map();
+  const now = Date.now();
+  let checkedAt = now;
+  const service = createPurchaseService({
+    db: adminDb,
+    fetchCustomer: async uid => ({request_date_ms: ++checkedAt,
+      subscriber: {non_subscriptions: inventories.get(uid) || {}}}),
+    serverTimestamp: () => FieldValue.serverTimestamp(),
+    now: () => now,
+  });
+  const receipt = id => [{id, store: 'app_store', is_sandbox: true,
+    purchase_date: new Date(now + 1).toISOString()}];
+  return {service, inventories, receipt};
+}
+
+const productFor = course => Object.keys(COURSE_PRODUCTS)
+  .find(product => COURSE_PRODUCTS[product] === course);
+
+test('real reconciliation unlocks two purchases, restores a missing profile cache and applies a partial refund', async () => {
+  const {service, inventories, receipt} = paymentHarness();
+  assert.equal((await service.prepare('learner', {
+    productId: productFor(courseA), courseId: courseA,
+  })).alreadyOwned, false);
+  await assertFails(read(learner, contentPath(courseA)));
+  const first = {[productFor(courseA)]: receipt('receipt-a')};
+  inventories.set('learner', first);
+  await service.refresh('learner');
+  await assertSucceeds(read(learner, contentPath(courseA)));
+  await assertFails(read(learner, contentPath(courseB)));
+  await service.prepare('learner', {productId: productFor(courseB), courseId: courseB});
+  inventories.set('learner', {...first, [productFor(courseB)]: receipt('receipt-b')});
+  await service.refresh('learner');
+  for (const course of [courseA, courseB]) {
+    for (const kind of contentKinds) await assertSucceeds(read(learner, contentPath(course, 'module-2', kind)));
+  }
+  await assertFails(read(learner, contentPath(courseC)));
+  assert.equal((await service.prepare('learner', {
+    productId: productFor(courseB), courseId: courseB,
+  })).alreadyOwned, true);
+  await adminDb.doc('users/learner').set({name: 'Test learner'});
+  await assertFails(read(learner, contentPath(courseB)));
+  await service.refresh('learner');
+  await assertSucceeds(read(learner, contentPath(courseA)));
+  await assertSucceeds(read(learner, contentPath(courseB)));
+  inventories.set('learner', first);
+  await service.refresh('learner');
+  await assertSucceeds(read(learner, contentPath(courseA)));
+  await assertFails(read(learner, contentPath(courseB)));
+});
+
+test('real bundle reconciliation preserves four choices when a receipt transfers to another account', async () => {
+  const {service, inventories, receipt} = paymentHarness();
+  const selection = courses.slice(0, 4);
+  await service.prepare('learner', {productId: BUNDLE4, courseIds: selection});
+  await assertFails(read(learner, contentPath(courseA)));
+  const inventory = {[BUNDLE4]: receipt('bundle-receipt')};
+  inventories.set('learner', inventory);
+  await service.refresh('learner');
+  for (const course of selection) await assertSucceeds(read(learner, contentPath(course)));
+  await assertFails(read(learner, contentPath(courses[4])));
+  inventories.set('learner', {});
+  inventories.set('other', inventory);
+  await service.refresh('learner');
+  await service.refresh('other');
+  for (const course of selection) {
+    await assertFails(read(learner, contentPath(course)));
+    await assertSucceeds(read(other, contentPath(course)));
+  }
+  await assertFails(read(other, contentPath(courses[4])));
+  await assert.rejects(service.prepare('other', {
+    productId: BUNDLE4, courseIds: courses.slice(1, 5),
+  }), error => error.code === 'failed-precondition');
+});
+
+test('real All Courses reconciliation unlocks every course and a refund retains an independent purchase', async () => {
+  const {service, inventories, receipt} = paymentHarness();
+  await service.prepare('learner', {productId: ALL});
+  await assertFails(read(learner, contentPath(courseA)));
+  const single = {[productFor(courseA)]: receipt('single-with-all')};
+  inventories.set('learner', {...single, [ALL]: receipt('all-receipt')});
+  await service.refresh('learner');
+  for (const course of courses) await assertSucceeds(read(learner, contentPath(course)));
+  inventories.set('learner', single);
+  await service.refresh('learner');
+  await assertSucceeds(read(learner, contentPath(courseA)));
+  for (const course of courses.slice(1)) await assertFails(read(learner, contentPath(course)));
+});
+
+test('real reconciliation keeps an unbound bundle locked and rejects client attempts to bind it', async () => {
+  const {service, inventories, receipt} = paymentHarness();
+  inventories.set('learner', {[BUNDLE4]: receipt('unbound-receipt')});
+  const result = await service.refresh('learner');
+  assert.deepEqual(result.unresolvedProductIds, [BUNDLE4]);
+  for (const course of courses) await assertFails(read(learner, contentPath(course)));
+  await assertFails(save(learner, `users/learner/purchaseIntents/${BUNDLE4}`, {
+    courseIds: courses.slice(0, 4), createdAtMs: Date.now(),
+  }));
+  await assert.rejects(service.prepare('learner', {
+    productId: BUNDLE4, courseIds: courses.slice(0, 4),
+  }), error => error.code === 'failed-precondition');
 });

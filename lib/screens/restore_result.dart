@@ -9,7 +9,7 @@
 ///
 /// There is a fourth state that `bool` could not express at all, and it is the
 /// one that matters most here. Entitlements are written to Firestore by the
-/// RevenueCat webhook, never by the client (see subscription_service.dart).
+/// verified backend reconciliation, never by the client (see subscription_service.dart).
 /// So the store can confirm an active purchase while the account still shows
 /// no plan — during a webhook delay, or whenever the Cloud Functions that
 /// receive it are not deployed. The old code returned `true` for that, closed
@@ -21,8 +21,8 @@ enum RestoreOutcome {
   /// The purchase was found AND the account now reflects it. Access is live.
   applied,
 
-  /// The store confirmed an active entitlement, but the account still showed
-  /// no plan after waiting for it. The purchase is safe; activation is late.
+  /// A purchase record was found, but restored access is not yet verified.
+  /// A historical store record alone does not prove current ownership.
   pendingActivation,
 
   /// The store has nothing to restore for this Apple ID. This is the only
@@ -81,10 +81,9 @@ class RestoreResult {
       case RestoreOutcome.applied:
         return 'Your purchases have been restored.';
       case RestoreOutcome.pendingActivation:
-        return 'We found your purchase, but your account has not finished '
-            'updating yet. This usually clears within a minute — reopen the '
-            'app and try again. If it does not, contact support and mention '
-            'that the purchase is confirmed but not activated.';
+        return 'A purchase record was found, but restored course access is '
+            'not confirmed yet. Try Restore purchases again. If your courses '
+            'stay locked, contact support. Do not buy again to resolve this.';
       case RestoreOutcome.nothingToRestore:
         return 'No previous purchases were found on this Apple ID. Make sure '
             'you are signed in to the same Apple ID you bought with.';

@@ -68,7 +68,8 @@ void main() {
     test('a pending activation is not phrased as a failure', () {
       final result = const RestoreResult.pending();
       expect(result.title, 'Purchase Found');
-      expect(result.displayMessage, contains('found your purchase'));
+      expect(result.displayMessage, contains('purchase record was found'));
+      expect(result.displayMessage, contains('Do not buy again'));
       expect(result.title.toLowerCase(), isNot(contains('fail')));
     });
 
@@ -92,7 +93,8 @@ void main() {
         message: 'The App Store could not be reached',
       );
       expect(result.displayMessage, contains('STORE_PROBLEM'));
-      expect(result.displayMessage, contains('The App Store could not be reached'));
+      expect(result.displayMessage,
+          contains('The App Store could not be reached'));
     });
 
     test('a bare failure still reads as a sentence', () {

@@ -1,13 +1,14 @@
 # B1nary — release runbook
 
-Current checkpoint: **2026-10-09**. Read [HANDOFF.md](HANDOFF.md) first; the
+Current checkpoint: **2026-10-18**. Read [HANDOFF.md](HANDOFF.md) first; the
 platform setup instructions below retain their historical context.
 
 - **Local release checks:** app tests, backend lint/tests, iOS archive tests,
   real Firestore rules tests, and the JavaScript release build pass. Both
   Codemagic workflows now gate on the rules emulator with Node 22 / Java 21.
-- **Firebase:** the October 5 read-only audit found billing disabled and no Cloud
-  Functions deployed; this has not been rechecked on October 9. Enable billing, configure products/secrets, then
+- **Firebase:** the October 18 read-only audit confirmed billing disabled, no
+  deployed Cloud Functions, disabled Secret Manager and older deployed rules.
+  See [the audit](PAYMENT-AUDIT-2026-10-18.md). Enable billing, configure products/secrets, then
   follow [PURCHASES.md](PURCHASES.md) for functions-before-rules deployment.
 - **iOS / App Store:** the owner confirmed Apple sign-in working on October 7.
   Session recovery, account deletion and real sandbox purchase flows still need

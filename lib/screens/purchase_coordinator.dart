@@ -162,34 +162,46 @@ class PurchaseCoordinator {
       storeFoundPurchase = await restoreStore();
       _checkAccount(uid);
       for (var attempt = 0; attempt < attempts; attempt++) {
-        final state = await refresh();
         _checkAccount(uid);
-        final products = state['activeProductIds'];
-        if (products is! List) {
-          throw const PurchaseFailure('Could not verify restored purchases.');
-        }
-        if (products.isEmpty) {
-          if (storeFoundPurchase && attempt + 1 < attempts) {
-            await pause();
-            continue;
+        try {
+          final state = await refresh();
+          _checkAccount(uid);
+          final products = state['activeProductIds'];
+          final unresolved = state['unresolvedProductIds'];
+          final courses = state['purchasedCourseIds'];
+          if (products is! List ||
+              !products
+                  .every((id) => id is String && isKnownPurchaseProduct(id)) ||
+              unresolved is! List ||
+              !unresolved
+                  .every((id) => id is String && products.contains(id)) ||
+              courses is! List ||
+              !courses.every((id) => kCourseCatalog.any((c) => c.id == id))) {
+            throw const PurchaseFailure('Could not verify restored purchases.');
           }
-          return const RestoreResult.nothing();
+          if (products.isEmpty) {
+            // A store-reported receipt may not yet be in the server snapshot.
+            // Do not turn that discrepancy into "nothing to restore".
+            if (!storeFoundPurchase) return const RestoreResult.nothing();
+          } else {
+            storeFoundPurchase = true;
+            if (unresolved.isNotEmpty) return const RestoreResult.pending();
+            final data = await readAccount(uid);
+            _checkAccount(uid);
+            final applied = state['subscriptionPlan'] == 'all'
+                ? data['subscriptionPlan'] == 'all'
+                : courses.isNotEmpty &&
+                    courses.every((id) => paidCourseAccess(data, id as String));
+            if (applied) return const RestoreResult.applied();
+          }
+        } on PurchaseFailure {
+          rethrow;
+        } catch (_) {
+          // Retry verification only. Repeating restoreStore can prompt or
+          // transfer the receipt a second time.
+          _checkAccount(uid);
+          if (attempt + 1 == attempts) rethrow;
         }
-        storeFoundPurchase = true;
-        final unresolved = state['unresolvedProductIds'];
-        if (unresolved is List && unresolved.isNotEmpty) {
-          return const RestoreResult.pending();
-        }
-        final data = await readAccount(uid);
-        _checkAccount(uid);
-        final courses = state['purchasedCourseIds'];
-        final applied = state['subscriptionPlan'] == 'all'
-            ? data['subscriptionPlan'] == 'all'
-            : courses is List &&
-                courses.isNotEmpty &&
-                courses
-                    .every((id) => id is String && paidCourseAccess(data, id));
-        if (applied) return const RestoreResult.applied();
         if (attempt + 1 < attempts) await pause();
       }
       return const RestoreResult.pending();

@@ -1,9 +1,12 @@
-# Purchases — local implementation, 2026-09-24
+# Purchases — local implementation, updated 2026-10-18
 
 This code is tested locally and **not deployed**. Start with `HANDOFF.md`.
-Real StoreKit purchase/restore still needs testing. On 2026-10-05, the actual
-Firestore rules passed 16 local emulator scenarios; see `tools/security/README.md`.
-The same day's live audit confirmed billing disabled and zero deployed functions.
+Real StoreKit purchase/restore still needs testing. On 2026-10-18, 20 local
+emulator scenarios passed, including real purchase reconciliation followed by
+learner content reads. The live audit confirmed billing disabled, zero deployed
+functions, Secret Manager disabled, and older deployed rules lacking multiple
+course authorization. See [the audit](PAYMENT-AUDIT-2026-10-18.md) and
+`tools/security/README.md` for exact verification scope and next steps.
 
 ## Products and store setup
 

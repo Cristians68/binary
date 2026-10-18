@@ -4,6 +4,36 @@ Read this first. It records what is live, what is waiting on the owner, and
 the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 `docs/IOS-GOOGLE-SIGNIN-AUDIT.md`, `docs/SECURITY.md` and `docs/RELEASE.md`.
 
+## 2026-10-18 — billing audit, restore fixes and search, 1.0.11+65
+
+The owner requested payment/unlock/restore verification, then search checks and
+a Community tab for questions, answers and study help. They subsequently asked
+to finish here, update pubspec, commit and push. Community remains future work;
+no implementation or organizational preference was finalized.
+
+**Fresh live audit: billing disabled, zero deployed Cloud Functions, Secret
+Manager API disabled, and older deployed Firestore rules.** The live rules lack
+the private snapshot authorization needed for multiple purchased courses.
+RevenueCat/App Store setup and real iOS transactions remain unverified. No
+connected browser/dashboard was available, and no billing upgrade was approved
+or performed. See [the full audit and next steps](PAYMENT-AUDIT-2026-10-18.md).
+
+Restore now preserves pending outcomes for delayed inventory, retries temporary
+verification/read failures, stops on account changes before another request,
+and rejects incomplete responses. Five regressions reproduced the old failures.
+Search checks cover all seven titles, skills, case/whitespace, filters, clear,
+empty results and the keyboard action. There was no search implementation change.
+
+All **705 Flutter tests pass; analysis reports zero issues**. The 49 backend
+tests and lint pass. All 20 emulator tests pass, including four
+new scenarios that run the real reconciliation code and transactions before
+checking course access through the real rules. The RevenueCat responses are
+synthetic; this does not establish live billing readiness. No deployment,
+TestFlight build, actual charge/restore/refund, or App Store submission ran.
+
+`pubspec.yaml` and README now identify **1.0.11+65**. The previous iteration was
+committed and pushed as `d45e800` before this audit began.
+
 ## 2026-10-18 — finalize the pending 1.0.10+64 checkpoint
 
 Resuming found the October 17 implementation still uncommitted on `master`.

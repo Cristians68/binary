@@ -11,6 +11,9 @@ void main() {
   Object? preflightError;
   Object? refreshError;
   Future<void> Function()? duringBuy;
+  Future<void> Function()? duringRefresh;
+  Future<void> Function()? duringRead;
+  Future<void> Function()? duringPause;
   final single =
       PurchaseRequest(productId: 'binary_course_itsm', courseId: 'itil-v4');
 
@@ -27,6 +30,9 @@ void main() {
     preflightError = null;
     refreshError = null;
     duringBuy = null;
+    duringRefresh = null;
+    duringRead = null;
+    duringPause = null;
     coordinator = PurchaseCoordinator(
       currentUid: () => uid,
       identify: (id) async {
@@ -39,14 +45,18 @@ void main() {
       },
       refresh: () async {
         calls.add('refresh');
+        await duringRefresh?.call();
         if (refreshError != null) throw refreshError!;
         return state;
       },
       readAccount: (id) async {
         calls.add('read:$id');
+        await duringRead?.call();
         return account;
       },
-      pause: () async {},
+      pause: () async {
+        await duringPause?.call();
+      },
       attempts: 2,
     );
   });
@@ -187,6 +197,72 @@ void main() {
       'purchasedCourseIds': ['itil-v4']
     };
     expect((await coordinator.restore(() async => true)).isPending, isTrue);
+  });
+
+  test('a store purchase with delayed server inventory never reports nothing',
+      () async {
+    final result = await coordinator.restore(() async => true);
+    expect(result.isPending, isTrue);
+    expect(result.foundNothing, isFalse);
+    expect(calls.where((call) => call == 'refresh'), hasLength(2));
+  });
+
+  for (final boundary in ['refresh', 'read']) {
+    test(
+        'restore retries a transient $boundary failure without restoring twice',
+        () async {
+      state = {
+        'subscriptionPlan': 'single',
+        'activeProductIds': ['binary_course_itsm'],
+        'purchasedCourseIds': ['itil-v4'],
+        'unresolvedProductIds': [],
+      };
+      account = {
+        'subscriptionPlan': 'single',
+        'purchasedCourseIds': ['itil-v4'],
+      };
+      var failures = 0;
+      Future<void> failOnce() async {
+        if (failures++ == 0) throw StateError('temporary network failure');
+      }
+
+      if (boundary == 'refresh') {
+        duringRefresh = failOnce;
+      } else {
+        duringRead = failOnce;
+      }
+      var restores = 0;
+      final result = await coordinator.restore(() async {
+        restores++;
+        return true;
+      });
+      expect(result.isApplied, isTrue);
+      expect(restores, 1);
+      expect(calls.where((call) => call == 'refresh'), hasLength(2));
+    });
+  }
+
+  test('account change between restore retries stops the next server call',
+      () async {
+    duringPause = () async {
+      uid = 'someone-else';
+    };
+    final result = await coordinator.restore(() async => true);
+    expect(result.isFailure, isTrue);
+    expect(result.message, contains('account changed'));
+    expect(calls.where((call) => call == 'refresh'), hasLength(1));
+  });
+
+  test('a malformed restore response cannot claim all purchases were restored',
+      () async {
+    state = {
+      'subscriptionPlan': 'all',
+      'activeProductIds': [kProductBundleAll],
+      // Missing unresolvedProductIds must not look like an empty list.
+      'purchasedCourseIds': [],
+    };
+    account = {'subscriptionPlan': 'all'};
+    expect((await coordinator.restore(() async => true)).isApplied, isFalse);
   });
 
   test('restore reports success only after every verified course is readable',
