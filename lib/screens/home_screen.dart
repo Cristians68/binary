@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'auth_service.dart';
 import 'course_detail_screen.dart';
@@ -192,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _getFirstName() {
     if (widget.learnerName != null) return widget.learnerName!.split(' ').first;
-    final user = FirebaseAuth.instance.currentUser;
+    final user = ServiceBackend.auth.currentUser;
     if (user?.displayName != null && user!.displayName!.isNotEmpty) {
       return user.displayName!.split(' ')[0];
     }
@@ -246,7 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
               initials: _getFirstName().isNotEmpty
                   ? _getFirstName()[0].toUpperCase()
                   : 'U',
-              photoUrl: FirebaseAuth.instance.currentUser?.photoURL,
+              photoUrl: ServiceBackend.auth.currentUser?.photoURL,
             ),
             const SizedBox(height: 12),
             Text(
@@ -260,7 +259,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              FirebaseAuth.instance.currentUser?.email ?? '',
+              ServiceBackend.auth.currentUser?.email ?? '',
               style: TextStyle(fontSize: 13, color: theme.subtext),
             ),
             const SizedBox(height: 32),
@@ -495,7 +494,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildUpgradeCard(ThemeNotifier theme) => Material(
       color: theme.card,
-      borderRadius: BorderRadius.circular(16),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: theme.border)),
       child: InkWell(
         onTap: _openPaywall,
         borderRadius: BorderRadius.circular(16),
@@ -743,6 +744,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCourseCard(Map<String, dynamic> course, ThemeNotifier theme) {
     final color = Color(course['color'] ?? 0xFF6366F1);
+    final accent = theme.accent(color);
     final progress = (course['progress'] ?? 0.0).toDouble();
     return GestureDetector(
       onTap: () => _navigateToCourse(course),
@@ -778,7 +780,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(_iconForTag(course['tag'] ?? ''),
-                  color: color, size: 22),
+                  color: accent, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -801,7 +803,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       value: progress,
                       backgroundColor:
                           theme.isDark ? theme.border : AppColors.lightBorder,
-                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                      valueColor: AlwaysStoppedAnimation<Color>(accent),
                       minHeight: 4,
                     ),
                   ),
@@ -815,7 +817,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text('${(progress * 100).toInt()}%',
                     style: TextStyle(
                         fontSize: 13,
-                        color: color,
+                        color: accent,
                         fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
                 Icon(CupertinoIcons.chevron_right,

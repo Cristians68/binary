@@ -338,16 +338,16 @@ class _AnswerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final (border, bg, icon) = switch (state) {
       _TileState.correct => (
-          AppColors.green,
+          theme.accent(AppColors.green),
           AppColors.green.withValues(alpha: 0.12),
           CupertinoIcons.check_mark_circled_solid,
         ),
       _TileState.wrong => (
-          AppColors.red,
+          theme.accent(AppColors.red),
           AppColors.red.withValues(alpha: 0.12),
           CupertinoIcons.xmark_circle_fill,
         ),
-      _TileState.idle => (theme.border, theme.card, null),
+      _TileState.idle => (theme.outline, theme.card, null),
     };
 
     return Padding(

@@ -1,9 +1,9 @@
 # B1nary
 
-IT certification study app — flashcard lessons, timed quizzes, streaks and
+IT certification study app — flashcard lessons, recall practice, explained quizzes, streaks and
 badges — built in Flutter, shipping to iOS with a Firebase backend.
 
-Version `1.0.9+63` in `pubspec.yaml`; Codemagic derives the TestFlight build number.
+Version `1.0.10+64` in `pubspec.yaml`; Codemagic derives the TestFlight build number.
 Primary target is iOS; Android, web, macOS and Windows
 targets exist and build, but only iOS and web are exercised.
 

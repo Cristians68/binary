@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
 const puppeteer = require('puppeteer-core');
-const root = path.resolve(__dirname, '../../build/ui_preview');
+const root = path.resolve(__dirname, '../..', process.env.BINARY_UI_PREVIEW_DIR || 'build/ui_preview');
 const out = path.resolve(__dirname, '../../.dart_tool/ui-review');
 const types = { '.html': 'text/html', '.js': 'application/javascript', '.json': 'application/json',
   '.wasm': 'application/wasm', '.png': 'image/png', '.ttf': 'font/ttf', '.otf': 'font/otf' };
@@ -129,6 +129,25 @@ async function scrollQuizToEnd(page) {
       { name: '21-quiz-mistakes', screen: 'quiz-feedback', quizFeedback: true, quizMistakes: true },
       { name: '22-quiz-mistakes-dark', screen: 'quiz-feedback', quizFeedback: true, quizMistakes: true, dark: true },
       { name: '23-quiz-answer-dark', screen: 'quiz-feedback', quizAnswer: true, dark: true },
+      { name: '24-login', screen: 'login', focusField: true },
+      { name: '25-signup', screen: 'signup' },
+      { name: '26-profile', screen: 'profile' },
+      { name: '27-profile-feedback', screen: 'profile', profileFeedback: true },
+      { name: '28-navigation-desktop', screen: 'navigation', width: 1280, height: 900 },
+      { name: '29-login-dark', screen: 'login', dark: true, focusField: true },
+      { name: '30-profile-dark', screen: 'profile', dark: true },
+      { name: '31-lesson-dark', screen: 'lesson', sample: true, dark: true },
+      { name: '32-recall', screen: 'recall', recall: true },
+      { name: '33-recall-answer', screen: 'recall', recall: true, recallAnswer: true },
+      { name: '34-recall-summary', screen: 'recall', recall: true, recallSummary: true },
+      { name: '35-recall-dark', screen: 'recall', recall: true, recallAnswer: true, dark: true },
+      { name: '36-focused-practice', screen: 'quiz-feedback', quizFeedback: true, focused: true },
+      { name: '37-focused-summary', screen: 'quiz-feedback', quizFeedback: true, focused: true, focusedSummary: true },
+      { name: 'large-text-recall', screen: 'recall', recall: true, recallAnswer: true, width: 320, height: 568, scale: 2 },
+      { name: 'large-text-recall-summary', screen: 'recall', recall: true, recallSummary: true, width: 320, height: 568, scale: 2 },
+      { name: 'large-text-focused', screen: 'quiz-feedback', quizFeedback: true, focused: true, focusedSummary: true, width: 320, height: 568, scale: 2 },
+      { name: 'large-text-login', screen: 'login', width: 320, height: 568, scale: 2 },
+      { name: 'large-text-profile', screen: 'profile', width: 320, height: 568, scale: 2 },
       { name: 'large-text-quiz-answer', screen: 'quiz-feedback', quizAnswer: true,
         width: 320, height: 568, scale: 2 },
       { name: 'large-text-quiz-results', screen: 'quiz-feedback', quizFeedback: true,
@@ -154,7 +173,9 @@ async function scrollQuizToEnd(page) {
         reviewAnswer: true, reviewFinish: true },
     ];
     for (const fixture of fixtures.filter(f => !process.argv[2] || f.name === process.argv[2] ||
-      (process.argv[2] === '--quiz-feedback' && (f.quizFeedback || f.quizAnswer)))) {
+      (process.argv[2] === '--quiz-feedback' && (f.quizFeedback || f.quizAnswer)) ||
+      (process.argv[2] === '--polish' && ['04-library', '07-lesson', '26-profile', '30-profile-dark', '31-lesson-dark', '35-recall-dark', 'large-text-courses', 'large-text-login'].includes(f.name)) ||
+      (process.argv[2] === '--practice' && (f.recall || f.focused)))) {
       await page.setViewport({ width: fixture.width || 440, height: fixture.height || 956, deviceScaleFactor: 3 });
       await page.goto('http://127.0.0.1:' + server.address().port + '/?screen=' + fixture.screen +
         '&dark=' + (fixture.dark ? 1 : 0) + '&scale=' + (fixture.scale || 1), { waitUntil: 'domcontentloaded' });
@@ -165,8 +186,21 @@ async function scrollQuizToEnd(page) {
       }, { timeout: 45000 });
       await sleep(1500);
       if (fixture.sample) await tap(page, 'Practice with a sample');
+      if (fixture.focusField) { await page.click('input'); await sleep(300); }
+      if (fixture.profileFeedback) await tapVisible(page, 'Send feedback');
       if (fixture.advance) { await tap(page, 'Continue'); await tap(page, 'DNS'); }
       if (fixture.onboardingSkills) { await tap(page, 'Continue'); await tap(page, 'Continue'); }
+      if (fixture.recall) {
+        await tapVisible(page, 'Practice recall');
+        if (fixture.recallAnswer) await tapVisible(page, 'Reveal answer');
+        if (fixture.recallSummary) {
+          await tapVisible(page, 'Reveal answer');
+          await tapVisible(page, 'Needs practice');
+          await tapVisible(page, 'Reveal answer');
+          await tapVisible(page, 'Got it');
+          if (fixture.scale) await scrollQuizToEnd(page);
+        }
+      }
       if (fixture.quizAnswer) {
         await tapVisible(page, 'DHCP');
         if (fixture.scale) await scrollQuizToEnd(page);
@@ -178,6 +212,14 @@ async function scrollQuizToEnd(page) {
         await tapVisible(page, 'See results');
         if (fixture.quizMistakes) await tapVisible(page, 'Review mistakes (1)');
         if (fixture.quizActions) await scrollQuizToEnd(page);
+        if (fixture.focused) {
+          await tapVisible(page, 'Practice missed questions (1)');
+          if (fixture.focusedSummary) {
+            await tapVisible(page, 'DNS');
+            await tapVisible(page, 'Finish round');
+            if (fixture.scale) await scrollQuizToEnd(page);
+          }
+        }
       }
       if (fixture.reviewAnswer) {
         // At large text sizes, answers are below the initial viewport.
@@ -226,6 +268,16 @@ async function scrollQuizToEnd(page) {
         .map(n => n.getAttribute('aria-label') || n.textContent).filter(Boolean));
       fs.writeFileSync(path.join(out, fixture.name + '.json'), JSON.stringify(labels, null, 2));
       console.log('Captured ' + fixture.name);
+      if (fixture.recallSummary) {
+        await tapVisible(page, 'Practice remaining (1)');
+        await page.waitForFunction(() => [...document.querySelectorAll('flt-semantics')]
+          .some(n => (n.getAttribute('aria-label') || n.textContent || '').includes('Round 2 · Card 1 of 1')));
+      }
+      if (fixture.focusedSummary) {
+        await tapVisible(page, 'Back to quiz results');
+        await page.waitForFunction(() => [...document.querySelectorAll('flt-semantics')]
+          .some(n => (n.getAttribute('aria-label') || n.textContent || '').includes('You scored 1 out of 2')));
+      }
       if (fixture.quizActions) {
         await tap(page, 'Try again');
         await page.waitForFunction(() => [...document.querySelectorAll('flt-semantics')]

@@ -276,7 +276,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _BackButton(
-                            color: widget.color,
+                            color: theme.accent(widget.color),
                             theme: theme,
                             onTap: () {
                               HapticFeedback.lightImpact();
@@ -330,7 +330,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                               '${(_progress * 100).toInt()}%',
                               style: TextStyle(
                                   fontSize: 12,
-                                  color: widget.color,
+                                  color: theme.accent(widget.color),
                                   fontWeight: FontWeight.w600),
                             ),
                           ],
@@ -357,7 +357,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen>
                         child: (!_loading && !_hasPaidAccess)
                             ? _FreeBanner(
                                 key: const ValueKey('banner'),
-                                color: widget.color,
+                                color: theme.accent(widget.color),
                               )
                             : const SizedBox(key: ValueKey('empty'), height: 0),
                       ),
@@ -472,7 +472,9 @@ class _BackButton extends StatelessWidget {
             Text(
               'Back',
               style: TextStyle(
-                  fontSize: 13, color: color, fontWeight: FontWeight.w600),
+                  fontSize: 13,
+                  color: theme.accent(color),
+                  fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -505,7 +507,7 @@ class _FreeBanner extends StatelessWidget {
               'Module 1 is free — try it now',
               style: TextStyle(
                 fontSize: 12,
-                color: color,
+                color: AppTheme.of(context).accent(color),
                 fontWeight: FontWeight.w500,
                 letterSpacing: -0.1,
               ),
@@ -561,7 +563,7 @@ class _ModuleCard extends StatelessWidget {
       statusColor = theme.subtext;
       statusIcon = CupertinoIcons.lock_fill;
     } else {
-      statusColor = color;
+      statusColor = theme.accent(color);
       statusIcon = CupertinoIcons.play_circle_fill;
     }
 
@@ -571,7 +573,7 @@ class _ModuleCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: theme.surface,
+          color: theme.isDark ? theme.surface : theme.card,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isDone
@@ -645,7 +647,7 @@ class _ModuleCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
-                              color: color,
+                              color: theme.accent(color),
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -674,7 +676,7 @@ class _ModuleCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 decoration: BoxDecoration(
-                  color: color,
+                  color: theme.accent(color),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Text(

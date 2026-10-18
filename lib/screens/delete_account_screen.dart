@@ -328,11 +328,13 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                             color: theme.subtext)),
                     const SizedBox(height: 8),
                     Container(
-                      decoration: BoxDecoration(
-                        color: theme.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: theme.border),
-                      ),
+                      decoration: theme.isDark
+                          ? BoxDecoration(
+                              color: theme.surface,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: theme.border),
+                            )
+                          : null,
                       child: TextField(
                         controller: _passwordController,
                         obscureText: _obscure,
@@ -341,7 +343,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
                           hintText: 'Password',
                           hintStyle:
                               TextStyle(color: theme.subtext, fontSize: 15),
-                          border: InputBorder.none,
+                          border: theme.isDark ? InputBorder.none : null,
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 15),
                           suffixIcon: GestureDetector(

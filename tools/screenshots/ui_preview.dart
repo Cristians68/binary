@@ -8,6 +8,11 @@ import 'package:binary/course_catalog.dart';
 import 'package:binary/screens/app_theme.dart';
 import 'package:binary/screens/courses_screen.dart';
 import 'package:binary/screens/home_screen.dart';
+import 'package:binary/screens/login_screen.dart';
+import 'package:binary/screens/signup_screen.dart';
+import 'package:binary/screens/profile_screen.dart';
+import 'package:binary/screens/main_navigation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:binary/screens/learning_navigation_bar.dart';
 import 'package:binary/screens/lesson_screen.dart';
 import 'package:binary/screens/offline_downloads_screen.dart';
@@ -37,6 +42,7 @@ Future<void> main() async {
   SharedPreferences.setMockInitialValues({});
   final db = FakeFirebaseFirestore();
   ServiceBackend.useFake(db, uid: 'design-preview');
+  ServiceBackend.useAuth(_PreviewAuth());
   final storeCapture = Uri.base.queryParameters['store'] == '1';
   final screen = Uri.base.queryParameters['screen'] ?? 'onboarding';
   const network = 'binary-network-professional';
@@ -88,8 +94,9 @@ Future<void> main() async {
         },
     ],
     'quizScores': [
-      {'score': 8, 'total': 10, 'percent': 80},
-      {'score': 10, 'total': 10, 'percent': 100}
+      // Match ProgressService: quiz history stores the percentage in score.
+      {'score': 80},
+      {'score': 100}
     ],
     'streak': {'current': 7, 'longest': 7, 'lastLogin': today},
     'badges': {'streak_7': today, 'quiz_first': today, 'quiz_perfect': today},
@@ -98,10 +105,29 @@ Future<void> main() async {
   await db.doc('users/design-preview/progress/$network').set({'progress': .4});
 
   final dark = Uri.base.queryParameters['dark'] == '1';
+  if (screen == 'recall') {
+    for (var i = 1; i <= 2; i++) {
+      await db
+          .doc(
+              'courses/$network/modules/${modules.first['id']}/flashcards/recall-$i')
+          .set({
+        'order': i,
+        'label': 'Network basics',
+        'question': i == 1 ? 'What does DNS do?' : 'What does DHCP do?',
+        'answer': i == 1
+            ? 'DNS resolves names to IP addresses.'
+            : 'DHCP leases network settings to devices.',
+        'example': i == 1
+            ? 'Think of finding the address for a website before connecting to it.'
+            : 'A new device can receive an address when it joins a network.',
+      });
+    }
+  }
   if (screen == 'quiz-feedback') {
     for (var i = 1; i <= 2; i++) {
       await db
-          .doc('courses/$network/modules/${modules.first['id']}/quiz/feedback-$i')
+          .doc(
+              'courses/$network/modules/${modules.first['id']}/quiz/feedback-$i')
           .set({
         'order': i,
         'question': i == 1
@@ -133,12 +159,15 @@ Future<void> main() async {
   }
   final scale = double.tryParse(Uri.base.queryParameters['scale'] ?? '') ?? 1;
   final theme = ThemeNotifier(initialIsDark: dark);
-  final brightness = dark ? Brightness.dark : Brightness.light;
   final module = modules.first;
   final Widget page = switch (screen) {
     'startup-error' =>
       AppStartup(initialize: () async => throw StateError('offline')),
     'welcome' => const WelcomeScreen(),
+    'login' => const LoginScreen(),
+    'signup' => const SignupScreen(),
+    'profile' => const ProfileScreen(),
+    'navigation' => const MainNavigation(),
     'legal' => const LegalScreen(),
     'paywall' => PaywallScreen(
         courseId: network,
@@ -149,7 +178,7 @@ Future<void> main() async {
     'review' || 'review-empty' => const ReviewScreen(),
     'progress' => const ProgressScreen(),
     'offline' => const OfflineDownloadsScreen(),
-    'lesson' => LessonScreen(
+    'lesson' || 'recall' => LessonScreen(
         moduleTitle: displayModuleTitle(module['title']),
         courseTag: 'Binary Network Pro',
         color: Color(networkData['color']),
@@ -167,24 +196,7 @@ Future<void> main() async {
   final hasTabs = ['home', 'courses', 'progress'].contains(screen);
   runApp(MaterialApp(
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      brightness: brightness,
-      platform: TargetPlatform.iOS,
-      scaffoldBackgroundColor: theme.bg,
-      colorScheme: ColorScheme(
-          brightness: brightness,
-          primary: AppColors.primary,
-          onPrimary: Colors.white,
-          secondary: AppColors.primary,
-          onSecondary: Colors.white,
-          error: AppColors.red,
-          onError: Colors.white,
-          surface: theme.surface,
-          onSurface: theme.text),
-      textTheme: GoogleFonts.interTextTheme(
-              dark ? ThemeData.dark().textTheme : ThemeData.light().textTheme)
-          .apply(bodyColor: theme.text, displayColor: theme.text),
-    ),
+    theme: appMaterialTheme(theme, platform: TargetPlatform.iOS),
     builder: (context, child) => AppTheme(
         notifier: theme,
         child: MediaQuery(
@@ -213,4 +225,32 @@ Future<void> main() async {
           )
         : page,
   ));
+}
+
+// Display-only identity: unexpected auth operations fail instead of touching
+// Firebase. All preview data belongs to the fictional learner in fake Firestore.
+class _PreviewAuth implements FirebaseAuth {
+  @override
+  User get currentUser => _PreviewUser();
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError('Preview auth: ${invocation.memberName}');
+}
+
+class _PreviewUser implements User {
+  @override
+  String get uid => 'design-preview';
+  @override
+  String get displayName => 'Alex Morgan';
+  @override
+  String get email => 'alex@example.com';
+  @override
+  String? get photoURL => null;
+  @override
+  bool get isAnonymous => false;
+  @override
+  List<UserInfo> get providerData => [];
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError('Preview user: ${invocation.memberName}');
 }

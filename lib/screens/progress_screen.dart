@@ -257,10 +257,14 @@ class _ProgressScreenState extends State<ProgressScreen>
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.10),
+            color: theme.isDark
+                ? AppColors.primary.withValues(alpha: 0.10)
+                : theme.card,
             borderRadius: BorderRadius.circular(24),
-            border:
-                Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+            border: Border.all(
+                color: theme.isDark
+                    ? AppColors.primary.withValues(alpha: 0.25)
+                    : theme.border),
           ),
           child: Flex(
             direction: MediaQuery.sizeOf(context).width < 380 ||
@@ -349,7 +353,7 @@ class _ProgressScreenState extends State<ProgressScreen>
       IconData icon, String text, Color color, ThemeNotifier theme) {
     return Row(
       children: [
-        Icon(icon, size: 13, color: color),
+        Icon(icon, size: 13, color: theme.accent(color)),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
@@ -412,6 +416,7 @@ class _ProgressScreenState extends State<ProgressScreen>
             final course = _courses[index];
             final courseId = course['id'] as String;
             final color = Color(course['color'] ?? 0xFF6366F1);
+            final accent = theme.accent(color);
             final tag = course['tag'] ?? '';
             // ✅ Use per-user progress, not shared course field
             final progress = _userProgress[courseId] ?? 0.0;
@@ -433,9 +438,14 @@ class _ProgressScreenState extends State<ProgressScreen>
                 child: Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.07),
+                    color: theme.isDark
+                        ? color.withValues(alpha: 0.07)
+                        : theme.card,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: color.withValues(alpha: 0.2)),
+                    border: Border.all(
+                        color: theme.isDark
+                            ? color.withValues(alpha: 0.2)
+                            : theme.border),
                   ),
                   child: Row(
                     children: [
@@ -446,7 +456,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                           color: color.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(_iconForTag(tag), color: color, size: 18),
+                        child: Icon(_iconForTag(tag), color: accent, size: 18),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -469,7 +479,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                                 value: progress,
                                 backgroundColor: theme.border,
                                 valueColor:
-                                    AlwaysStoppedAnimation<Color>(color),
+                                    AlwaysStoppedAnimation<Color>(accent),
                                 minHeight: 5,
                               ),
                             ),
@@ -482,7 +492,7 @@ class _ProgressScreenState extends State<ProgressScreen>
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: color,
+                          color: accent,
                           letterSpacing: -0.3,
                         ),
                       ),

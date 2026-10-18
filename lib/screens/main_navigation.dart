@@ -240,7 +240,7 @@ class _SideNav extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 9,
                   fontWeight: FontWeight.w700,
-                  color: theme.subtext.withValues(alpha: 0.6),
+                  color: theme.subtext,
                   letterSpacing: 1.4,
                 ),
               ),
@@ -281,7 +281,7 @@ class _SideNav extends StatelessWidget {
                     'Master IT. Get certified.',
                     style: TextStyle(
                       fontSize: 10,
-                      color: theme.subtext.withValues(alpha: 0.55),
+                      color: theme.subtext,
                     ),
                   ),
                 ],

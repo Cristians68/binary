@@ -5,6 +5,7 @@ import 'package:binary/screens/onboarding_screen.dart';
 import 'package:binary/screens/offline_downloads_screen.dart';
 import 'package:binary/screens/offline_service.dart';
 import 'package:binary/screens/quiz_screen.dart';
+import 'package:binary/screens/practice_session_screen.dart';
 import 'package:binary/screens/service_backend.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -68,6 +69,41 @@ void main() {
     expect(find.text('The actual published question'), findsOneWidget);
     expect(find.text('Correct published answer'), findsOneWidget);
     expect(find.text('Wrong published answer'), findsOneWidget);
+  });
+
+  testWidgets(
+      'lesson recall uses loaded cards and returns to the same lesson position',
+      (tester) async {
+    await db.doc('courses/network/modules/module-1').set({'order': 1});
+    for (var i = 1; i <= 2; i++) {
+      await db.doc('courses/network/modules/module-1/flashcards/c$i').set({
+        'order': i,
+        'label': 'Concept',
+        'question': 'Published term $i',
+        'answer': 'Published definition $i',
+        'example': 'Example $i',
+      });
+    }
+    await pump(
+        tester,
+        const LessonScreen(
+            moduleTitle: 'Network basics',
+            courseTag: 'Binary Network Pro',
+            color: Colors.blue,
+            moduleId: 'module-1',
+            courseId: 'network'));
+    await tap(tester, 'Next');
+    expect(find.text('Published term 2'), findsOneWidget);
+    await tap(tester, 'Practice recall');
+    expect(find.byType(PracticeSessionScreen), findsOneWidget);
+    expect(find.text('Published definition 1'), findsNothing);
+    await tap(tester, 'Reveal answer');
+    expect(find.text('Published definition 1'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Published term 2'), findsOneWidget);
+    expect(find.byType(QuizScreen), findsNothing);
+    expect((await db.doc('users/learner').get()).exists, isFalse);
   });
   testWidgets('missing content offers a real retry and recovery',
       (tester) async {

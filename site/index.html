@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>B1nary — IT certification study app</title>
-<meta name="description" content="Study for IT certifications with structured courses, flashcard lessons and quizzes. Service management, Agile and Scrum, networking, cybersecurity and cloud. One-time purchase, no subscription.">
+<meta name="description" content="Build IT skills with structured courses, active recall, focused quiz practice and spaced review. Learn from every answer. Try the first module of every course free.">
 <link rel="canonical" href="https://binaryapp.org/">
-<meta name="theme-color" content="#0071E3">
+<meta name="theme-color" content="#325BE8">
 
 <!-- Certification marks are deliberately absent from the description and
      keywords. Listing them as what this product delivers implies an
@@ -17,12 +17,12 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://binaryapp.org/">
 <meta property="og:title" content="B1nary — IT certification study app">
-<meta property="og:description" content="Structured courses, flashcard lessons and quizzes for IT certification study. One-time purchase, no subscription.">
+<meta property="og:description" content="Learn, recall, and practice what needs work. IT courses with explained quizzes and spaced review. Start with a free module.">
 <meta property="og:image" content="https://binaryapp.org/icons/Icon-512.png">
 <meta property="og:site_name" content="B1nary">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="B1nary — IT certification study app">
-<meta name="twitter:description" content="Structured courses, flashcard lessons and quizzes for IT certification study. One-time purchase, no subscription.">
+<meta name="twitter:description" content="Learn, recall, and practice what needs work. IT courses with explained quizzes and spaced review. Start with a free module.">
 <meta name="twitter:image" content="https://binaryapp.org/icons/Icon-512.png">
 
 <link rel="icon" type="image/png" href="favicon.png">
@@ -44,7 +44,7 @@
   "name": "B1nary",
   "applicationCategory": "EducationalApplication",
   "operatingSystem": "Web, iOS",
-  "description": "Structured courses, flashcard lessons and quizzes for IT certification study.",
+  "description": "IT certification study with structured lessons, active recall, focused quiz practice and spaced review.",
   "url": "https://binaryapp.org/",
   "offers": [
     { "@type": "Offer", "name": "Single course", "price": "14.99", "priceCurrency": "USD", "category": "one-time" },
@@ -84,11 +84,11 @@
           <svg class="icon" style="width:16px;height:16px" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
           One-time purchase — no subscription
         </p>
-        <h1>Study for your IT certification without the subscription trap.</h1>
+        <h1>Understand it.<br>Recall it.<br>Put it to the test.</h1>
         <p class="lede">
-          Six structured courses built from flashcard lessons and quizzes that
-          actually test you. Learn at your own pace, keep your progress, and
-          own what you buy.
+          Build your IT skills with clear lessons, active recall, and quizzes
+          that explain every answer. Focus on what needs work, then return
+          for spaced review.
         </p>
         <div class="btn-row">
           <a class="btn btn--primary" href="/app">Start learning free</a>
@@ -100,37 +100,23 @@
         </p>
       </div>
 
-      <!-- An illustration of the app's own concepts, not a screenshot. It is
-           drawn from live tokens so it always matches the current design, and
-           it is aria-hidden because everything it shows is stated in the text
-           beside it. -->
-      <div class="hero__art" aria-hidden="true">
-        <div class="preview">
-          <div class="preview__row">
-            <div class="preview__streak">
-              <span class="preview__streak-num">7</span>
-              <span class="preview__streak-label">day streak</span>
-            </div>
-            <div class="preview__goal">
-              <span class="preview__goal-label">Daily goal</span>
-              <span class="preview__bar"><span class="preview__bar-fill" style="width:72%"></span></span>
-              <span class="preview__goal-val">36 / 50 pts</span>
-            </div>
-          </div>
-          <div class="preview__card">
-            <span class="preview__tag">Cybersecurity Professional</span>
-            <p class="preview__q">Which control protects data <em>in transit</em>?</p>
-            <span class="preview__opt">Full-disk encryption</span>
-            <span class="preview__opt preview__opt--right">TLS</span>
-            <span class="preview__opt">Database backups</span>
-          </div>
-          <div class="preview__row preview__row--tight">
-            <span class="preview__chip">6 courses</span>
-            <span class="preview__chip">Flashcards</span>
-            <span class="preview__chip">Quizzes</span>
-          </div>
+      <aside class="hero__art hero__art--interactive" aria-label="Try a sample recall card">
+        <div class="preview recall-demo">
+          <p class="eyebrow">TRY A RECALL CARD</p>
+          <span class="preview__tag">Network Professional · Sample</span>
+          <h2 class="preview__q">What does DNS do when you open a website?</h2>
+          <p>Explain it in your own words before you reveal the answer.</p>
+          <details class="recall-demo__answer">
+            <summary>Reveal answer</summary>
+            <p>DNS resolves a name, such as a website address, to an IP address
+            your device can use to reach the server.</p>
+            <p><strong>Check your recall:</strong> Did you remember both the
+            name and the IP address? In the app, mark cards that need practice
+            and try those again.</p>
+          </details>
+          <p class="recall-demo__note">A sample of the study method. Your progress starts in the app.</p>
         </div>
-      </div>
+      </aside>
     </div>
   </section>
 
@@ -139,37 +125,39 @@
     <div class="container">
       <h2 id="how-heading" class="reveal">How it works</h2>
       <p class="lede reveal" style="margin-top:var(--sp-3)">
-        Three steps, repeated until the material sticks.
+        A clear path from understanding a concept to practicing it from memory.
       </p>
       <div class="grid grid--3" style="margin-top:var(--sp-8)">
         <div class="card reveal">
           <div class="icon-tile">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
           </div>
-          <h3>1. Learn the concept</h3>
+          <h3>1. Learn, then recall</h3>
           <p style="color:var(--subtext);margin-top:var(--sp-2)">
-            Each module is a set of flashcards covering one topic, written in
-            plain language with worked scenarios and the traps exams like to set.
+            Read a focused lesson with examples. Open Recall practice to hide
+            the explanation, try it from memory, and check what you remembered.
           </p>
         </div>
         <div class="card reveal">
           <div class="icon-tile">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
           </div>
-          <h3>2. Prove it on the quiz</h3>
+          <h3>2. Learn from each answer</h3>
           <p style="color:var(--subtext);margin-top:var(--sp-2)">
-            Every module ends in a quiz with shuffled answers, so passing means
-            you know the material rather than the position of the right option.
+            Answer a quiz with shuffled options and immediate explanations.
+            See your pass mark, inspect mistakes, and practice just the
+            questions you missed.
           </p>
         </div>
         <div class="card reveal">
           <div class="icon-tile">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>
           </div>
-          <h3>3. Keep the streak</h3>
+          <h3>3. Return for review</h3>
           <p style="color:var(--subtext);margin-top:var(--sp-2)">
-            Daily goals, streaks and badges track consistency — the thing that
-            actually decides whether you finish a certification.
+            Missed quiz questions enter spaced review. An immediate practice
+            round leaves that schedule intact, so you can check your recall
+            again after some time has passed.
           </p>
         </div>
       </div>
@@ -179,7 +167,7 @@
   <!-- ── Courses ─────────────────────────────────────────────────────────── -->
   <section class="section" id="courses" aria-labelledby="courses-heading" style="background:var(--surface)">
     <div class="container">
-      <h2 id="courses-heading" class="reveal">Six courses</h2>
+      <h2 id="courses-heading" class="reveal">Seven paths to stronger IT skills</h2>
       <p class="lede reveal" style="margin-top:var(--sp-3)">
         Each one is a full syllabus of flashcard modules and quizzes, not a
         handful of sample questions.
@@ -219,6 +207,11 @@
           <h3>Cloud Architecture</h3>
           <p class="course__blurb">Designing for the cloud — availability, scaling, networking, identity, and well-architected trade-offs.</p>
         </article>
+        <article class="card reveal">
+          <h3>AI &amp; Machine Learning Foundations</h3>
+          <p class="course__blurb">How modern AI works — machine learning, neural networks, language models, prompting, model quality, and responsible use.</p>
+          <p class="course__note">An original foundations course. It does not claim alignment with an external certification exam.</p>
+        </article>
       </div>
     </div>
   </section>
@@ -231,14 +224,14 @@
 
         <div class="card reveal">
           <div class="icon-tile"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg></div>
-          <h3>Flashcard lessons</h3>
-          <p style="color:var(--subtext);margin-top:var(--sp-2)">Bite-sized modules you can finish in a commute, with scenarios and exam traps called out explicitly.</p>
+          <h3>Lessons with active recall</h3>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">Read the lesson, then hide the answer and explain the idea yourself. Reveal the explanation and repeat only the cards you marked Needs practice.</p>
         </div>
 
         <div class="card reveal">
           <div class="icon-tile"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></div>
           <h3>Spaced review</h3>
-          <p style="color:var(--subtext);margin-top:var(--sp-2)">Cards you found hard come back sooner, so revision time goes where it is actually needed.</p>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">Missed quiz questions return for scheduled review. Correct answers move them to longer intervals; mistakes bring them back sooner.</p>
         </div>
 
         <div class="card reveal">
@@ -255,8 +248,8 @@
 
         <div class="card reveal">
           <div class="icon-tile"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="4" width="3" height="14"/></svg></div>
-          <h3>Progress you can see</h3>
-          <p style="color:var(--subtext);margin-top:var(--sp-2)">Per-course completion, quiz history and scores, so you know what is solid and what still needs work.</p>
+          <h3>Focused quiz practice</h3>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">Retry the questions you missed with fresh answer ordering and explanations. Your original quiz score stays intact. Retake the full quiz when you are ready.</p>
         </div>
 
         <div class="card reveal">
@@ -307,7 +300,7 @@
           <p class="price__amount">$99.99</p>
           <p class="price__meta">One-time · lifetime access</p>
           <ul class="price__list">
-            <li>All six courses</li>
+            <li>All seven courses</li>
             <li>All future courses included</li>
             <li>Certificate on each completion</li>
           </ul>
@@ -354,9 +347,26 @@
 
         <details class="reveal">
           <summary>Can I study offline?</summary>
-          <p>Yes. Courses you have access to can be downloaded to your device
-          and studied without a connection. Your progress syncs the next time
-          you are online.</p>
+          <p>Download lesson flashcards for courses you can access, then read
+          them and use Recall practice without a connection. Reconnect to
+          load new quizzes, refresh course access, and save course progress.
+          Downloads and review queues are stored on the device for your account.</p>
+        </details>
+
+        <details class="reveal">
+          <summary>Does focused practice change my quiz score?</summary>
+          <p>No. Practice missed questions opens a separate round with just
+          the questions you missed. It does not change your original result,
+          award course completion, or postpone your scheduled reviews.
+          Choose Try again in quiz results to take a new full attempt.</p>
+        </details>
+
+        <details class="reveal">
+          <summary>Can I use these study tools on the website?</summary>
+          <p>Yes. Select Open the app to use the browser app, including lessons,
+          Recall practice, quizzes, focused practice, and spaced review.
+          Light and dark themes and layouts for phones and larger screens
+          are available in the app.</p>
         </details>
 
         <details class="reveal">

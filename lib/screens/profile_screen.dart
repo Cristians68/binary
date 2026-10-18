@@ -24,6 +24,7 @@ import 'app_router.dart';
 import 'streak_service.dart';
 import '../app_links.dart';
 import 'app_theme.dart';
+import 'service_backend.dart';
 import 'notification_prefs_service.dart';
 import 'notification_settings_sheet.dart';
 import 'welcome_screen.dart';
@@ -138,8 +139,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   String _getFullName() =>
-      FirebaseAuth.instance.currentUser?.displayName ?? 'IT Learner';
-  String _getEmail() => FirebaseAuth.instance.currentUser?.email ?? '';
+      ServiceBackend.auth.currentUser?.displayName ?? 'IT Learner';
+  String _getEmail() => ServiceBackend.auth.currentUser?.email ?? '';
   String _getInitials() {
     final name = _getFullName();
     final parts = name.split(' ');
@@ -296,8 +297,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                               ? CupertinoIcons.star_fill
                               : CupertinoIcons.star,
                           color: filled
-                              ? AppColors.amber
-                              : theme.subtext.withValues(alpha: 0.4),
+                              ? theme.accent(AppColors.amber)
+                              : theme.subtext,
                           size: 32,
                         ),
                       ),
@@ -312,11 +313,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                         color: theme.text)),
                 const SizedBox(height: 8),
                 Container(
-                  decoration: BoxDecoration(
-                    color: theme.bg,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: theme.border),
-                  ),
+                  decoration: theme.isDark
+                      ? BoxDecoration(
+                          color: theme.bg,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: theme.border),
+                        )
+                      : null,
                   child: TextField(
                     controller: controller,
                     maxLines: 4,
@@ -324,10 +327,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                     decoration: InputDecoration(
                       hintText:
                           'Tell us what you love, what could be better, or anything else...',
-                      hintStyle: TextStyle(
-                          color: theme.subtext.withValues(alpha: 0.6),
-                          fontSize: 14),
-                      border: InputBorder.none,
+                      hintStyle: TextStyle(color: theme.subtext, fontSize: 14),
+                      border: theme.isDark ? InputBorder.none : null,
                       contentPadding: const EdgeInsets.all(16),
                     ),
                   ),
@@ -346,7 +347,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           HapticFeedback.mediumImpact();
                           try {
                             final uid =
-                                FirebaseAuth.instance.currentUser?.uid ?? '';
+                                ServiceBackend.auth.currentUser?.uid ?? '';
                             await FirebaseFirestore.instance
                                 .collection('feedback')
                                 .add({
@@ -487,7 +488,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _showEditProfile() {
     final theme = AppTheme.of(context);
     final nameController = TextEditingController(
-        text: FirebaseAuth.instance.currentUser?.displayName ?? '');
+        text: ServiceBackend.auth.currentUser?.displayName ?? '');
     bool loading = false;
     String? error;
 
@@ -538,7 +539,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     : () async {
                         setModal(() => loading = true);
                         try {
-                          await FirebaseAuth.instance.currentUser
+                          await ServiceBackend.auth.currentUser
                               ?.updateDisplayName(nameController.text.trim());
                           if (ctx.mounted) {
                             Navigator.pop(ctx);
@@ -760,7 +761,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ? null
                     : () async {
                         setModal(() => loading = true);
-                        final user = FirebaseAuth.instance.currentUser;
+                        final user = ServiceBackend.auth.currentUser;
                         final email = user?.email;
                         // Defence in depth: the row above is hidden for these
                         // accounts, but `user!.email!` crashed rather than
@@ -841,11 +842,13 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildModalTextField(TextEditingController controller, String hint,
       bool isPassword, ThemeNotifier theme) {
     return Container(
-      decoration: BoxDecoration(
-        color: theme.border.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: theme.border),
-      ),
+      decoration: theme.isDark
+          ? BoxDecoration(
+              color: theme.border.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: theme.border),
+            )
+          : null,
       child: TextField(
         controller: controller,
         obscureText: isPassword,
@@ -853,7 +856,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: TextStyle(color: theme.subtext, fontSize: 15),
-          border: InputBorder.none,
+          border: theme.isDark ? InputBorder.none : null,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         ),
@@ -1180,10 +1183,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                           'Delete account',
                           style: TextStyle(
                             fontSize: 13,
-                            color: theme.subtext.withValues(alpha: 0.6),
+                            color: theme.subtext,
                             decoration: TextDecoration.underline,
-                            decorationColor:
-                                theme.subtext.withValues(alpha: 0.4),
+                            decorationColor: theme.subtext,
                           ),
                         ),
                       ),
@@ -1217,7 +1219,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             borderRadius: BorderRadius.circular(8)),
         child: Text(label,
             style: TextStyle(
-                fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.of(context).accent(color))),
       );
 
   Widget _buildHeader(ThemeNotifier theme) {
@@ -1240,7 +1244,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         radius: 44,
                         initials: _getInitials(),
                         fontSize: 26,
-                        photoUrl: FirebaseAuth.instance.currentUser?.photoURL,
+                        photoUrl: ServiceBackend.auth.currentUser?.photoURL,
                       ),
                       Positioned(
                         right: -2,
@@ -1409,9 +1413,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               width: 46,
               height: 26,
               decoration: BoxDecoration(
-                color: theme.isDark
-                    ? AppColors.primary
-                    : Colors.grey.withValues(alpha: 0.3),
+                color: theme.isDark ? AppColors.primary : theme.outline,
                 borderRadius: BorderRadius.circular(13),
               ),
               child: Stack(
@@ -1466,7 +1468,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10)),
-              child: Icon(icon, size: 16, color: color),
+              child: Icon(icon, size: 16, color: theme.accent(color)),
             ),
             const SizedBox(width: 14),
             Expanded(

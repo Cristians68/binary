@@ -224,12 +224,12 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                               borderRadius:
                                                   BorderRadius.circular(16),
                                               borderSide: BorderSide(
-                                                  color: theme.border)),
+                                                  color: theme.outline)),
                                           enabledBorder: OutlineInputBorder(
                                               borderRadius:
                                                   BorderRadius.circular(16),
                                               borderSide: BorderSide(
-                                                  color: theme.border)),
+                                                  color: theme.outline)),
                                           focusedBorder: OutlineInputBorder(
                                               borderRadius:
                                                   BorderRadius.circular(16),
@@ -244,7 +244,10 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                                       const EdgeInsets.only(
                                                           right: 8),
                                                   child: ChoiceChip(
-                                                    label: Text(label),
+                                                    label: Text(label,
+                                                        softWrap: false,
+                                                        overflow: TextOverflow
+                                                            .visible),
                                                     selected: _filter == label,
                                                     showCheckmark: false,
                                                     selectedColor:
@@ -253,14 +256,14 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                                     labelStyle: TextStyle(
                                                         color: _filter == label
                                                             ? Colors.white
-                                                            : theme.subtext,
+                                                            : theme.text,
                                                         fontSize: 12,
                                                         fontWeight:
                                                             FontWeight.w600),
                                                     side: BorderSide(
                                                         color: _filter == label
                                                             ? AppColors.primary
-                                                            : theme.border),
+                                                            : theme.outline),
                                                     shape:
                                                         RoundedRectangleBorder(
                                                             borderRadius:
@@ -396,6 +399,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
     final id = course['id'] as String;
     final category = _category(course);
     final color = Color(course['color'] ?? AppColors.primary.toARGB32());
+    final accent = theme.accent(color);
     final enrolled = _enrolledIds.contains(id);
     final modules = course['totalModules'];
     return Material(
@@ -410,7 +414,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
                       color: enrolled
-                          ? color.withValues(alpha: .45)
+                          ? accent.withValues(alpha: .65)
                           : theme.border)),
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,7 +426,8 @@ class _CoursesScreenState extends State<CoursesScreen> {
                           decoration: BoxDecoration(
                               color: color.withValues(alpha: .10),
                               borderRadius: BorderRadius.circular(15)),
-                          child: Icon(_icon(category), size: 25, color: color)),
+                          child:
+                              Icon(_icon(category), size: 25, color: accent)),
                       const SizedBox(width: 12),
                       Expanded(
                           child: Text(category.toUpperCase(),
@@ -432,7 +437,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 1.2))),
                       if (enrolled)
-                        Icon(Icons.bookmark_rounded, size: 22, color: color),
+                        Icon(Icons.bookmark_rounded, size: 22, color: accent),
                     ]),
                     const SizedBox(height: 18),
                     Text(displayTitle(id),

@@ -33,8 +33,8 @@ class _LoginScreenState extends State<LoginScreen>
         vsync: this, duration: const Duration(milliseconds: 600));
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
     _slide = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
-        .animate(CurvedAnimation(
-            parent: _controller, curve: Curves.easeOutCubic));
+        .animate(
+            CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
   }
 
@@ -137,8 +137,7 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         backgroundColor: theme.surface,
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         margin: const EdgeInsets.all(16),
         duration: const Duration(seconds: 4),
       ),
@@ -158,14 +157,12 @@ class _LoginScreenState extends State<LoginScreen>
           Positioned(
             top: -120,
             right: -100,
-            child:
-                GlowOrb(color: AppColors.primary, size: 320, opacity: 0.10),
+            child: GlowOrb(color: AppColors.primary, size: 320, opacity: 0.10),
           ),
           Positioned(
             bottom: -140,
             left: -120,
-            child:
-                GlowOrb(color: AppColors.indigo, size: 300, opacity: 0.08),
+            child: GlowOrb(color: AppColors.indigo, size: 300, opacity: 0.08),
           ),
           SafeArea(
             child: FadeTransition(
@@ -175,7 +172,8 @@ class _LoginScreenState extends State<LoginScreen>
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 28),
-                  child: WebContentBounds(child: Column(
+                  child: WebContentBounds(
+                      child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 20),
@@ -323,10 +321,13 @@ class _LoginScreenState extends State<LoginScreen>
                             Icon(CupertinoIcons.lock_shield,
                                 size: 13, color: theme.subtext),
                             const SizedBox(width: 6),
-                            Text(
-                              'Your progress is saved securely to your account',
-                              style: TextStyle(
-                                  fontSize: 12, color: theme.subtext),
+                            Flexible(
+                              child: Text(
+                                'Your progress is saved securely to your account',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    fontSize: 12, color: theme.subtext),
+                              ),
                             ),
                           ],
                         ),
@@ -386,19 +387,20 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildTextField(TextEditingController controller, String hint,
       bool isPassword, IconData icon, ThemeNotifier theme) {
     return Container(
-      decoration: BoxDecoration(
-        color: theme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.border),
-      ),
+      decoration: theme.isDark
+          ? BoxDecoration(
+              color: theme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: theme.border),
+            )
+          : null,
       child: TextField(
         controller: controller,
         obscureText: isPassword ? _obscurePassword : false,
         keyboardType: isPassword
             ? TextInputType.visiblePassword
             : TextInputType.emailAddress,
-        style: TextStyle(
-            color: theme.text, fontSize: 15, letterSpacing: -0.2),
+        style: TextStyle(color: theme.text, fontSize: 15, letterSpacing: -0.2),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: TextStyle(color: theme.subtext, fontSize: 15),
@@ -416,7 +418,7 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                 )
               : null,
-          border: InputBorder.none,
+          border: theme.isDark ? InputBorder.none : null,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
         ),
@@ -450,8 +452,8 @@ class _PressableButtonState extends State<_PressableButton>
     super.initState();
     _controller = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 100));
-    _scale = Tween<double>(begin: 1.0, end: 0.96).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _scale = Tween<double>(begin: 1.0, end: 0.96)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -463,8 +465,7 @@ class _PressableButtonState extends State<_PressableButton>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown:
-          widget.onTap == null ? null : (_) => _controller.forward(),
+      onTapDown: widget.onTap == null ? null : (_) => _controller.forward(),
       onTapUp: widget.onTap == null
           ? null
           : (_) {

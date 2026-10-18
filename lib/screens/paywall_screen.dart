@@ -816,8 +816,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
     final ctaDisabled =
         singleIncomplete || bundle4Incomplete || _packageFor(_selected) == null;
     final ctaColor = ctaDisabled
-        ? widget.courseColor.withValues(alpha: 0.4)
-        : widget.courseColor;
+        ? theme.isDark
+            ? widget.courseColor.withValues(alpha: 0.4)
+            : theme.surface
+        : theme.accent(widget.courseColor);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(inset ? 24 : 0, 0, inset ? 24 : 0, 24),
@@ -831,9 +833,14 @@ class _PaywallScreenState extends State<PaywallScreen> {
               padding: const EdgeInsets.symmetric(vertical: 17),
               decoration: BoxDecoration(
                 color: _purchasing
-                    ? widget.courseColor.withValues(alpha: 0.5)
+                    ? theme.isDark
+                        ? widget.courseColor.withValues(alpha: 0.5)
+                        : theme.accent(widget.courseColor)
                     : ctaColor,
                 borderRadius: BorderRadius.circular(16),
+                border: !theme.isDark && ctaDisabled
+                    ? Border.all(color: theme.border)
+                    : null,
               ),
               child: _purchasing
                   ? const Center(
@@ -849,10 +856,12 @@ class _PaywallScreenState extends State<PaywallScreen> {
                           ? 'Purchases unavailable'
                           : _ctaLabel,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: !theme.isDark && ctaDisabled
+                            ? theme.subtext
+                            : Colors.white,
                         letterSpacing: -0.3,
                       ),
                     ),
@@ -903,7 +912,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(
                 fontSize: 10,
-                color: theme.subtext.withValues(alpha: 0.6),
+                color: theme.isDark
+                    ? theme.subtext.withValues(alpha: 0.6)
+                    : theme.subtext,
                 height: 1.5),
           ),
         ],
@@ -962,9 +973,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: widget.courseColor,
+                      color: theme.accent(widget.courseColor),
                       decoration: TextDecoration.underline,
-                      decorationColor: widget.courseColor,
+                      decorationColor: theme.accent(widget.courseColor),
                     ),
                   ),
                 ),
@@ -990,7 +1001,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
     required bool unavailable,
   }) {
     final selected = _selected == plan;
-    final effectiveColor = unavailable ? theme.subtext : color;
+    final effectiveColor = unavailable ? theme.subtext : theme.accent(color);
     final stacked = MediaQuery.sizeOf(context).width < 380 ||
         MediaQuery.textScalerOf(context).scale(16) > 20;
     final priceLabel = Text(price,
@@ -1062,15 +1073,19 @@ class _PaywallScreenState extends State<PaywallScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
-                          color: unavailable ? theme.border : badgeColor,
+                          color: unavailable
+                              ? theme.border
+                              : theme.accent(badgeColor),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           unavailable ? 'UNAVAILABLE' : badge,
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              color: unavailable && !theme.isDark
+                                  ? theme.text
+                                  : Colors.white,
                               letterSpacing: 0.5),
                         ),
                       ),

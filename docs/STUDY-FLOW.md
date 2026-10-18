@@ -1,6 +1,28 @@
 # Study flow and offline downloads
 
-Updated 2026-10-16.
+Updated 2026-10-17.
+
+## Recall and focused practice
+
+**Practice recall** in a lesson opens a local practice session using the
+flashcards already loaded for that lesson. Definitions and examples remain
+hidden until **Reveal answer**. The learner chooses **Got it** or **Needs
+practice**, then can repeat just the difficult cards. Closing practice returns
+to the same lesson card. Downloaded flashcards support this flow offline.
+
+**Practice missed questions** in quiz results opens a separate session with
+only that attempt's missed questions. Answer positions are shuffled afresh;
+each selection shows correctness, the correct answer after a miss, and the
+authored explanation. **Practice remaining** repeats only mistakes from that
+round. Returning restores the original quiz results, including mistake review
+and the full-quiz **Try again** action.
+
+Both flows keep state only for the open practice session. They do not write
+course scores, completion, points, or spaced-review schedules. Self-ratings
+are described as self-ratings; immediate retry accuracy is not called mastery.
+The existing delayed review queue remains due after immediate practice.
+
+These widgets are shared by the iOS source and browser app at `/app/`.
 
 ## Content and downloads
 
@@ -62,6 +84,10 @@ failed-save recovery, incomplete downloads, saved lessons with an empty
 catalogue, paid offline access, and onboarding at 320px with doubled text.
 `quiz_feedback_test.dart` also covers answer-review accuracy after shuffling,
 read-only review behavior, fresh retakes, scroll reset, and confirmed exits.
+`practice_session_test.dart` covers answer hiding, focused retry rounds,
+screen-reader activation, and 320px doubled-text layouts in both themes.
+Integration checks cover returning to the original lesson card and unchanged
+saved quiz scores/review queues after multiple focused-practice rounds.
 
 The 2026-09-19 local run passed all 489 Flutter tests with zero analyzer issues.
 `flutter build web --release --no-pub` also succeeded. Its optional Wasm probe

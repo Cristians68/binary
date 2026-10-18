@@ -11,6 +11,7 @@ import '../course_catalog.dart';
 import '../content_source.dart';
 import 'content_service.dart';
 import 'content_status.dart';
+import 'practice_session_screen.dart';
 
 class LessonScreen extends StatefulWidget {
   final String moduleTitle;
@@ -125,7 +126,8 @@ class _LessonScreenState extends State<LessonScreen> {
       return Scaffold(
         backgroundColor: theme.bg,
         body: Center(
-          child: CircularProgressIndicator(color: widget.color, strokeWidth: 2),
+          child: CircularProgressIndicator(
+              color: theme.accent(widget.color), strokeWidth: 2),
         ),
       );
     }
@@ -133,7 +135,7 @@ class _LessonScreenState extends State<LessonScreen> {
     if (_flashcards.isEmpty) {
       return ContentUnavailableScreen(
         title: 'Lesson unavailable',
-        color: widget.color,
+        color: theme.accent(widget.color),
         onRetry: _loadFlashcards,
         onPractice: _practiceSample,
       );
@@ -183,14 +185,14 @@ class _LessonScreenState extends State<LessonScreen> {
                               Icon(
                                 Icons.arrow_back_ios_new_rounded,
                                 size: 12,
-                                color: widget.color,
+                                color: theme.accent(widget.color),
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 'Back',
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: widget.color,
+                                  color: theme.accent(widget.color),
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -247,7 +249,7 @@ class _LessonScreenState extends State<LessonScreen> {
                           : '${displayTitle(widget.courseTag)} · ${widget.moduleTitle}',
                       style: TextStyle(
                         fontSize: 11,
-                        color: widget.color,
+                        color: theme.accent(widget.color),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -259,7 +261,16 @@ class _LessonScreenState extends State<LessonScreen> {
                 // ── Scrollable card content ───────────────
                 Expanded(
                   child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 280),
+                    duration: MediaQuery.disableAnimationsOf(context)
+                        ? Duration.zero
+                        : const Duration(milliseconds: 280),
+                    layoutBuilder: (currentChild, previousChildren) => Stack(
+                      alignment: Alignment.topCenter,
+                      children: [
+                        ...previousChildren,
+                        if (currentChild != null) currentChild,
+                      ],
+                    ),
                     transitionBuilder: (child, animation) {
                       return FadeTransition(
                         opacity: CurvedAnimation(
@@ -288,6 +299,26 @@ class _LessonScreenState extends State<LessonScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: theme.text,
+                                side: BorderSide(color: theme.subtext),
+                              ),
+                              onPressed: () => Navigator.of(context).push(
+                                AppRouter.push(PracticeSessionScreen(
+                                  cards: _flashcards
+                                      .map(PracticeCard.recall)
+                                      .toList(),
+                                  title: 'Recall practice',
+                                  subtitle: widget.moduleTitle,
+                                  color: widget.color,
+                                  returnLabel: 'Back to lesson',
+                                )),
+                              ),
+                              icon: const Icon(Icons.psychology_outlined),
+                              label: const Text('Practice recall'),
+                            ),
+                            const SizedBox(height: 12),
                             // ── Main card ──
                             Container(
                               width: double.infinity,
@@ -295,12 +326,12 @@ class _LessonScreenState extends State<LessonScreen> {
                               decoration: BoxDecoration(
                                 color: theme.isDark
                                     ? widget.color.withValues(alpha: 0.07)
-                                    : widget.color.withValues(alpha: 0.05),
+                                    : theme.card,
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: theme.isDark
                                       ? widget.color.withValues(alpha: 0.18)
-                                      : widget.color.withValues(alpha: 0.25),
+                                      : theme.border,
                                 ),
                                 boxShadow: theme.isDark
                                     ? null
@@ -331,7 +362,7 @@ class _LessonScreenState extends State<LessonScreen> {
                                       card['label']!.toUpperCase(),
                                       style: TextStyle(
                                         fontSize: 10,
-                                        color: widget.color,
+                                        color: theme.accent(widget.color),
                                         fontWeight: FontWeight.w700,
                                         letterSpacing: 0.8,
                                       ),
@@ -457,7 +488,7 @@ class _LessonScreenState extends State<LessonScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             decoration: BoxDecoration(
-                              color: widget.color,
+                              color: theme.accent(widget.color),
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Row(

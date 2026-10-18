@@ -31,12 +31,14 @@ class QuizResultsDialog extends StatefulWidget {
     required this.practiceOnly,
     required this.color,
     this.celebration,
+    this.onPracticeMistakes,
   });
 
   final List<QuizAnswer> answers;
   final bool practiceOnly;
   final Color color;
   final Widget? celebration;
+  final VoidCallback? onPracticeMistakes;
 
   @override
   State<QuizResultsDialog> createState() => _QuizResultsDialogState();
@@ -159,6 +161,26 @@ class _QuizResultsDialogState extends State<QuizResultsDialog> {
                           textAlign: TextAlign.center,
                         ),
                       ),
+                    ],
+                    if (missed.isNotEmpty &&
+                        widget.onPracticeMistakes != null) ...[
+                      const SizedBox(height: 10),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.all(16),
+                        ),
+                        onPressed: widget.onPracticeMistakes,
+                        icon: const Icon(Icons.psychology_outlined),
+                        label: Text(
+                            'Practice missed questions (${missed.length})',
+                            textAlign: TextAlign.center),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('A focused round. Your quiz score stays the same.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: theme.subtext, fontSize: 12)),
                     ],
                     const SizedBox(height: 10),
                     FilledButton(

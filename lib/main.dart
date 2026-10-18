@@ -191,32 +191,11 @@ class _BinaryAppState extends State<BinaryApp> {
     return ListenableBuilder(
       listenable: _themeNotifier,
       builder: (context, _) {
-        final isDark = _themeNotifier.isDark;
         return MaterialApp(
           navigatorKey: _navigatorKey,
           title: 'B1nary',
           debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            brightness: isDark ? Brightness.dark : Brightness.light,
-            scaffoldBackgroundColor:
-                isDark ? AppColors.darkBg : AppColors.lightBg,
-            colorScheme: ColorScheme(
-              brightness: isDark ? Brightness.dark : Brightness.light,
-              primary: AppColors.primary,
-              onPrimary: Colors.white,
-              secondary: AppColors.primary,
-              onSecondary: Colors.white,
-              error: AppColors.red,
-              onError: Colors.white,
-              surface: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-              onSurface: isDark ? AppColors.darkText : AppColors.lightText,
-            ),
-            textTheme: GoogleFonts.interTextTheme(
-              isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
-            ).apply(
-              bodyColor: isDark ? AppColors.darkText : AppColors.lightText,
-              displayColor: isDark ? AppColors.darkText : AppColors.lightText,
-            ),
+          theme: appMaterialTheme(_themeNotifier).copyWith(
             // CupertinoPageTransitionsBuilder now lives in the cupertino
             // library, not material — hence the import above. Without it the
             // analyzer on an older Flutter was happy and the CI archive died

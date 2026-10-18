@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ── Shared brand mark ──────────────────────────────────────────────────────
@@ -96,13 +97,15 @@ class AppColors {
   static const darkSubtext = Color(0xFFA8B5CB);
   static const darkNavBg = Color(0xFF151E30);
 
-  // ── Light mode — vibrant, Apple.com-inspired ──
-  static const lightBg = Color(0xFFF6F8FC);
-  static const lightSurface = Color(0xFFEDF1F8);
+  // Light surfaces stay distinct even when a display washes out pale shades.
+  // Decorative dividers and interactive outlines have separate roles.
+  static const lightBg = Color(0xFFF2F4F8);
+  static const lightSurface = Color(0xFFE6EBF2);
   static const lightCard = Color(0xFFFFFFFF);
-  static const lightBorder = Color(0xFFE0E6F0);
-  static const lightText = Color(0xFF17243C);
-  static const lightSubtext = Color(0xFF64728A);
+  static const lightBorder = Color(0xFFCBD3DF);
+  static const lightOutline = Color(0xFF7C879A);
+  static const lightText = Color(0xFF14213A);
+  static const lightSubtext = Color(0xFF45536B);
   static const lightNavBg = Color(0xFFFFFFFF);
 
   // ── Accent colors ──
@@ -139,10 +142,85 @@ class ThemeNotifier extends ChangeNotifier {
   Color get surface => _isDark ? AppColors.darkSurface : AppColors.lightSurface;
   Color get card => _isDark ? AppColors.darkCard : AppColors.lightCard;
   Color get border => _isDark ? AppColors.darkBorder : AppColors.lightBorder;
+  Color get outline => _isDark ? AppColors.darkBorder : AppColors.lightOutline;
   Color get text => _isDark ? AppColors.darkText : AppColors.lightText;
   Color get subtext => _isDark ? AppColors.darkSubtext : AppColors.lightSubtext;
   Color get navBg => _isDark ? AppColors.darkNavBg : AppColors.lightNavBg;
   Color get primary => AppColors.primary;
+
+  /// Course colors arrive from the catalogue, including bright cyan and amber.
+  /// Keep their hue, but give foregrounds and white-text buttons enough depth.
+  /// Decorative tints should still use the original course color.
+  Color accent(Color color) {
+    if (_isDark) return color;
+    final opaque = color.withValues(alpha: 1);
+    final background = AppColors.lightSurface.computeLuminance();
+    for (var step = 0; step <= 20; step++) {
+      final candidate = Color.lerp(opaque, AppColors.lightText, step / 20)!;
+      if ((background + 0.05) / (candidate.computeLuminance() + 0.05) >= 4.5) {
+        return candidate;
+      }
+    }
+    return AppColors.lightText;
+  }
+}
+
+/// Shared by the app and the screenshot fixture so previews use shipping colors.
+ThemeData appMaterialTheme(ThemeNotifier theme, {TargetPlatform? platform}) {
+  final brightness = theme.isDark ? Brightness.dark : Brightness.light;
+  final scheme = ColorScheme(
+    brightness: brightness,
+    primary: AppColors.primary,
+    onPrimary: Colors.white,
+    secondary: AppColors.primary,
+    onSecondary: Colors.white,
+    error: AppColors.red,
+    onError: Colors.white,
+    surface: theme.surface,
+    onSurface: theme.text,
+  );
+  final base = ThemeData(
+    brightness: brightness,
+    platform: platform,
+    scaffoldBackgroundColor: theme.bg,
+    colorScheme: scheme,
+    textTheme: GoogleFonts.interTextTheme(
+      theme.isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
+    ).apply(bodyColor: theme.text, displayColor: theme.text),
+  );
+  if (theme.isDark) return base;
+  return base.copyWith(
+    colorScheme: scheme.copyWith(
+      surface: theme.card,
+      surfaceContainer: theme.bg,
+      surfaceContainerHighest: theme.surface,
+      onSurfaceVariant: theme.subtext,
+      outline: theme.outline,
+      outlineVariant: theme.border,
+      error: theme.accent(AppColors.red),
+      surfaceTint: Colors.transparent,
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: theme.card,
+      hintStyle: TextStyle(color: theme.subtext),
+      labelStyle: TextStyle(color: theme.subtext),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: theme.outline),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.primary,
+        side: BorderSide(color: theme.outline),
+      ),
+    ),
+  );
 }
 
 // ── Inherited widget ──────────────────────────────────────────────────────────

@@ -39,6 +39,19 @@ Set-Location $root
 $public = Join-Path $root 'public'
 $appDir = Join-Path $public 'app'
 
+# Only replace the generated directory inside this checkout. Never follow a
+# junction or symlink when clearing an older assembled site.
+$resolvedRoot = [IO.Path]::GetFullPath($root)
+$resolvedPublic = [IO.Path]::GetFullPath($public)
+if ((Split-Path -Parent $resolvedPublic) -ne $resolvedRoot -or
+    (Split-Path -Leaf $resolvedPublic) -ne 'public') {
+  throw "Refusing to replace output outside this checkout: $resolvedPublic"
+}
+if ((Test-Path -LiteralPath $public) -and
+    ((Get-Item -LiteralPath $public).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+  throw "Refusing to replace a linked output directory: $resolvedPublic"
+}
+
 # ── 1. Build the Flutter web app into build/web ────────────────────────────
 if (-not $SkipApp) {
   if (-not (Get-Command flutter -ErrorAction SilentlyContinue)) {
@@ -70,7 +83,7 @@ if ((Get-Content $appIndex -Raw) -notmatch '<base href="/app/">') {
 
 # ── 2. Reset public/ ───────────────────────────────────────────────────────
 Write-Host '==> Assembling public/' -ForegroundColor Cyan
-if (Test-Path $public) { Remove-Item $public -Recurse -Force }
+if (Test-Path -LiteralPath $public) { Remove-Item -LiteralPath $public -Recurse -Force }
 New-Item -ItemType Directory -Path $public | Out-Null
 
 # ── 3. Marketing site at the root ──────────────────────────────────────────

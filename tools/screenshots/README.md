@@ -43,9 +43,11 @@ account and writes nothing to production. Use it to review the UI.
 
 ```
 flutter build web --no-pub --debug -t tools/screenshots/ui_preview.dart --output build/ui_preview
-node tools/screenshots/capture_ui.js            # all 41 fixtures
+node tools/screenshots/capture_ui.js            # all current fixtures
 node tools/screenshots/capture_ui.js 08-quiz    # just one
 node tools/screenshots/capture_ui.js --quiz-feedback # nine quiz feedback/result/review fixtures
+node tools/screenshots/capture_ui.js --practice # recall and focused-practice fixtures
+node tools/screenshots/check_site.js           # assembled public/ website checks
 ```
 
 Screenshots and the semantics-label dump for each land in
@@ -87,6 +89,16 @@ They cover light and dark mode plus 320px doubled text. No production quiz data
 or learner state is changed. They also inspect immediate answer feedback,
 scroll to the final result/review actions at doubled text, and activate
 **Try again** to verify that a fresh attempt starts at the top.
+
+The October 17 fixtures also enter Recall practice through a real lesson and
+focused practice through real quiz results. They cover hidden/revealed answers,
+summary screens, difficult-card retries, return to original results, dark mode,
+and doubled text. These fixtures use synthetic questions and flashcards.
+
+`check_site.js` serves the assembled `public/` locally. It checks the marketing
+site at desktop/mobile/320px doubled text in both themes, palette contrast,
+course count, anchors, keyboard-operated recall, recall with JavaScript off,
+and the public support/legal pages. Captures stay in `.dart_tool/site-review/`.
 
 ## App Store screenshot collection
 

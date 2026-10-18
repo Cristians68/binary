@@ -2,6 +2,7 @@ import 'package:binary/screens/app_router.dart';
 import 'package:binary/screens/app_theme.dart';
 import 'package:binary/screens/quiz_results_dialog.dart';
 import 'package:binary/screens/quiz_screen.dart';
+import 'package:binary/screens/practice_session_screen.dart';
 import 'package:binary/screens/review_service.dart';
 import 'package:binary/screens/service_backend.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
@@ -189,6 +190,39 @@ void main() {
     final user = (await db.doc('users/learner').get()).data()!;
     expect(user['quizScores'], hasLength(1));
     expect(user['lessonsCompleted'], 1);
+  });
+
+  testWidgets(
+      'focused practice uses only misses and preserves scores and scheduled review',
+      (tester) async {
+    await seed(count: 3);
+    await open(tester);
+    await tap(tester, 'Wrong answer 1');
+    await tap(tester, 'Next question');
+    await tap(tester, 'Correct answer 2');
+    await tap(tester, 'Next question');
+    await tap(tester, 'Correct answer 3');
+    await tap(tester, 'See results');
+    final queueBefore = await reviewQueue(tester);
+    final userBefore = (await db.doc('users/learner').get()).data();
+    expect(userBefore!['quizScores'], hasLength(1));
+    await tap(tester, 'Practice missed questions (1)');
+    expect(find.byType(PracticeSessionScreen), findsOneWidget);
+    expect(find.text('Published question 1'), findsOneWidget);
+    expect(find.text('Published question 2'), findsNothing);
+    await tap(tester, 'Wrong answer 1');
+    await tap(tester, 'Finish round');
+    await tap(tester, 'Practice remaining (1)');
+    await tap(tester, 'Correct answer 1');
+    await tap(tester, 'Finish round');
+    await tap(tester, 'Back to quiz results');
+    expect(inResults('You scored 2 out of 3'), findsOneWidget);
+    expect(await reviewQueue(tester), queueBefore);
+    expect((await db.doc('users/learner').get()).data(), userBefore);
+    await tap(tester, 'Practice missed questions (1)');
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(inResults('You scored 2 out of 3'), findsOneWidget);
   });
 
   testWidgets('mistake review and all actions fit small phones at double text',

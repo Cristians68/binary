@@ -15,6 +15,7 @@ import '../course_catalog.dart';
 import '../content_source.dart';
 import 'content_service.dart';
 import 'content_status.dart';
+import 'practice_session_screen.dart';
 
 /// This controller belongs to the result route so it cannot outlive the quiz.
 class _QuizCelebration extends StatefulWidget {
@@ -265,6 +266,19 @@ class _QuizScreenState extends State<QuizScreen> {
         answers: List.unmodifiable(_responses),
         practiceOnly: _isPractice,
         color: widget.color,
+        onPracticeMistakes: () => navigator.push(MaterialPageRoute<void>(
+          builder: (_) => PracticeSessionScreen(
+            cards: [
+              for (final answer in _responses)
+                if (!answer.isCorrect)
+                  PracticeCard.question(_questions[answer.number - 1]),
+            ],
+            title: 'Focused practice',
+            subtitle: widget.moduleTitle,
+            color: widget.color,
+            returnLabel: 'Back to quiz results',
+          ),
+        )),
         celebration:
             passed && !_isPractice && !MediaQuery.disableAnimationsOf(context)
                 ? _QuizCelebration(color: widget.color)
@@ -349,7 +363,8 @@ class _QuizScreenState extends State<QuizScreen> {
       return Scaffold(
         backgroundColor: theme.bg,
         body: Center(
-          child: CircularProgressIndicator(color: widget.color, strokeWidth: 2),
+          child: CircularProgressIndicator(
+              color: theme.accent(widget.color), strokeWidth: 2),
         ),
       );
     }
@@ -357,7 +372,7 @@ class _QuizScreenState extends State<QuizScreen> {
     if (_questions.isEmpty) {
       return ContentUnavailableScreen(
         title: 'Quiz unavailable',
-        color: widget.color,
+        color: theme.accent(widget.color),
         onRetry: _loadQuestions,
         onPractice: _practiceSample,
       );
@@ -426,14 +441,15 @@ class _QuizScreenState extends State<QuizScreen> {
                                             Icon(
                                               Icons.arrow_back_ios_new_rounded,
                                               size: 13,
-                                              color: widget.color,
+                                              color: theme.accent(widget.color),
                                             ),
                                             const SizedBox(width: 5),
                                             Text(
                                               'Lesson',
                                               style: TextStyle(
                                                 fontSize: 14,
-                                                color: widget.color,
+                                                color:
+                                                    theme.accent(widget.color),
                                                 fontWeight: FontWeight.w600,
                                               ),
                                             ),
@@ -487,7 +503,7 @@ class _QuizScreenState extends State<QuizScreen> {
                                         : '${displayTitle(widget.courseTag)} · ${widget.moduleTitle}',
                                     style: TextStyle(
                                       fontSize: 11,
-                                      color: widget.color,
+                                      color: theme.accent(widget.color),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -505,14 +521,16 @@ class _QuizScreenState extends State<QuizScreen> {
                                 ),
                                 const SizedBox(height: 24),
                                 ...List.generate(answers.length, (i) {
-                                  Color borderColor = theme.border;
+                                  Color borderColor = theme.outline;
                                   Color bgColor = theme.surface;
                                   Widget? trailingIcon;
 
                                   if (_answered) {
                                     if (i == correct) {
-                                      borderColor = AppColors.green
-                                          .withValues(alpha: 0.5);
+                                      borderColor = theme.isDark
+                                          ? AppColors.green
+                                              .withValues(alpha: 0.5)
+                                          : theme.accent(AppColors.green);
                                       bgColor = AppColors.green
                                           .withValues(alpha: 0.10);
                                       trailingIcon = Icon(
@@ -524,13 +542,14 @@ class _QuizScreenState extends State<QuizScreen> {
                                       );
                                     } else if (i == _selectedAnswer &&
                                         i != correct) {
-                                      borderColor =
-                                          AppColors.red.withValues(alpha: 0.5);
+                                      borderColor = theme.isDark
+                                          ? AppColors.red.withValues(alpha: 0.5)
+                                          : theme.accent(AppColors.red);
                                       bgColor =
                                           AppColors.red.withValues(alpha: 0.10);
                                       trailingIcon = Icon(
                                         CupertinoIcons.xmark_circle_fill,
-                                        color: AppColors.red,
+                                        color: theme.accent(AppColors.red),
                                         size: 18,
                                       );
                                     }
@@ -617,7 +636,8 @@ class _QuizScreenState extends State<QuizScreen> {
                                     onPressed: _saving ? null : _nextQuestion,
                                     style: FilledButton.styleFrom(
                                       padding: EdgeInsets.zero,
-                                      backgroundColor: widget.color,
+                                      backgroundColor:
+                                          theme.accent(widget.color),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(16),
                                       ),
@@ -627,7 +647,7 @@ class _QuizScreenState extends State<QuizScreen> {
                                       padding: const EdgeInsets.symmetric(
                                           vertical: 16),
                                       decoration: BoxDecoration(
-                                        color: widget.color,
+                                        color: theme.accent(widget.color),
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Row(

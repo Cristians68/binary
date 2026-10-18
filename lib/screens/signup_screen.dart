@@ -82,8 +82,7 @@ class _SignupScreenState extends State<SignupScreen>
     }
 
     if (password.length < 8) {
-      setState(() =>
-          _errorMessage = 'Password must be at least 8 characters.');
+      setState(() => _errorMessage = 'Password must be at least 8 characters.');
       return;
     }
 
@@ -150,7 +149,8 @@ class _SignupScreenState extends State<SignupScreen>
       _passwordController.clear();
       setState(() {
         _errorMessage = switch (e.code) {
-          'email-already-in-use' || 'credential-already-in-use' =>
+          'email-already-in-use' ||
+          'credential-already-in-use' =>
             'An account already exists with this email.',
           'invalid-email' => 'Please enter a valid email address.',
           'weak-password' =>
@@ -179,8 +179,7 @@ class _SignupScreenState extends State<SignupScreen>
           Positioned(
             top: -120,
             right: -100,
-            child:
-                GlowOrb(color: AppColors.primary, size: 320, opacity: 0.10),
+            child: GlowOrb(color: AppColors.primary, size: 320, opacity: 0.10),
           ),
           Positioned(
             bottom: -140,
@@ -195,7 +194,8 @@ class _SignupScreenState extends State<SignupScreen>
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 28),
-                  child: WebContentBounds(child: Column(
+                  child: WebContentBounds(
+                      child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 20),
@@ -298,8 +298,8 @@ class _SignupScreenState extends State<SignupScreen>
                           child: RichText(
                             text: TextSpan(
                               text: 'Already have an account? ',
-                              style: TextStyle(
-                                  fontSize: 14, color: theme.subtext),
+                              style:
+                                  TextStyle(fontSize: 14, color: theme.subtext),
                               children: const [
                                 TextSpan(
                                   text: 'Sign in',
@@ -374,17 +374,18 @@ class _SignupScreenState extends State<SignupScreen>
     TextInputType keyboardType = TextInputType.text,
   }) {
     return Container(
-      decoration: BoxDecoration(
-        color: theme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.border),
-      ),
+      decoration: theme.isDark
+          ? BoxDecoration(
+              color: theme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: theme.border),
+            )
+          : null,
       child: TextField(
         controller: controller,
         obscureText: isPassword ? _obscurePassword : false,
         keyboardType: isPassword ? TextInputType.visiblePassword : keyboardType,
-        style: TextStyle(
-            color: theme.text, fontSize: 15, letterSpacing: -0.2),
+        style: TextStyle(color: theme.text, fontSize: 15, letterSpacing: -0.2),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: TextStyle(color: theme.subtext, fontSize: 15),
@@ -402,7 +403,7 @@ class _SignupScreenState extends State<SignupScreen>
                   ),
                 )
               : null,
-          border: InputBorder.none,
+          border: theme.isDark ? InputBorder.none : null,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
         ),
@@ -424,8 +425,7 @@ class _SignupScreenState extends State<SignupScreen>
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOutCubic,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
             decoration: BoxDecoration(
               color: selected
                   ? AppColors.primary.withValues(alpha: 0.12)
@@ -442,8 +442,7 @@ class _SignupScreenState extends State<SignupScreen>
               style: TextStyle(
                 fontSize: 13,
                 color: selected ? AppColors.primary : theme.subtext,
-                fontWeight:
-                    selected ? FontWeight.w600 : FontWeight.w400,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                 letterSpacing: -0.1,
               ),
             ),
@@ -479,8 +478,8 @@ class _PressableButtonState extends State<_PressableButton>
     super.initState();
     _controller = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 100));
-    _scale = Tween<double>(begin: 1.0, end: 0.96).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _scale = Tween<double>(begin: 1.0, end: 0.96)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -492,8 +491,7 @@ class _PressableButtonState extends State<_PressableButton>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown:
-          widget.onTap == null ? null : (_) => _controller.forward(),
+      onTapDown: widget.onTap == null ? null : (_) => _controller.forward(),
       onTapUp: widget.onTap == null
           ? null
           : (_) {

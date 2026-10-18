@@ -1,8 +1,64 @@
-# B1nary — handoff (last updated 2026-10-16)
+# B1nary — handoff (last updated 2026-10-18)
 
 Read this first. It records what is live, what is waiting on the owner, and
 the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 `docs/IOS-GOOGLE-SIGNIN-AUDIT.md`, `docs/SECURITY.md` and `docs/RELEASE.md`.
+
+## 2026-10-18 — finalize the pending 1.0.10+64 checkpoint
+
+Resuming found the October 17 implementation still uncommitted on `master`.
+A fresh fetch confirmed `origin/master` and local HEAD both at `2a4e112`.
+Reviewed the pending practice, theme, website, preview and documentation work
+and retained version **1.0.10+64** for this same iteration.
+
+Fresh verification: **698 Flutter tests pass; analyzer reports zero issues**;
+`git diff --check` is clean. The successful October 17 JavaScript web build and
+browser-check logs were inspected, not rerun. The full-suite log for this
+continuation is `.dart_tool/release-tests-1.0.10-resume.log` (ignored).
+
+The next product priorities remain in `MARKET-AND-PRODUCT-2026-10-17.md`.
+Production billing/functions and the intended iPhone build still need the
+release checks below; their production status was not rechecked today.
+No hosting deployment, content publication, TestFlight build or App Store
+submission was performed during this continuation.
+
+## 2026-10-17 — recall practice, focused quizzes and website, 1.0.10+64
+
+The owner resumed development, requested market research and improvements to
+both the app and website, then asked to finish this iteration, update pubspec,
+commit and push. Work continues from `2a4e112`; origin/master matched that
+revision when fetched. `pubspec.yaml` and README now identify **1.0.10+64**.
+
+- Lessons offer **Practice recall**: reveal hidden definitions/examples,
+  self-assess recall, and repeat only difficult cards. Returning preserves the
+  original lesson position. Loaded/downloaded lesson content is reused.
+- Quiz results offer **Practice missed questions**, with fresh option ordering,
+  explanations, and optional rounds of remaining mistakes. Practice never
+  changes the original result, course completion, points, or spaced-review due
+  dates. Both practice modes keep session-local state only.
+- Completed the shared light-theme work, including readable course accents,
+  form focus states, profile/navigation text, and control boundaries. Browser
+  review also led to top-aligned lesson content, uncut course-filter labels,
+  readable dark practice buttons, and a wrapping login footer at doubled text.
+- The website's Flutter app shares these features. The marketing site uses
+  matching colors, an interactive recall sample, accurate offline/practice
+  descriptions, and all seven courses (including AI & Machine Learning).
+- [Market research and priorities](MARKET-AND-PRODUCT-2026-10-17.md) records
+  sources, implementation decisions, and a prioritized follow-up roadmap.
+
+Verification: **698 Flutter tests pass; analyzer reports zero issues.** The
+browser suite captured 60 scenarios and exposed the large-text login footer
+overflow, now fixed with two regression tests. Website checks pass at desktop,
+phone and 320px doubled text in both themes, including palette contrast,
+keyboard interaction, no-JavaScript recall, and all public support/legal pages.
+These checks do not establish native iOS accessibility or purchase behavior.
+
+Generated outputs and logs stay ignored in `.dart_tool/`, `build/` and `public/`.
+Use `BINARY_UI_PREVIEW_DIR=build/ui_preview_final` with capture_ui.js to inspect
+the final fixture build; `--polish` selects the screens changed during review.
+The purchase/functions and native-device release gates below remain unresolved.
+No hosting deployment, production content writes, TestFlight build or App Store
+submission was performed during this iteration; the owner ended with commit/push.
 
 ## 2026-10-16 — quiz feedback and navigation, version 1.0.9+63
 

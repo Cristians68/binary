@@ -28,11 +28,15 @@ class StudyLabel extends StatelessWidget {
                     child: Padding(
                         padding: const EdgeInsets.only(right: 5),
                         child: Icon(icon,
-                            size: 14, color: onDark ? AppColors.mint : color))),
+                            size: 14,
+                            color: onDark
+                                ? AppColors.mint
+                                : AppTheme.of(context).accent(color)))),
               TextSpan(text: text),
             ]),
             style: TextStyle(
-                color: onDark ? Colors.white : color,
+                color:
+                    onDark ? Colors.white : AppTheme.of(context).accent(color),
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 height: 1.3)),
