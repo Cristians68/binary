@@ -6,7 +6,8 @@ const admin = require("firebase-admin");
 const crypto = require("node:crypto");
 const { fetchCustomer } = require("./revenuecat_client");
 const { createPurchaseService } = require("./purchase_reconciliation");
-const { COURSE_IDS, PurchaseError } = require("./purchase_catalog");
+const { PurchaseError } = require("./purchase_catalog");
+const { createTrialService } = require("./trial_service");
 
 const REVENUECAT_WEBHOOK_SECRET = defineSecret("REVENUECAT_WEBHOOK_SECRET");
 const REVENUECAT_SECRET_API_KEY = defineSecret("REVENUECAT_SECRET_API_KEY");
@@ -102,24 +103,22 @@ function purchaseCallable(action) {
 exports.setPendingPurchase = purchaseCallable((purchases, uid, data) => purchases.prepare(uid, data));
 exports.refreshEntitlement = purchaseCallable((purchases, uid) => purchases.refresh(uid));
 
-// Legacy one-time trial. The normal free preview remains Module 1 of every
-// course. Clients cannot extend or reset this server-owned trial.
+// One seven-day trial of a chosen course, independent of store purchases.
+// Module 1 of every course remains free after the trial expires.
 exports.startTrial = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Sign in to start a trial.");
-  const courseId = request.data?.courseId;
-  if (!COURSE_IDS.has(courseId)) throw new HttpsError("invalid-argument", "A valid courseId is required.");
-  const ref = db().collection("users").doc(uid);
-  return db().runTransaction(async (tx) => {
-    const data = (await tx.get(ref)).data() || {};
-    if (data.hasUsedTrial === true) return { granted: false, reason: "already_used" };
-    const expiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    tx.set(ref, {
-      trialCourseId: courseId,
-      trialExpiry: admin.firestore.Timestamp.fromDate(expiry),
-      trialStartedAt: admin.firestore.FieldValue.serverTimestamp(),
-      hasUsedTrial: true,
-    }, { merge: true });
-    return { granted: true, expiresAt: expiry.toISOString() };
-  });
+  try {
+    await admin.auth().getUser(uid);
+    return await createTrialService({
+      db: db(),
+      timestamp: (ms) => admin.firestore.Timestamp.fromMillis(ms),
+      serverTimestamp: () => admin.firestore.FieldValue.serverTimestamp(),
+    })(uid, request.data?.courseId);
+  } catch (error) {
+    if (error instanceof PurchaseError) throw new HttpsError(error.code, error.message);
+    if (error.code === "auth/user-not-found") throw new HttpsError("unauthenticated", "Sign in again.");
+    logger.error("Trial activation failed", { code: error.code || "internal" });
+    throw new HttpsError("unavailable", "Could not start your trial. Please try again.");
+  }
 });

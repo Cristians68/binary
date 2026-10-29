@@ -1,8 +1,145 @@
-# B1nary — handoff (last updated 2026-10-18)
+# B1nary — handoff (last updated 2026-10-29)
 
 Read this first. It records what is live, what is waiting on the owner, and
 the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 `docs/IOS-GOOGLE-SIGNIN-AUDIT.md`, `docs/SECURITY.md` and `docs/RELEASE.md`.
+
+For the latest App Store Connect preparation, saved bundle reviewer notes and
+fresh production blockers, see
+[APP-STORE-CONNECT-STATUS-2026-10-27.md](APP-STORE-CONNECT-STATUS-2026-10-27.md).
+The October 19 setup history remains in
+[APP-STORE-CONNECT-STATUS-2026-10-19.md](APP-STORE-CONNECT-STATUS-2026-10-19.md).
+
+## 2026-10-29 — final audit and billing repaired
+
+The owner requested a final audit before committing/pushing, then App Store
+Connect preparation while they start Codemagic. All **729 Flutter**, **56 backend**,
+**22 emulator** and **9 iOS verifier** tests pass; analyzer and backend lint are
+clean. Seed validation and 14 fault checks pass, as do the JavaScript release
+build and website layout/contrast/keyboard checks. The audit fixed an additional
+stalled-product-loading case that could hide the trial. Version is **1.0.11+68**;
+Codemagic derives the actual TestFlight build number. See
+[FINAL-AUDIT-2026-10-29.md](FINAL-AUDIT-2026-10-29.md).
+
+**Billing repaired with explicit owner approval:** project `binary-6a372` now
+uses **`011D9D-8B93EA-A892D2`**, My Billing Account 1, and reports **billing enabled**.
+No new payment ran. Secret Manager is enabled. Deployment stopped before functions
+were created because RevenueCat secrets were absent. With explicit approval,
+created the V1 key **Binary Firebase purchase verification**; securely configuring
+it in Firebase, webhook setup, product audit and deployment remain in progress.
+Do not expose key values in source, logs or handoff. Production rules are still older.
+
+**Computer-use constraint:** interact only with the Chrome window on the left LG
+monitor, never the main/game display. Native input has not reliably reached the
+RevenueCat reveal control while the game retains input; background checks work.
+The browser access host reports unavailable. Do not fight the user's pointer.
+
+Generated screenshots/dashboard evidence stay local under ignored
+`submission-assets/`; paid-content fixture exports remain ignored too. Preserve
+manual App Store release. The owner will trigger Codemagic after the push;
+do not start that build for them.
+
+## Earlier October 29 checkpoint — seven-day trial and billing recheck
+
+The owner resumed work and explicitly chose **one chosen course** for the
+seven-day free trial. The paywall now offers course selection and trial
+activation, independent of App Store products. No card or automatic charge;
+one trial per Firebase account. Full course access expires after exactly seven
+days; progress and free first modules remain. The server owns the grant and
+expiry, rejects course switching/reuse, and safely returns the existing grant
+on retry. Activation must be confirmed by a fresh server profile read.
+
+Trial status, expiry, loading/retry and activation failures are visible in the
+paywall. The website pricing explanation and support FAQ match. Existing
+profile/feedback work was preserved; corrected its test setup for initials,
+async sends and scrolling after keyboard layout, and cleared analyzer warnings.
+
+**Fresh billing finding:** Binary is still linked to closed account
+`012550-8FC12A-E19CC0` (Binary Academy), with billing disabled and zero functions.
+However, the previously paid account **`011D9D-8B93EA-A892D2`, My Billing Account 1,
+is now open**. Do not recommend another activation payment before considering
+relinking the project to this open account. No relink or financial action ran.
+The production secrets API remains disabled and deployed rules remain older.
+
+Verification: **728 Flutter tests**, **56 backend tests**, **22 Firestore emulator
+tests** pass; analysis reports zero issues and backend lint passes. Emulator
+tests execute the actual trial transaction and verify content access, expiry,
+progress preservation and competing trial requests. App tests cover selection,
+double taps, failures, active/expired states, doubled text and downloaded-content
+expiry. The JavaScript release web build succeeds; the existing optional Wasm
+probe warning remains. Native iPhone testing and live deployment are outstanding.
+See [TRIAL-STATUS-2026-10-29.md](TRIAL-STATUS-2026-10-29.md) for the exact checkpoint.
+
+## Historical pause — October 27, resumed October 29, 2026
+
+The owner asked to remember today's work and continue tomorrow. Stop live
+changes and billing checks at this checkpoint. Read this section and the
+October 27 App Store Connect status report first when resuming.
+
+- **Objective:** finish preparing for App Review. Version **1.0.11**, build
+  **67**, remains Prepare for Submission with manual release. Both bundles'
+  review notes were saved; the app review notes now identify build 67 and
+  the Everything plan label. No submission or deployment occurred.
+- **Billing link:** project `binary-6a372` still uses
+  **`012550-8FC12A-E19CC0`**, renamed **Binary Academy**. The Blaze upgrade
+  succeeded, but the account remained closed / not in good standing. Google
+  Payments Center showed a **$30 minimum activation payment** for this account.
+- **Payment mismatch:** the owner's successful **$10 receipt** is for a
+  different account, **`011D9D-8B93EA-A892D2`**, **My Billing Account 1**.
+  Its receipt says payment should appear within 24 hours. The latest API and
+  console checks still showed both accounts closed; the paid account had no
+  linked projects. Do not treat this receipt as payment to Binary's account.
+- **First step tomorrow:** recheck both accounts and the project's billing
+  link. Run the existing read-only scripts:
+  `node tools/auth/audit-remote.js`,
+  `node tools/auth/audit-payments.js --save`, and the ignored diagnostic
+  `node .dart_tool/payment-audit/check-billing-link.cjs` (checks both accounts).
+  Use the existing CLI login without printing tokens or secret values.
+  If the paid $10 account opens, investigate using it for Binary and guide
+  the owner through any billing relinking. Check this option before
+  recommending another payment. The assistant made no payment or saved-card
+  preference change; financial transactions remain owner actions.
+- **After billing is enabled:** verify RevenueCat offerings/products, secrets,
+  notifications/webhook and legacy receipts per `PURCHASES.md`; deploy
+  functions then rules; perform iPhone purchase, multiple-course unlock,
+  restore/refund, sign-in and account-deletion checks. Last audit: zero
+  functions, disabled Secret Manager and older rules lacking purchase-snapshot
+  authorization. Actual device testing is still outstanding.
+- **Submission assets:** capture functional review screenshots for seven
+  courses and two bundles, compare storefront previews with the native build,
+  then attach the current IAPs for review. The legacy single is restore-only.
+- **Workspace:** pre-existing uncommitted app/build/test changes remain intact.
+  Today's local changes concern handoff/status documentation. No commit or
+  push was requested or performed.
+
+## 2026-10-27 — App Store preparation, 1.0.11 (67)
+
+The owner asked to finish preparing for App Review in App Store Connect.
+Saved missing review notes for both bundles and clarified the version notes
+with build 67 and the actual Everything plan label. Version 1.0.11 remains
+Prepare for Submission, with build 67 and manual release selected.
+
+Fresh read-only production checks still show **billing disabled, zero Cloud
+Functions, Secret Manager disabled and older rules without the private
+purchase snapshot check**. Purchase-review screenshot slots remain empty;
+functional iPhone checkout/restore/deletion checks are still required.
+No review submission, upload, billing change or production deployment occurred.
+Existing local source edits were preserved; no commit or push was requested.
+
+Later the same evening, the owner completed the Blaze upgrade. The live
+Firebase dialog confirms success for the correct project, but direct Cloud
+Billing metadata still reports billing disabled: the linked Firebase Payment
+account is closed. A different same-name account open in Edge is also closed
+and has no linked projects. The owner needs to resolve/reopen the linked
+account or link an active account before backend deployment. See the October
+27 status report for the precise follow-up; no financial action was taken.
+
+At 8:35 PM EDT the linked account was identified as
+`012550-8FC12A-E19CC0`. Its management page confirms Binary is linked, and the
+disabled Reopen button says the account is **not in good standing**. All eight
+accounts shown by the owner are closed. The payment iframe did not expose a
+more specific alert during inspection; resolution may require Google Cloud
+Billing Support. The correct linked account's management page was left open.
 
 ## 2026-10-18 — billing audit, restore fixes and search, 1.0.11+65
 

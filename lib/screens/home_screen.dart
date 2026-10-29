@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
@@ -326,48 +325,50 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);
-    final isWide = kIsWeb && MediaQuery.of(context).size.width >= 720;
 
     return Scaffold(
       backgroundColor: theme.bg,
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: isWide ? 900 : double.infinity,
-              ),
-              child: Padding(
-                padding: EdgeInsets.all(isWide ? 32 : 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(theme),
-                    const SizedBox(height: 24),
-                    _buildLearningHero(theme),
-                    if (!_hasFullAccess) ...[
-                      const SizedBox(height: 16),
-                      _buildUpgradeCard(theme),
+        child: LayoutBuilder(builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 720;
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isWide ? 900 : double.infinity,
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(isWide ? 32 : 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(theme),
+                      const SizedBox(height: 24),
+                      _buildLearningHero(theme),
+                      if (!_hasFullAccess) ...[
+                        const SizedBox(height: 16),
+                        _buildUpgradeCard(theme),
+                      ],
+                      const SizedBox(height: 24),
+                      _buildStudyPulse(theme),
+                      const SizedBox(height: 28),
+                      _buildReviewCard(theme),
+                      _buildSectionTitle('Your courses', theme),
+                      const SizedBox(height: 12),
+                      _buildEnrolledCourses(theme, isWide: isWide),
+                      SizedBox(height: isWide ? 36 : 28),
+                      _buildSectionTitle('Your progress', theme),
+                      const SizedBox(height: 12),
+                      _buildStatsRow(theme),
+                      const SizedBox(height: 20),
                     ],
-                    const SizedBox(height: 24),
-                    _buildStudyPulse(theme),
-                    const SizedBox(height: 28),
-                    _buildReviewCard(theme),
-                    _buildSectionTitle('Your courses', theme),
-                    const SizedBox(height: 12),
-                    _buildEnrolledCourses(theme, isWide: isWide),
-                    SizedBox(height: isWide ? 36 : 28),
-                    _buildSectionTitle('Your progress', theme),
-                    const SizedBox(height: 12),
-                    _buildStatsRow(theme),
-                    const SizedBox(height: 20),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        }),
       ),
     );
   }
@@ -715,20 +716,22 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Desktop: 2-column grid
-    if (isWide && _enrolledCourses.length > 1) {
-      return GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 2.6,
-        ),
-        itemCount: _enrolledCourses.length,
-        itemBuilder: (_, i) => _buildCourseCard(_enrolledCourses[i], theme),
-      );
+    // Cards size to their text rather than a fixed aspect ratio. A fold or
+    // accessibility text change must not clip the title or progress row.
+    if (isWide &&
+        _enrolledCourses.length > 1 &&
+        MediaQuery.textScalerOf(context).scale(14) <= 18) {
+      return LayoutBuilder(
+          builder: (context, constraints) => Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  for (final course in _enrolledCourses)
+                    SizedBox(
+                        width: (constraints.maxWidth - 12) / 2,
+                        child: _buildCourseCard(course, theme)),
+                ],
+              ));
     }
 
     // Mobile: single column

@@ -3,6 +3,7 @@ import 'package:binary/course_content.dart';
 import 'package:binary/screens/content_service.dart';
 import 'package:binary/screens/offline_service.dart';
 import 'package:binary/screens/service_backend.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -130,6 +131,47 @@ void main() {
           .set({...question, 'order': 1});
       final result = await ContentService.quiz('network', 'module-2');
       expect(result.origin, ContentOrigin.unavailable);
+    });
+
+    test(
+        'trial expiry also blocks downloaded paid lessons while preserving free previews',
+        () async {
+      for (final module in ['module-1', 'module-2']) {
+        await db.doc('courses/network/modules/$module/flashcards/card').set({
+          'question': 'DNS',
+          'answer': 'Resolves names',
+          'order': 1,
+        });
+      }
+      await db.doc('users/learner').set({
+        'hasUsedTrial': true,
+        'trialCourseId': 'network',
+        'trialExpiry':
+            Timestamp.fromDate(DateTime.now().add(const Duration(days: 7))),
+      });
+      await OfflineService.downloadCourse(courseId: 'network', modules: const [
+        {'id': 'module-1', 'title': 'Preview', 'order': 1},
+        {'id': 'module-2', 'title': 'Names', 'order': 2},
+      ]);
+      expect(
+          (await ContentService.flashcards('network', 'module-2',
+                  downloadedOnly: true))
+              .origin,
+          ContentOrigin.cached);
+      await db.doc('users/learner').update({
+        'trialExpiry': Timestamp.fromDate(
+            DateTime.now().subtract(const Duration(seconds: 1))),
+      });
+      expect(
+          (await ContentService.flashcards('network', 'module-2',
+                  downloadedOnly: true))
+              .origin,
+          ContentOrigin.unavailable);
+      expect(
+          (await ContentService.flashcards('network', 'module-1',
+                  downloadedOnly: true))
+              .origin,
+          ContentOrigin.cached);
     });
   });
 }

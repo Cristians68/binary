@@ -22,6 +22,7 @@ function harness() {
   stub("firebase-functions", { logger: { error() {}, warn() {}, info() {} } });
   const firestore = () => store.db;
   firestore.FieldValue = { serverTimestamp: () => "now" };
+  firestore.Timestamp = { fromMillis: (ms) => ms };
   stub("firebase-admin", {
     firestore,
     auth: () => ({ getUser: async (uid) => {
@@ -115,4 +116,19 @@ test("a deleted account cannot recreate its purchase data with an old ID token",
   h.missing.add("deleted");
   await assert.rejects(h.refreshEntitlement({ auth: { uid: "deleted" } }), { code: "unauthenticated" });
   assert.deepEqual(h.refreshed, []);
+});
+
+test("trial callable uses authenticated identity and rejects deleted accounts", async () => {
+  const h = harness();
+  await assert.rejects(h.startTrial({ data: { courseId: "csm" } }), { code: "unauthenticated" });
+  h.missing.add("deleted");
+  await assert.rejects(h.startTrial({ auth: { uid: "deleted" }, data: { courseId: "csm" } }),
+    { code: "unauthenticated" });
+  assert.equal(h.docs.size, 0);
+  const result = await h.startTrial({ auth: { uid: "signed-in" },
+    data: { uid: "victim", courseId: "csm", expiresAt: "2099-01-01" } });
+  assert.equal(result.granted, true);
+  assert.equal(h.docs.has("users/victim"), false);
+  assert.equal(h.docs.get("users/signed-in").trialCourseId, "csm");
+  assert.ok(Date.parse(result.expiresAt) < Date.now() + 8 * 24 * 3600000);
 });

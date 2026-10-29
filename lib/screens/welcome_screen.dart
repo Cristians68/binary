@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'app_router.dart';
 import 'package:flutter/cupertino.dart';
@@ -142,7 +141,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);
-    final isWide = kIsWeb && MediaQuery.of(context).size.width >= 720;
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -151,7 +149,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           opacity: _fade,
           child: SlideTransition(
             position: _slide,
-            child: isWide ? _buildWideLayout(theme) : _buildNarrowLayout(theme),
+            child: LayoutBuilder(builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 1000 &&
+                  MediaQuery.textScalerOf(context).scale(16) <= 20;
+              return isWide
+                  ? _buildWideLayout(theme)
+                  : WebContentBounds(child: _buildNarrowLayout(theme));
+            }),
           ),
         ),
       ),
@@ -161,7 +165,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   // ── Desktop two-column landing layout ──────────────────────────────────────
 
   Widget _buildWideLayout(ThemeNotifier theme) {
-    return Center(
+    return SingleChildScrollView(
+        child: Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 1100),
         child: Padding(
@@ -268,7 +273,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           ),
         ),
       ),
-    );
+    ));
   }
 
   // ── Mobile single-column layout (unchanged) ─────────────────────────────────

@@ -7,6 +7,9 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'purchase_coordinator.dart';
 import 'restore_result.dart';
 import 'service_backend.dart';
+import 'trial_state.dart';
+
+export 'trial_state.dart';
 
 export 'purchase_coordinator.dart'
     show kProductSingle, kProductBundle4, kProductBundleAll;
@@ -183,10 +186,7 @@ class SubscriptionService {
       if (_uid != uid) return false;
       final data = snap.data() ?? {};
       if (planGrantsAccess(data, courseId)) return true;
-      final expiry = data['trialExpiry'];
-      if (data['trialCourseId'] == courseId &&
-          expiry is Timestamp &&
-          expiry.toDate().isAfter(DateTime.now())) {
+      if (TrialState.fromData(data).grantsAccess(courseId)) {
         return true;
       }
       // Launch and explicit purchase/restore reconcile access. Reading a
@@ -240,16 +240,53 @@ class SubscriptionService {
   }
 
   static Future<bool> startTrial(String courseId) async {
-    if (_uid == null) return false;
+    final uid = _uid;
+    if (uid == null) {
+      throw const TrialFailure('Sign in to start your free trial.');
+    }
     try {
       final res = await _fn
-          .httpsCallable('startTrial')
+          .httpsCallable('startTrial',
+              options:
+                  HttpsCallableOptions(timeout: const Duration(seconds: 15)))
           .call<Map<String, dynamic>>({'courseId': courseId});
-      return res.data['granted'] == true;
+      if (_uid != uid) {
+        throw const TrialFailure('Your account changed. Please try again.');
+      }
+      if (res.data['granted'] != true) {
+        throw const TrialFailure(
+            'You have already used your one-time free trial.');
+      }
+      // Only dismiss the paywall once the server profile confirms access.
+      final state = await getTrialState();
+      if (_uid != uid || !state.grantsAccess(courseId)) {
+        throw const TrialFailure(
+            'Your trial could not be confirmed. Please try again.');
+      }
+      return true;
+    } on TrialFailure {
+      rethrow;
     } catch (e) {
       debugPrint('startTrial failed: $e');
-      return false;
+      throw const TrialFailure(
+          'Your trial could not be started. Check your connection and try again. No payment was taken.');
     }
+  }
+
+  static Future<TrialState> getTrialState() async {
+    final uid = _uid;
+    if (uid == null) {
+      throw const TrialFailure('Sign in to start your free trial.');
+    }
+    final snap = await _db
+        .collection('users')
+        .doc(uid)
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 15));
+    if (_uid != uid) {
+      throw const TrialFailure('Your account changed. Please try again.');
+    }
+    return TrialState.fromData(snap.data() ?? {});
   }
 
   static Future<bool> hasUsedTrial() async {

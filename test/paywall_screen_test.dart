@@ -15,6 +15,8 @@
 /// exactly the state the reviewer hit.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -52,11 +54,28 @@ Future<void> pumpPaywall(WidgetTester tester) async {
   expect(
     find.byType(CircularProgressIndicator),
     findsNothing,
-    reason: 'the paywall never finished loading, so nothing below is meaningful',
+    reason:
+        'the paywall never finished loading, so nothing below is meaningful',
   );
 }
 
 void main() {
+  testWidgets('a stalled store cannot hide the free-trial section forever',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: AppTheme(
+      notifier: ThemeNotifier(),
+      child: PaywallScreen(
+          courseTitle: 'B1nary',
+          courseColor: Colors.blue,
+          loadPackages: () => Completer<Never>().future),
+    )));
+    await tester.pump(const Duration(seconds: 16));
+    await tester.pumpAndSettle();
+    expect(find.text('Try a full course free for 7 days'), findsOneWidget);
+    expect(find.text('Purchases are unavailable right now'), findsOneWidget);
+  });
+
   testWidgets('every plan is still on screen when no packages load',
       (tester) async {
     await pumpPaywall(tester);

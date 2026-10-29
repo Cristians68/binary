@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:image_picker/image_picker.dart';
 import 'profile_avatar.dart';
+import 'feedback_sheet.dart';
 import 'profile_photo.dart';
 import 'app_lock.dart';
 import 'auth_service.dart';
@@ -142,12 +142,14 @@ class _ProfileScreenState extends State<ProfileScreen>
       ServiceBackend.auth.currentUser?.displayName ?? 'IT Learner';
   String _getEmail() => ServiceBackend.auth.currentUser?.email ?? '';
   String _getInitials() {
-    final name = _getFullName();
-    final parts = name.split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return name.isNotEmpty ? name[0].toUpperCase() : 'U';
+    final parts = _getFullName()
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .take(2);
+    return parts.isEmpty
+        ? 'U'
+        : parts.map((part) => part.characters.first).join().toUpperCase();
   }
 
   // ── Help Center — opens support page in Safari ────────────────────────────
@@ -161,245 +163,26 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  // ── Feedback sheet ─────────────────────────────────────────────────────────
+  // ── Feedback and public rating ─────────────────────────────────────────
   void _showFeedbackSheet() {
-    final theme = AppTheme.of(context);
-    final controller = TextEditingController();
-    int selectedStars = 0;
-    bool submitted = false;
-    bool loading = false;
-
     HapticFeedback.selectionClick();
-
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
-      backgroundColor: theme.surface,
+      backgroundColor: AppTheme.of(context).surface,
       isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModal) {
-          if (submitted) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 56),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: AppColors.green.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(CupertinoIcons.checkmark_circle_fill,
-                        color: AppColors.green, size: 32),
-                  ),
-                  const SizedBox(height: 16),
-                  Text('Thanks for your feedback!',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: theme.text,
-                          letterSpacing: -0.4)),
-                  const SizedBox(height: 8),
-                  Text('We read every message and use it to improve B1nary.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 14, color: theme.subtext, height: 1.5)),
-                  const SizedBox(height: 28),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(ctx),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(16)),
-                      child: const Text('Done',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white)),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return Padding(
-            padding: EdgeInsets.fromLTRB(
-                24, 20, 24, MediaQuery.of(ctx).viewInsets.bottom + 40),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                        color: theme.subtext.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(2)),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.amber.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(13),
-                      ),
-                      child: const Icon(CupertinoIcons.chat_bubble_text_fill,
-                          color: AppColors.amber, size: 20),
-                    ),
-                    const SizedBox(width: 14),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Send feedback',
-                            style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                                color: theme.text,
-                                letterSpacing: -0.4)),
-                        Text('We\'d love to hear from you',
-                            style:
-                                TextStyle(fontSize: 13, color: theme.subtext)),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Text('How would you rate B1nary?',
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: theme.text)),
-                const SizedBox(height: 12),
-                Row(
-                  children: List.generate(5, (i) {
-                    final filled = i < selectedStars;
-                    return GestureDetector(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setModal(() => selectedStars = i + 1);
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Icon(
-                          filled
-                              ? CupertinoIcons.star_fill
-                              : CupertinoIcons.star,
-                          color: filled
-                              ? theme.accent(AppColors.amber)
-                              : theme.subtext,
-                          size: 32,
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 20),
-                Text('Your message',
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: theme.text)),
-                const SizedBox(height: 8),
-                Container(
-                  decoration: theme.isDark
-                      ? BoxDecoration(
-                          color: theme.bg,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: theme.border),
-                        )
-                      : null,
-                  child: TextField(
-                    controller: controller,
-                    maxLines: 4,
-                    style: TextStyle(color: theme.text, fontSize: 15),
-                    decoration: InputDecoration(
-                      hintText:
-                          'Tell us what you love, what could be better, or anything else...',
-                      hintStyle: TextStyle(color: theme.subtext, fontSize: 14),
-                      border: theme.isDark ? InputBorder.none : null,
-                      contentPadding: const EdgeInsets.all(16),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                GestureDetector(
-                  onTap: loading
-                      ? null
-                      : () async {
-                          if (controller.text.trim().isEmpty &&
-                              selectedStars == 0) {
-                            _showToast('Please add a rating or message.');
-                            return;
-                          }
-                          setModal(() => loading = true);
-                          HapticFeedback.mediumImpact();
-                          try {
-                            final uid =
-                                ServiceBackend.auth.currentUser?.uid ?? '';
-                            await FirebaseFirestore.instance
-                                .collection('feedback')
-                                .add({
-                              'uid': uid,
-                              'stars': selectedStars,
-                              'message': controller.text.trim(),
-                              'createdAt': FieldValue.serverTimestamp(),
-                              'appVersion': '1.0.0',
-                            });
-                          } catch (_) {}
-                          if (selectedStars >= 4) {
-                            final inAppReview = InAppReview.instance;
-                            if (await inAppReview.isAvailable()) {
-                              await inAppReview.requestReview();
-                            }
-                          }
-                          setModal(() {
-                            loading = false;
-                            submitted = true;
-                          });
-                        },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(
-                      color: loading
-                          ? AppColors.primary.withValues(alpha: 0.5)
-                          : AppColors.primary,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: loading
-                        ? const Center(
-                            child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                    color: Colors.white, strokeWidth: 2)))
-                        : const Text('Send feedback',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white)),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+      builder: (_) => const FeedbackSheet(),
     );
+  }
+
+  Future<void> _rateApp() async {
+    try {
+      await InAppReview.instance.openStoreListing(appStoreId: '6762030524');
+    } catch (_) {
+      if (mounted) _showToast('The store could not open. Please try again.');
+    }
   }
 
   void _showToast(String message) {
@@ -1112,6 +895,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                   _buildItem(CupertinoIcons.chat_bubble_text_fill,
                       'Send feedback', AppColors.amber, theme,
                       onTap: _showFeedbackSheet),
+                  _buildItem(CupertinoIcons.star_fill, 'Rate B1nary',
+                      AppColors.amber, theme,
+                      onTap: _rateApp),
                   _buildItem(CupertinoIcons.info_circle_fill, 'About B1nary',
                       AppColors.amber, theme,
                       onTap: _showAboutSheet, isLast: true),

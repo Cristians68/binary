@@ -9,6 +9,7 @@ import '../app_links.dart';
 import 'app_theme.dart';
 import 'bundle_selection.dart';
 import '../course_catalog.dart';
+import 'trial_offer.dart';
 
 // ── All available courses the user can pick from in a bundle-4 plan ──────────
 // Titles come from the shared catalogue so certification trademarks are never
@@ -161,7 +162,14 @@ class _PaywallScreenState extends State<PaywallScreen> {
       _loading = true;
       _productsUnavailable = false;
     });
-    final packages = await widget.loadPackages();
+    // A stalled store must not hide the independent free-trial action forever.
+    List<Package> packages;
+    try {
+      packages =
+          await widget.loadPackages().timeout(const Duration(seconds: 15));
+    } catch (_) {
+      packages = [];
+    }
     if (mounted) {
       setState(() {
         _packages = packages;
@@ -364,58 +372,73 @@ class _PaywallScreenState extends State<PaywallScreen> {
     final inlineCta = MediaQuery.sizeOf(context).height < 700 ||
         MediaQuery.textScalerOf(context).scale(16) > 20;
 
-    return Scaffold(
-      backgroundColor: theme.bg,
-      body: SafeArea(
-        child: _loading
-            ? Center(
-                child: CircularProgressIndicator(
-                    color: widget.courseColor, strokeWidth: 2))
-            : WebContentBounds(
-                maxWidth: 640,
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildCloseButton(theme),
-                            const SizedBox(height: 24),
-                            _buildHeroSection(theme),
-                            const SizedBox(height: 28),
-                            _buildFeatureList(theme),
-                            const SizedBox(height: 28),
-                            if (_productsUnavailable ||
-                                _selectedProductUnavailable) ...[
-                              _buildUnavailableBanner(theme),
-                              const SizedBox(height: 20),
-                            ],
-                            _buildPlanSection(theme),
-                            // Course pickers — each only shown for its own plan.
-                            if (_selected == _Plan.single) ...[
-                              const SizedBox(height: 20),
-                              _buildSinglePicker(theme),
-                            ],
-                            if (_selected == _Plan.bundle4) ...[
-                              const SizedBox(height: 20),
-                              _buildBundle4Picker(theme),
-                            ],
-                            const SizedBox(height: 20),
-                            _buildNoticeBox(theme),
-                            const SizedBox(height: 32),
-                            if (inlineCta) _buildCta(theme, inset: false),
-                          ],
+    return PopScope(
+        canPop: !_purchasing,
+        child: Scaffold(
+          backgroundColor: theme.bg,
+          body: SafeArea(
+            child: _loading
+                ? Center(
+                    child: CircularProgressIndicator(
+                        color: widget.courseColor, strokeWidth: 2))
+                : WebContentBounds(
+                    maxWidth: 640,
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildCloseButton(theme),
+                                const SizedBox(height: 24),
+                                _buildHeroSection(theme),
+                                const SizedBox(height: 20),
+                                TrialOffer(
+                                  courseId: widget.courseId,
+                                  color: widget.courseColor,
+                                  disabled: _purchasing,
+                                  onActivated: () =>
+                                      Navigator.pop(context, true),
+                                  onBusyChanged: (busy) {
+                                    if (mounted) {
+                                      setState(() => _purchasing = busy);
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: 28),
+                                _buildFeatureList(theme),
+                                const SizedBox(height: 28),
+                                if (_productsUnavailable ||
+                                    _selectedProductUnavailable) ...[
+                                  _buildUnavailableBanner(theme),
+                                  const SizedBox(height: 20),
+                                ],
+                                _buildPlanSection(theme),
+                                // Course pickers — each only shown for its own plan.
+                                if (_selected == _Plan.single) ...[
+                                  const SizedBox(height: 20),
+                                  _buildSinglePicker(theme),
+                                ],
+                                if (_selected == _Plan.bundle4) ...[
+                                  const SizedBox(height: 20),
+                                  _buildBundle4Picker(theme),
+                                ],
+                                const SizedBox(height: 20),
+                                _buildNoticeBox(theme),
+                                const SizedBox(height: 32),
+                                if (inlineCta) _buildCta(theme, inset: false),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    if (!inlineCta) _buildCta(theme),
-                  ],
-                )),
-      ),
-    );
+                        if (!inlineCta) _buildCta(theme),
+                      ],
+                    )),
+          ),
+        ));
   }
 
   // ── Sections ──────────────────────────────────────────────────────────────
@@ -424,7 +447,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
     return Align(
       alignment: Alignment.centerRight,
       child: GestureDetector(
-        onTap: () => Navigator.pop(context, false),
+        onTap: _purchasing ? null : () => Navigator.pop(context, false),
         child: Container(
           width: 32,
           height: 32,

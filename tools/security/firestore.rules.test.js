@@ -12,8 +12,9 @@ const {
 } = require('firebase/firestore');
 const {COURSE_IDS, COURSE_PRODUCTS, BUNDLE4, ALL} = require('../../functions/purchase_catalog');
 const {createPurchaseService} = require('../../functions/purchase_reconciliation');
+const {createTrialService, TRIAL_DURATION_MS} = require('../../functions/trial_service');
 const {initializeApp, deleteApp} = require('firebase-admin/app');
-const {getFirestore, FieldValue} = require('firebase-admin/firestore');
+const {getFirestore, FieldValue, Timestamp: AdminTimestamp} = require('firebase-admin/firestore');
 
 const projectId = 'demo-binary-release';
 const courses = [...COURSE_IDS];
@@ -109,6 +110,43 @@ test('a guest can browse metadata and every preview content collection', async (
     }
   }
   await assertFails(read(guest, contentPath(courseA)));
+});
+
+test('real trial activation unlocks only the chosen course, expires, and preserves progress', async () => {
+  let time = Date.now();
+  const start = createTrialService({db: adminDb, now: () => time,
+    timestamp: AdminTimestamp.fromMillis, serverTimestamp: FieldValue.serverTimestamp});
+  const progressPath = `users/learner/progress/${courseA}/modules/module-2`;
+  await save(learner, progressPath, {status: 'done'});
+  const grant = await start('learner', courseA);
+  assert.equal(Date.parse(grant.expiresAt), time + TRIAL_DURATION_MS);
+  for (const kind of contentKinds) {
+    await assertSucceeds(read(learner, contentPath(courseA, 'module-2', kind)));
+    await assertFails(read(learner, contentPath(courseB, 'module-2', kind)));
+  }
+  assert.equal((await start('learner', courseB)).granted, false);
+  // Advance the server clock for issuance, then place the original expiry in
+  // the past for the rules engine, whose request.time uses the emulator clock.
+  time += TRIAL_DURATION_MS;
+  assert.equal((await start('learner', courseA)).granted, false);
+  await adminDb.doc('users/learner').update({trialExpiry: AdminTimestamp.fromMillis(Date.now() - 1000)});
+  for (const kind of contentKinds) {
+    await assertFails(read(learner, contentPath(courseA, 'module-2', kind)));
+    await assertSucceeds(read(learner, contentPath(courseA, 'module-1', kind)));
+  }
+  assert.equal((await read(learner, progressPath)).data().status, 'done');
+});
+
+test('simultaneous trial requests grant exactly one course without extending it', async () => {
+  const start = createTrialService({db: adminDb, timestamp: AdminTimestamp.fromMillis,
+    serverTimestamp: FieldValue.serverTimestamp});
+  const results = await Promise.all([start('learner', courseA), start('learner', courseB)]);
+  assert.equal(results.filter(result => result.granted).length, 1);
+  const winner = results.find(result => result.granted);
+  assert.deepEqual(await start('learner', winner.courseId), winner);
+  const loser = winner.courseId === courseA ? courseB : courseA;
+  await assertSucceeds(read(learner, contentPath(winner.courseId)));
+  await assertFails(read(learner, contentPath(loser)));
 });
 
 test('signed-out requests cannot read even previews or catalogue metadata', async () => {

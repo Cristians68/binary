@@ -8,6 +8,36 @@ functions, Secret Manager disabled, and older deployed rules lacking multiple
 course authorization. See [the audit](PAYMENT-AUDIT-2026-10-18.md) and
 `tools/security/README.md` for exact verification scope and next steps.
 
+## Seven-day free trial (2026-10-29 local update)
+
+The owner chose one full course per account for seven days. The trial is a
+server-granted preview, separate from the non-consumable IAPs below: no card,
+automatic payment or renewal. Open Plans & Pricing, choose the trial course,
+then tap **Start 7-day free trial**. Course-specific paywalls name that course;
+generic paywalls require an explicit selection. A fresh server profile read
+must confirm the trial before the app reports success.
+
+`startTrial` verifies the authenticated Firebase account and runs
+`functions/trial_service.js` in a Firestore transaction. It stores the existing
+protected fields `trialCourseId`, `trialExpiry`, `trialStartedAt`, `hasUsedTrial`.
+Expiry is server time plus exactly 168 hours. Concurrent requests can grant
+only one course. Retrying the same active grant returns its original expiry;
+switching courses or restarting after expiry is denied. Historical trial
+records count as used. Paid access and learner progress are preserved.
+
+The paywall shows active/expired status and the local expiry date and time.
+Expired trials lose paid-content access, including through downloads; the
+first module of every course remains free. The existing server rules already
+enforce trial expiry using `request.time`.
+
+Local verification: 728 Flutter tests, 56 backend tests, 22 emulator tests,
+clean analyzer and backend lint. Neither the callable nor app changes are live.
+The current billing account is closed, but the account the owner previously
+paid is now open; see [the October 29 checkpoint](TRIAL-STATUS-2026-10-29.md).
+
+Implementation references: [Firebase callable authentication/errors](https://firebase.google.com/docs/functions/callable)
+and [Firestore transactions](https://firebase.google.com/docs/firestore/manage-data/transactions).
+
 ## Products and store setup
 
 Create one non-consumable for each course in App Store Connect and RevenueCat.

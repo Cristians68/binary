@@ -118,7 +118,9 @@ workflows:
       # major release cannot silently break a build months from now. Pinning to
       # a version Codemagic has retired fails instantly — only pin what you saw
       # actually work.
-      xcode: latest
+      # Explicitly select the iOS 27.1 SDK / iPhone Duo simulator image.
+      # The default image currently uses an older SDK.
+      xcode: 27.1
       cocoapods: default
       ios_signing:
         # Signing assets are referenced by the names they were saved under in

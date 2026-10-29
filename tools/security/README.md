@@ -24,7 +24,7 @@ file refuses a missing or non-loopback emulator host. All accounts and course
 content are synthetic. Production data and configuration are untouched.
 
 `firestore.rules.test.js` loads the real root rules and clears the demo database
-between its 20 scenarios. Positive controls exercise real document and query
+between its 22 scenarios. Positive controls exercise real document and query
 reads, so a broken fixture cannot masquerade as secure access denial. Coverage:
 
 - Guest metadata and both preview module IDs; signed-out and unpaid denials.
@@ -32,6 +32,7 @@ reads, so a broken fixture cannot masquerade as secure access denial. Coverage:
 - Refund/transfer revocation and denial of unresolved receipts/pending checkouts.
 - Old forged profile lists, protected field writes/removals, private purchase data.
 - Owner progress/attempts, private photo shape and byte limits, admin-only content.
+- Real seven-day trial activation, expiry, preserved progress and competing requests.
 
 Four scenarios also execute `functions/purchase_reconciliation.js` with the
 Admin SDK against the emulator before checking access as an authenticated

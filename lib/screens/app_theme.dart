@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -239,19 +238,10 @@ class AppTheme extends InheritedNotifier<ThemeNotifier> {
   }
 }
 
-// ── Web content bounds ───────────────────────────────────────────────────────
-// Most screens were built mobile-first and never got a wide-screen pass, so
-// on the web they stretch a mobile-width column edge-to-edge across a full
-// desktop viewport -- content reads too wide, and forms end up pinned to one
-// side with a large dead gap next to them. This is not "the web version
-// working like a website" so much as "an app screen inside a browser tab."
-//
-// This wraps a screen's scrollable content so that on a wide web viewport it
-// centers with a comfortable reading-width cap, and is a complete no-op on
-// mobile (native or narrow web) so nothing changes there.
-bool isWideWeb(BuildContext context) =>
-    kIsWeb && MediaQuery.of(context).size.width >= 720;
-
+// Reading and form widths follow the available space on every platform.
+// Keep the wrapper tree stable when the window resizes: swapping between
+// `child` and Align would recreate stateful descendants during a fold.
+// The historical name remains for existing screen callers.
 class WebContentBounds extends StatelessWidget {
   final Widget child;
   final double maxWidth;
@@ -260,7 +250,6 @@ class WebContentBounds extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!isWideWeb(context)) return child;
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(

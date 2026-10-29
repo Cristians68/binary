@@ -13,7 +13,7 @@ import 'app_lock.dart';
 import 'course_picker.dart';
 import 'learning_navigation_bar.dart';
 
-// Desktop sidebar is shown when the viewport is at least this wide AND we're on web.
+// Use the current window width, including native windows resized by a fold.
 const double _kSidebarBreakpoint = 720;
 const double _kSidebarWidth = 240;
 
@@ -112,54 +112,40 @@ class _MainNavigationState extends State<MainNavigation>
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.of(context);
-    final isWide =
-        kIsWeb && MediaQuery.of(context).size.width >= _kSidebarBreakpoint;
-
-    if (isWide) {
-      return _buildWideLayout(context, theme);
-    }
-    return _buildNarrowLayout(context, theme);
-  }
-
-  // ── Desktop: sidebar + content ───────────────────────────────────────────────
-
-  Widget _buildWideLayout(BuildContext context, ThemeNotifier theme) {
-    return Scaffold(
-      backgroundColor: theme.bg,
-      body: Row(
-        children: [
-          _SideNav(
-            currentIndex: _currentIndex,
-            tabs: _tabs,
-            onTap: _onTabTapped,
-            theme: theme,
-          ),
-          Container(width: 1, color: theme.border),
-          Expanded(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: IndexedStack(index: _currentIndex, children: _screens),
+    return LayoutBuilder(builder: (context, constraints) {
+      final isWide = constraints.maxWidth >= _kSidebarBreakpoint;
+      return Scaffold(
+        backgroundColor: theme.bg,
+        body: Row(
+          children: [
+            if (isWide) ...[
+              _SideNav(
+                currentIndex: _currentIndex,
+                tabs: _tabs,
+                onTap: _onTabTapped,
+                theme: theme,
+              ),
+              Container(width: 1, color: theme.border),
+            ],
+            // This keyed sibling stays mounted when navigation moves between
+            // the bottom and side. Search, scrolling and tab state survive.
+            Expanded(
+              key: const ValueKey('learning-content'),
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: IndexedStack(index: _currentIndex, children: _screens),
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Mobile: bottom nav bar ───────────────────────────────────────────────────
-
-  Widget _buildNarrowLayout(BuildContext context, ThemeNotifier theme) {
-    return Scaffold(
-      backgroundColor: theme.bg,
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: IndexedStack(index: _currentIndex, children: _screens),
-      ),
-      bottomNavigationBar: LearningNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: _onTabTapped,
-      ),
-    );
+          ],
+        ),
+        bottomNavigationBar: isWide
+            ? null
+            : LearningNavigationBar(
+                currentIndex: _currentIndex,
+                onTap: _onTabTapped,
+              ),
+      );
+    });
   }
 }
 
@@ -172,7 +158,7 @@ class _TabItem {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DESKTOP SIDEBAR
+// ADAPTIVE SIDEBAR
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _SideNav extends StatelessWidget {
@@ -194,104 +180,114 @@ class _SideNav extends StatelessWidget {
       width: _kSidebarWidth,
       color: theme.navBg,
       child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Logo ──────────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 36),
-              child: Row(
-                children: [
-                  // The shared mark, not a third hand-drawn copy of it.
-                  const AppIcon(size: 36),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'B1nary',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: theme.text,
-                          letterSpacing: -0.6,
-                          height: 1.1,
-                        ),
-                      ),
-                      Text(
-                        'IT Cert Prep',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: theme.subtext,
-                          letterSpacing: 0.1,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(child: _buildContent()),
             ),
-
-            // ── Section label ─────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
-              child: Text(
-                'NAVIGATION',
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  color: theme.subtext,
-                  letterSpacing: 1.4,
-                ),
-              ),
-            ),
-
-            // ── Nav items ─────────────────────────────────────────────────────
-            ...List.generate(
-                tabs.length,
-                (i) => _SideNavItem(
-                      icon: tabs[i].icon,
-                      label: tabs[i].label,
-                      active: currentIndex == i,
-                      onTap: () => onTap(i),
-                      theme: theme,
-                    )),
-
-            const Spacer(),
-
-            // ── Footer ────────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(height: 1, color: theme.border),
-                  const SizedBox(height: 14),
-                  Text(
-                    'B1nary',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: theme.subtext,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Master IT. Get certified.',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: theme.subtext,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
+
+  Widget _buildContent() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Logo ──────────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 28, 20, 36),
+            child: Row(
+              children: [
+                // The shared mark, not a third hand-drawn copy of it.
+                const AppIcon(size: 36),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'B1nary',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: theme.text,
+                        letterSpacing: -0.6,
+                        height: 1.1,
+                      ),
+                    ),
+                    Text(
+                      'IT Cert Prep',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: theme.subtext,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                  ],
+                )),
+              ],
+            ),
+          ),
+
+          // ── Section label ─────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
+            child: Text(
+              'NAVIGATION',
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: theme.subtext,
+                letterSpacing: 1.4,
+              ),
+            ),
+          ),
+
+          // ── Nav items ─────────────────────────────────────────────────────
+          ...List.generate(
+              tabs.length,
+              (i) => _SideNavItem(
+                    icon: tabs[i].icon,
+                    label: tabs[i].label,
+                    active: currentIndex == i,
+                    onTap: () => onTap(i),
+                    theme: theme,
+                  )),
+
+          const Spacer(),
+
+          // ── Footer ────────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(height: 1, color: theme.border),
+                const SizedBox(height: 14),
+                Text(
+                  'B1nary',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: theme.subtext,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Master IT. Get certified.',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: theme.subtext,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
 }
 
 // ── Individual sidebar nav item with hover state ──────────────────────────────
