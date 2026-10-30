@@ -1,7 +1,9 @@
 # Binary Academy — October 29, 2026 trial checkpoint
 
 The owner resumed development and chose **one full course of the learner's
-choice** for the seven-day trial. Changes are local and uncommitted.
+choice** for the seven-day trial. This file records the initial local checkpoint;
+the later deployment and verification are in
+[FINAL-AUDIT-2026-10-29.md](FINAL-AUDIT-2026-10-29.md). The trial is now live.
 
 ## Implemented
 

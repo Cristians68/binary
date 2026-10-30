@@ -21,18 +21,36 @@ stalled-product-loading case that could hide the trial. Version is **1.0.11+68**
 Codemagic derives the actual TestFlight build number. See
 [FINAL-AUDIT-2026-10-29.md](FINAL-AUDIT-2026-10-29.md).
 
+**Live deployment verified:** `startTrial` and `deleteAccount` are ACTIVE on
+Node 22. Matching Firestore rules and the website/web app are deployed. A live
+synthetic-account check confirms preview access, initial paid denial, chosen-course
+unlock, unrelated-course denial, seven-day expiry, idempotent retry, no course
+switching and successful account cleanup. Both website domains serve the audited
+bundle. Generated function images have seven-day retention.
+
 **Billing repaired with explicit owner approval:** project `binary-6a372` now
 uses **`011D9D-8B93EA-A892D2`**, My Billing Account 1, and reports **billing enabled**.
-No new payment ran. Secret Manager is enabled. Deployment stopped before functions
-were created because RevenueCat secrets were absent. With explicit approval,
-created the V1 key **Binary Firebase purchase verification**; securely configuring
-it in Firebase, webhook setup, product audit and deployment remain in progress.
-Do not expose key values in source, logs or handoff. Production rules are still older.
+No new payment ran. Secret Manager is enabled. With explicit approval, created
+the V1 key **Binary Firebase purchase verification**; securely configuring it in
+Firebase, webhook setup, product audit and purchase-function deployment remain.
+Trial/deletion deployed from an isolated package containing the exact audited
+handlers, avoiding unrelated missing secret parameters. Never expose key values.
+
+The deployment dependency scan found additional npm advisories after source commit
+**bfe63c4** was pushed. Patched the backend lockfile and added scoped `qs` 6.x /
+CommonJS-compatible `uuid` 11.x overrides; Firebase SDK majors remain the same.
+**npm audit reports zero vulnerabilities**, backend lint/56 tests pass, clean
+installation succeeds and real transaction/deletion checks with the patched SDK
+pass. This follow-up changes backend dependencies/docs; the owner's app build
+from bfe63c4 remains valid.
 
 **Computer-use constraint:** interact only with the Chrome window on the left LG
 monitor, never the main/game display. Native input has not reliably reached the
 RevenueCat reveal control while the game retains input; background checks work.
-The browser access host reports unavailable. Do not fight the user's pointer.
+The browser access host reports unavailable. The owner subsequently chose
+**background-only work**. Do not issue further browser, mouse or keyboard actions
+until that restriction is lifted. App Store copy is prepared in
+`docs/APP-STORE-CONNECT-DRAFT-2026-10-29.md`; nothing was saved live today.
 
 Generated screenshots/dashboard evidence stay local under ignored
 `submission-assets/`; paid-content fixture exports remain ignored too. Preserve

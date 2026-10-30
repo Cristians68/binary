@@ -77,3 +77,47 @@ Audit logs remain local in `.dart_tool/final-audit-tests-2026-10-29.log`,
 `.dart_tool/payment-audit/` and `.dart_tool/site-review/`.
 
 Toolchain source: [Codemagic Xcode 27.1 image](https://docs.codemagic.io/specs-macos/xcode-27-1/).
+
+## Background continuation after the audited source commit
+
+The owner requested **background-only work** while playing. No further browser
+input was issued after that instruction. Live RevenueCat/App Store Connect edits
+are pending; prepared copy and the product checklist are in
+[APP-STORE-CONNECT-DRAFT-2026-10-29.md](APP-STORE-CONNECT-DRAFT-2026-10-29.md).
+
+Source commit **bfe63c4** was pushed to `origin/master`; the owner starts Codemagic.
+The website and app were deployed to Firebase Hosting and verified at both
+`https://binaryapp.org` and `https://binary-6a372.web.app`: all six checked paths
+return 200, trial copy is present, `/app/` has the correct base URL, and the live
+JavaScript bundle's SHA-256 matches the audited local release.
+
+The subsequent deployment dependency installation exposed additional npm
+advisories. Applied compatible dependency patches, plus scoped `qs` 6.x and
+CommonJS-compatible `uuid` 11.x overrides. The Google SDK callers use no-argument
+UUID v4 generation, which is supported by both versions. Firebase SDK major
+versions remain unchanged. A clean `npm ci` succeeds, **all 56 backend tests and
+lint pass**, and **npm audit reports zero vulnerabilities**, including production
+dependencies. A separate emulator run using the actual patched production SDK
+also verifies a real trial transaction, idempotent retry and recursive deletion.
+
+To avoid unrelated missing RevenueCat parameters blocking the free trial,
+prepared an ignored deployment package containing the exact audited `startTrial`
+handler and its modules, plus the audited `deleteAccount`. No purchase or scheduled
+notification functions are included. Both functions are now **ACTIVE** on Node 22.
+A seven-day cleanup policy covers generated deployment images. Deployed the
+matching rules after confirming that the diff preserves existing grants and
+adds protection for purchase fields and verified purchase snapshots.
+
+At **2026-10-30 00:07 UTC** (October 29 locally), verified the live backend with
+one disposable anonymous account: unauthenticated calls denied, free preview
+readable, paid content initially denied, chosen course unlocked, unrelated course
+denied, exact seven-day expiry, retry keeps the original expiry, course switching
+denied, and deployed account deletion successfully removes the synthetic account.
+The fresh production audit confirms **billing enabled**, **two ACTIVE functions**,
+and **deployed rules matching the checkout**.
+
+Remaining: transfer the approved RevenueCat key to Secret Manager, configure
+offerings/products and webhook, deploy purchase verification/reconciliation, and
+test native purchases/restores/refunds. The created key remains in RevenueCat;
+no secret values have been copied into the repository. App Store Connect edits
+remain prepared locally because the owner requested background-only work.

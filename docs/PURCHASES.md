@@ -1,6 +1,8 @@
-# Purchases — local implementation, updated 2026-10-18
+# Purchases — updated 2026-10-29
 
-This code is tested locally and **not deployed**. Start with `HANDOFF.md`.
+Purchase reconciliation is tested locally and **not deployed**. The seven-day
+trial and account-deletion functions, matching rules and website are now live;
+trial/deletion passed a synthetic-account end-to-end check. Start with `HANDOFF.md`.
 Real StoreKit purchase/restore still needs testing. On 2026-10-18, 20 local
 emulator scenarios passed, including real purchase reconciliation followed by
 learner content reads. The live audit confirmed billing disabled, zero deployed
@@ -31,9 +33,12 @@ first module of every course remains free. The existing server rules already
 enforce trial expiry using `request.time`.
 
 Local verification: 728 Flutter tests, 56 backend tests, 22 emulator tests,
-clean analyzer and backend lint. Neither the callable nor app changes are live.
-The current billing account is closed, but the account the owner previously
-paid is now open; see [the October 29 checkpoint](TRIAL-STATUS-2026-10-29.md).
+clean analyzer and backend lint; the final store-timeout regression brings the
+app suite to **729**. The callable and website changes are now **live**. The owner
+approved linking the open billing account, and billing is enabled. Live trial
+activation, access isolation, retry and deletion checks pass. The owner's new
+iPhone build still requires device verification. See
+[the final audit](FINAL-AUDIT-2026-10-29.md).
 
 Implementation references: [Firebase callable authentication/errors](https://firebase.google.com/docs/functions/callable)
 and [Firestore transactions](https://firebase.google.com/docs/firestore/manage-data/transactions).

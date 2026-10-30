@@ -82,6 +82,7 @@ key.properties
 node_modules/
 functions/node_modules/
 /public/
+/.firebase/
 
 # Generated App Store captures and dashboard evidence stay local.
 /submission-assets/
