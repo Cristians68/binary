@@ -56,7 +56,7 @@ workflows:
       java: 21
     scripts:
       - name: Get packages
-        script: flutter pub get
+        script: flutter pub get --enforce-lockfile
       - name: Analyze
         # Strict on purpose. The tree is clean at zero issues, so any new lint
         # — including info level — fails the build rather than accumulating.
@@ -113,13 +113,8 @@ workflows:
       flutter: 3.47.2
       node: 22
       java: 21
-      # `latest` tracks whatever Xcode Codemagic has provisioned. Pin this to a
-      # specific version (e.g. `16.2`) once a build is green, so a future Xcode
-      # major release cannot silently break a build months from now. Pinning to
-      # a version Codemagic has retired fails instantly — only pin what you saw
-      # actually work.
-      # Explicitly select the iOS 27.1 SDK / iPhone Duo simulator image.
-      # The default image currently uses an older SDK.
+      # Keep Xcode explicit so the compiler cannot change between releases.
+      # RevenueCat 10.19.0 includes the initializer fix required by Xcode 27.
       xcode: 27.1
       cocoapods: default
       ios_signing:
@@ -149,7 +144,7 @@ workflows:
         APP_STORE_APP_ID: 6762030524
     scripts:
       - name: Get packages
-        script: flutter pub get
+        script: flutter pub get --enforce-lockfile
 
       # A release that fails its own tests should never reach a tester's phone.
       - name: Analyze and test
@@ -181,7 +176,10 @@ workflows:
           # "could not find compatible versions for pod Flutter". The
           # committed Podfile pins the platform to match
           # IPHONEOS_DEPLOYMENT_TARGET in the Xcode project.
-          cd ios && pod install
+          # Refresh cached podspecs for the RevenueCat SDK selected by the lockfile.
+          set -e
+          cd ios
+          pod install --repo-update
 
       - name: Validate learning content
         script: |

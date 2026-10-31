@@ -1,6 +1,6 @@
 # B1nary — release runbook
 
-Current checkpoint: **2026-10-29**. Read [HANDOFF.md](HANDOFF.md) and
+Current checkpoint: **2026-10-31**. Read [HANDOFF.md](HANDOFF.md) and
 [the final audit](FINAL-AUDIT-2026-10-29.md) first; the
 platform setup instructions below retain their historical context.
 
@@ -23,7 +23,33 @@ Pushing source to GitHub is separate from starting the signed TestFlight build.
 
 ## Part 1 — iOS → TestFlight
 
-### Why the last build failed
+### Build 29 — RevenueCat Swift compilation (2026-10-30)
+
+Build `6ae4db4cefa74786046f355d`, commit `1728cee`, passed the analysis,
+tests, CocoaPods install and signing setup, then failed while archiving with
+Xcode 27.1. RevenueCat's `PaywallColor.swift` reported an invalid redeclaration
+of the synthesized `init(stringRepresentation:)`; the ambiguous initializer
+errors in `CustomerCenterConfigData.swift` are consequences of that conflict.
+
+The fix upgrades `purchases_flutter` from 9.16.1 to 10.19.0 and updates
+`pubspec.lock`. Its CocoaPods dependency is `PurchasesHybridCommon` 19.17.0,
+which selects RevenueCat iOS 5.99.0. That SDK declares an explicit private
+initializer inside `PaywallColor`, preventing the conflicting synthesized
+initializer. See the [published Flutter podspec](https://github.com/RevenueCat/purchases-flutter/blob/10.19.0/ios/purchases_flutter.podspec)
+and [native Swift source](https://github.com/RevenueCat/purchases-ios/blob/5.99.0/Sources/Paywalls/PaywallColor.swift).
+The upgrade also raises the Android minimum to API 23, as required by
+RevenueCat 10.x / Google Play Billing 8.3.
+Both CI workflows enforce the committed Dart lockfile. The iOS workflow
+refreshes CocoaPods metadata before installation so cached podspecs cannot
+hide the newly selected native SDK.
+
+Run the next `ios-testflight` build from the commit containing this fix.
+If Codemagic restores old CocoaPods dependencies, clear its dependency cache
+before rebuilding. The signed archive still needs verification on Codemagic;
+Windows cannot run Xcode. The package-update notices and Swift Package Manager
+warnings in build 29 were not the fatal errors.
+
+### Earlier signing failure (resolved)
 
 The build fails at `Building iOS` with:
 

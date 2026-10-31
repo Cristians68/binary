@@ -1,8 +1,33 @@
-# B1nary — handoff (last updated 2026-10-29)
+# B1nary — handoff (last updated 2026-10-31)
 
 Read this first. It records what is live, what is waiting on the owner, and
 the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 `docs/IOS-GOOGLE-SIGNIN-AUDIT.md`, `docs/SECURITY.md` and `docs/RELEASE.md`.
+
+## 2026-10-31 — repair Codemagic build 29
+
+Build 29 from `1728cee` failed in RevenueCat's Swift `PaywallColor` initializer
+on Xcode 27.1. Upgraded `purchases_flutter` 9.16.1 to 10.19.0 (native iOS SDK
+5.99.0), refreshed the Dart lockfile, and raised Android's minimum to API 23
+for the new billing SDK. CI now enforces the lockfile and refreshes CocoaPods
+metadata. Details are in `RELEASE.md`.
+
+Verified: all **729 Flutter tests**, **9 iOS verifier tests**, **56 backend
+tests**, **22 Firestore emulator tests**, clean Flutter analysis/backend lint,
+and **zero production npm
+vulnerabilities**. Learning-content validation and all 14 fault checks pass.
+The JavaScript release build succeeds; its Wasm dry run also succeeds with the
+new SDK. These checks do not prove native archive or real StoreKit behavior.
+
+Fresh read-only production audit: billing enabled; `startTrial` and
+`deleteAccount` ACTIVE; Google/Apple providers enabled; deployed Firestore
+rules match this checkout. **Both RevenueCat secrets are still missing** and
+purchase-verification/webhook functions are not deployed. The existing approved
+RevenueCat key must be transferred securely before that setup can continue.
+The owner explicitly allowed RevenueCat dashboard work on October 31 to finish
+the key transfer and webhook setup, lifting background-only work for that task.
+Keep the owner-triggered Codemagic build. No App Store
+submission or claim of native purchase readiness is justified yet.
 
 For the latest App Store Connect preparation, saved bundle reviewer notes and
 fresh production blockers, see

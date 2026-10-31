@@ -1,4 +1,4 @@
-# Purchases — updated 2026-10-29
+# Purchases — updated 2026-10-31
 
 Purchase reconciliation is tested locally and **not deployed**. The seven-day
 trial and account-deletion functions, matching rules and website are now live;
@@ -9,6 +9,13 @@ learner content reads. The live audit confirmed billing disabled, zero deployed
 functions, Secret Manager disabled, and older deployed rules lacking multiple
 course authorization. See [the audit](PAYMENT-AUDIT-2026-10-18.md) and
 `tools/security/README.md` for exact verification scope and next steps.
+
+**Latest live recheck (2026-10-31):** billing is enabled; `startTrial` and
+`deleteAccount` are ACTIVE; deployed rules match this checkout and include
+private purchase-snapshot authorization. `REVENUECAT_SECRET_API_KEY` and
+`REVENUECAT_WEBHOOK_SECRET` both return 404. Purchase functions remain
+undeployed. The RevenueCat Flutter SDK is now 10.19.0 to fix Xcode 27
+compilation; this dependency update does not configure the purchase backend.
 
 ## Seven-day free trial (2026-10-29 local update)
 

@@ -25,7 +25,8 @@ android {
 
     defaultConfig {
         applicationId = "com.cristians.b1nary"
-        minSdk = 21
+        // RevenueCat 10.x / Google Play Billing 8.3 requires Android 6.0.
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
