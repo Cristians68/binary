@@ -6,7 +6,7 @@
 <title>Accessibility — B1nary</title>
 <meta name="description" content="B1nary's accessibility statement: what this site and app support today, what is not yet verified, and how to report a barrier.">
 <link rel="canonical" href="https://binaryapp.org/accessibility">
-<meta name="theme-color" content="#0071E3">
+<meta name="theme-color" content="#325BE8">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="icons/Icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,7 +39,7 @@
     <p class="eyebrow">Accessibility</p>
     <h1 style="margin-top:var(--sp-4)">Accessibility statement</h1>
     <p style="color:var(--subtext);margin-top:var(--sp-3)">
-      Last updated: 1 September 2026
+      Last updated: 31 October 2026
     </p>
 
     <p style="margin-top:var(--sp-8)">
@@ -51,10 +51,9 @@
 
     <h2 id="target">Conformance target</h2>
     <p>
-      We are working towards <strong>WCAG 2.2 Level AA</strong>. This website is
-      built to meet it. The application itself is
-      <strong>partially conformant</strong>: it has not yet been through a full
-      independent audit, so we do not claim conformance for it.
+      We are working towards <strong>WCAG 2.2 Level AA</strong>. This website and
+      the application have not had a full independent accessibility audit.
+      We describe the checks performed below and do not claim full conformance.
     </p>
 
     <h2 id="website">What this website supports</h2>
@@ -66,7 +65,7 @@
       <li>Text contrast of at least 4.5:1, verified in both light and dark themes rather than assumed.</li>
       <li>Light and dark themes that follow your system setting.</li>
       <li>Text that reflows without horizontal scrolling down to a 320&nbsp;px viewport, and that scales when you zoom to 200%.</li>
-      <li>Touch targets of at least 44&nbsp;&times;&nbsp;44&nbsp;px.</li>
+      <li>Primary buttons, navigation links and expandable question rows with a minimum height of 44&nbsp;px.</li>
       <li>Respect for <code>prefers-reduced-motion</code> — animation is switched off, not merely shortened.</li>
       <li>Content that is fully readable with JavaScript disabled.</li>
     </ul>
@@ -76,6 +75,9 @@
       <li>Light and dark themes.</li>
       <li>System text-size settings.</li>
       <li>Screen reader labels on its main controls.</li>
+      <li>Adaptive layouts for phones and larger browser windows, with tab and search state preserved when the layout changes.</li>
+      <li>Quiz answer explanations, separate mistake-practice rounds, and lesson recall controls that do not rely on color alone.</li>
+      <li>Trial selection and feedback forms checked with larger text and small-screen layouts.</li>
     </ul>
 
     <h2 id="known">Known limitations</h2>
@@ -84,7 +86,7 @@
     </p>
     <ul>
       <li>The app has not had a full screen-reader audit, so some controls may be announced less clearly than they should be.</li>
-      <li>The app's layout is designed mobile-first; on a tablet in landscape some screens are wider than ideal for comfortable reading.</li>
+      <li>Native iOS VoiceOver, device text sizing and other assistive-technology flows still need verification on the intended release build.</li>
       <li>Some course content uses tables and diagrams whose alternatives are still being improved.</li>
     </ul>
 
@@ -104,11 +106,10 @@
 
     <h2 id="assessment">How this was assessed</h2>
     <p>
-      This website was assessed by internal review against the WCAG 2.2 Level AA
-      success criteria, including contrast calculation for every text and
-      background pair in both themes, keyboard-only navigation, and testing at
-      320&nbsp;px, 768&nbsp;px, 1024&nbsp;px and 1440&nbsp;px viewport widths. It
-      has not been assessed by an external auditor.
+      Internal checks cover the shared text and outline palette in both themes,
+      keyboard use of the recall sample, public-page links, and layouts at desktop
+      and phone sizes, including 320&nbsp;px with doubled text. These checks do not
+      cover every WCAG success criterion or replace a full assistive-technology audit.
     </p>
 
   </div>

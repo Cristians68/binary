@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>B1nary — IT certification study app</title>
-<meta name="description" content="Build IT skills with structured courses, active recall, focused quiz practice and spaced review. Learn from every answer. Try the first module of every course free.">
+<title>B1nary Academy — IT courses, recall &amp; quiz practice</title>
+<meta name="description" content="Study seven IT courses with active recall, explained quizzes and spaced review. Try every first module free or one full course for seven days. No card required.">
 <link rel="canonical" href="https://binaryapp.org/">
 <meta name="theme-color" content="#325BE8">
 
@@ -16,13 +16,13 @@
 
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://binaryapp.org/">
-<meta property="og:title" content="B1nary — IT certification study app">
-<meta property="og:description" content="Learn, recall, and practice what needs work. IT courses with explained quizzes and spaced review. Start with a free module.">
+<meta property="og:title" content="B1nary Academy — Learn, recall, practice">
+<meta property="og:description" content="Seven IT courses. Free first modules. One full course free for seven days, with no card or automatic charge. Start in your browser.">
 <meta property="og:image" content="https://binaryapp.org/icons/Icon-512.png">
 <meta property="og:site_name" content="B1nary">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="B1nary — IT certification study app">
-<meta name="twitter:description" content="Learn, recall, and practice what needs work. IT courses with explained quizzes and spaced review. Start with a free module.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="B1nary Academy — Learn, recall, practice">
+<meta name="twitter:description" content="Seven IT courses. Free first modules. One full course free for seven days, with no card or automatic charge. Start in your browser.">
 <meta name="twitter:image" content="https://binaryapp.org/icons/Icon-512.png">
 
 <link rel="icon" type="image/png" href="favicon.png">
@@ -33,24 +33,25 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="site.css">
 
-<!-- Structured data carries only facts that are true today: the real product
-     name, the real one-time prices, and the real platform. No aggregateRating
-     is published, because the app has no ratings — inventing one would be
-     both false and a review-guideline problem. -->
+<!-- Describe the available browser experience. Paid iOS offers are not yet
+     available, so they must not appear as purchasable offers in search results. -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "name": "B1nary",
+  "name": "B1nary Academy",
   "applicationCategory": "EducationalApplication",
-  "operatingSystem": "Web, iOS",
+  "operatingSystem": "Web",
   "description": "IT certification study with structured lessons, active recall, focused quiz practice and spaced review.",
   "url": "https://binaryapp.org/",
-  "offers": [
-    { "@type": "Offer", "name": "Single course", "price": "14.99", "priceCurrency": "USD", "category": "one-time" },
-    { "@type": "Offer", "name": "Any four courses", "price": "49.99", "priceCurrency": "USD", "category": "one-time" },
-    { "@type": "Offer", "name": "All courses", "price": "99.99", "priceCurrency": "USD", "category": "one-time" }
-  ]
+  "offers": {
+    "@type": "Offer",
+    "name": "Free first modules and one-course trial",
+    "price": "0",
+    "priceCurrency": "USD",
+    "url": "https://binaryapp.org/app/",
+    "description": "The first module of every course is free. Each account can also try one full course for seven days, without a card or automatic charge."
+  }
 }
 </script>
 </head>
@@ -82,7 +83,7 @@
       <div class="hero__copy">
         <p class="eyebrow">
           <svg class="icon" style="width:16px;height:16px" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
-          One-time purchase — no subscription
+          Seven IT courses · Start free
         </p>
         <h1>Understand it.<br>Recall it.<br>Put it to the test.</h1>
         <p class="lede">
@@ -95,8 +96,8 @@
           <a class="btn btn--secondary" href="#courses">See the courses</a>
         </div>
         <p class="hero__note">
-          The first module of every course is free, and you can start without
-          creating an account. Also coming to iOS.
+          Free first modules, plus a 7-day free trial of one full course.
+          No card or automatic charge. Available in your browser; iOS is in preparation.
         </p>
       </div>
 
@@ -117,6 +118,29 @@
           <p class="recall-demo__note">A sample of the study method. Your progress starts in the app.</p>
         </div>
       </aside>
+    </div>
+  </section>
+
+  <section class="section section--tight" id="free-trial" aria-labelledby="trial-heading">
+    <div class="container">
+      <div class="trial-panel">
+        <div>
+          <p class="eyebrow">YOUR NEXT SEVEN DAYS</p>
+          <h2 id="trial-heading">Go deeper into one course. Free.</h2>
+          <p class="lede">Choose the subject you want to work on and unlock every
+          lesson and quiz in that course for seven days. Your progress stays when the trial ends.</p>
+        </div>
+        <div>
+          <ol class="trial-panel__steps">
+            <li>Open the browser app as a guest or sign in.</li>
+            <li>Go to Profile → Legal &amp; Purchases → Plans &amp; Pricing.</li>
+            <li>Choose a course and select Start 7-day free trial.</li>
+          </ol>
+          <a class="btn btn--primary" href="/app/">Choose your trial course</a>
+          <p class="trial-panel__note">One trial per account. The course cannot be switched.
+          No card, renewal or automatic payment. Free first modules remain available afterward.</p>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -243,7 +267,7 @@
         <div class="card reveal">
           <div class="icon-tile"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></div>
           <h3>Offline downloads</h3>
-          <p style="color:var(--subtext);margin-top:var(--sp-2)">Save a course to your device and keep studying on a plane, on the underground, or anywhere with no signal.</p>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">Download lesson flashcards for courses you can access. Read and practice recall offline; reconnect for new quizzes, access updates and saving progress.</p>
         </div>
 
         <div class="card reveal">
@@ -255,7 +279,25 @@
         <div class="card reveal">
           <div class="icon-tile"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="6"/><path d="M8.5 14.5L7 22l5-3 5 3-1.5-7.5"/></svg></div>
           <h3>Completion certificates</h3>
-          <p style="color:var(--subtext);margin-top:var(--sp-2)">Finish every module in a course and get a shareable certificate of completion from B1nary.</p>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">Finish every module and find your shareable B1nary completion certificate under Profile → My certificates. This is a study achievement, not an industry certification.</p>
+        </div>
+
+        <div class="card reveal">
+          <div class="icon-tile"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg></div>
+          <h3>Find your next skill</h3>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">Search the course titles and skills, or filter by subject. Explore service management, Scrum, networking, security, cloud and AI.</p>
+        </div>
+
+        <div class="card reveal">
+          <div class="icon-tile"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M9 10v9"/></svg></div>
+          <h3>Study at your screen size</h3>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">Use a phone or a wider browser window with light or dark themes and larger text. Tabs and search stay in place as the layout adapts.</p>
+        </div>
+
+        <div class="card reveal">
+          <div class="icon-tile"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11a8 8 0 0 1-8 8H7l-5 3V11a9 9 0 0 1 19 0Z"/><path d="M7 10h10M7 14h6"/></svg></div>
+          <h3>Help when you need it</h3>
+          <p style="color:var(--subtext);margin-top:var(--sp-2)">Send private feedback from Profile, revisit your stats and certificates, and manage your account in one place.</p>
         </div>
 
       </div>
@@ -265,17 +307,18 @@
   <!-- ── Pricing ─────────────────────────────────────────────────────────── -->
   <section class="section" id="pricing" aria-labelledby="pricing-heading" style="background:var(--surface)">
     <div class="container">
-      <h2 id="pricing-heading" class="reveal">Pay once. Keep it.</h2>
+      <h2 id="pricing-heading" class="reveal">Start free. Choose your next step.</h2>
       <p class="lede reveal" style="margin-top:var(--sp-3)">
-        No subscription, no renewal, no losing access to something you already
-        paid for. Prices are in US dollars and may vary by region.
+        Free first modules and the one-course trial are available now.
+        The one-time iOS purchase plans below are in preparation;
+        paid checkout is not available yet.
       </p>
 
       <div class="grid grid--3" style="margin-top:var(--sp-8)">
         <div class="card reveal price">
           <h3>Single course</h3>
-          <p class="price__amount">$14.99</p>
-          <p class="price__meta">One-time · lifetime access</p>
+          <p class="price__status">iOS purchase coming later</p>
+          <p class="price__meta">One-time purchase · no renewal</p>
           <ul class="price__list">
             <li>Any one course, in full</li>
             <li>Every module and quiz in it</li>
@@ -285,20 +328,21 @@
 
         <div class="card reveal price price--featured">
           <span class="price__flag">Most flexible</span>
-          <h3>Any four courses</h3>
-          <p class="price__amount">$49.99</p>
-          <p class="price__meta">One-time · lifetime access</p>
+          <h3>Any 4 Courses</h3>
+          <p class="price__status">iOS purchase coming later</p>
+          <p class="price__meta">One-time purchase · no renewal</p>
           <ul class="price__list">
-            <li>Pick any four courses</li>
+            <li>Choose four courses before purchase</li>
+            <li>Restores keep those original choices</li>
             <li>Every module and quiz in them</li>
             <li>Certificate on each completion</li>
           </ul>
         </div>
 
         <div class="card reveal price">
-          <h3>All courses</h3>
-          <p class="price__amount">$99.99</p>
-          <p class="price__meta">One-time · lifetime access</p>
+          <h3>Everything</h3>
+          <p class="price__status">iOS purchase coming later</p>
+          <p class="price__meta">One-time purchase · no renewal</p>
           <ul class="price__list">
             <li>All seven courses</li>
             <li>All future courses included</li>
@@ -308,10 +352,10 @@
       </div>
 
       <div class="callout reveal" style="margin-top:var(--sp-8);max-width:var(--measure)">
-        <p><strong>Try before you pay.</strong> The first module of every course
-        is free, and you can start without an account. There is also a one-time
-        7-day free trial for one full course of your choice. No card required
-        and no automatic charge. Start it from Plans &amp; Pricing in the app.</p>
+        <p><strong>No payment needed to start.</strong> Explore the free modules
+        or <a href="#free-trial">start your 7-day free trial</a>.
+        When iOS purchases become available, the App Store will show the exact
+        localized price before you confirm. Purchases cannot be made on this website.</p>
       </div>
     </div>
   </section>
@@ -333,9 +377,24 @@
 
         <details class="reveal">
           <summary>Is it a subscription?</summary>
-          <p>No. Every purchase is a one-time payment and access does not
-          expire. If you buy the all-courses bundle, future courses are included
-          at no extra cost.</p>
+          <p>No. The 7-day trial ends without charging you and does not renew.
+          The planned iOS purchase options are one-time, non-consumable purchases.
+          Everything includes future courses. Paid checkout is not available yet.</p>
+        </details>
+
+        <details class="reveal">
+          <summary>What happens when my free trial ends?</summary>
+          <p>Full access to your chosen trial course ends after seven days.
+          Your progress is kept, and the first module of every course remains free.
+          Downloads do not extend the trial. Each account gets one trial, and its
+          course cannot be changed after activation.</p>
+        </details>
+
+        <details class="reveal">
+          <summary>Is the iPhone app available?</summary>
+          <p>The iOS release is in preparation. You can use the browser app now
+          on your phone or computer. This website will link to the App Store
+          when the release is available; there is no public download link yet.</p>
         </details>
 
         <details class="reveal">
@@ -372,9 +431,12 @@
 
         <details class="reveal">
           <summary>What happens to my purchase if I change device?</summary>
-          <p>Purchases are tied to your store account, so "Restore purchases" in
-          the app brings them back on a new device. Signing in with the same
-          account also restores your progress, streak and badges.</p>
+          <p>For existing iOS purchases, use the same Apple ID and open
+          Profile → Legal &amp; Purchases → Restore purchases in the iOS app.
+          Restore is not available in the browser. Four-course bundles retain
+          their original selections. Sign in to the same B1nary account to
+          recover synced progress, streaks and badges. Contact
+          <a href="/support">support</a> if access is not restored.</p>
         </details>
 
         <details class="reveal">

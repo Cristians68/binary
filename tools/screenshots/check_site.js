@@ -56,20 +56,31 @@ const server = http.createServer((req, res) => {
           contrast.push({ fg: 'button text', bg: '--brand', ratio: ratio('#ffffff', color('--brand')), min: 4.5 });
           return {
             contrast,
-            overflow: [...document.querySelectorAll('main *')].filter(el => {
+            overflow: [...document.querySelectorAll('.site-header *, main *')].filter(el => {
               const r = el.getBoundingClientRect();
               return r.width && (r.right > innerWidth + 1 || r.left < -1);
             }).map(el => el.tagName + '.' + el.className),
+            // Box bounds alone miss words painted outside an otherwise valid
+            // heading and header links clipped by body overflow-x: hidden.
+            clippedText: [...document.querySelectorAll('.site-header *, main *')].flatMap(el =>
+              [...el.childNodes].filter(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim()).flatMap(node => {
+                const range = document.createRange();
+                range.selectNodeContents(node);
+                return [...range.getClientRects()].filter(r => r.width && (r.right > innerWidth + 1 || r.left < -1))
+                  .map(() => node.textContent.trim().slice(0, 80));
+              })),
             missingAnchors: [...document.querySelectorAll('a[href^="#"]')].map(a => a.getAttribute('href')).filter(id => !document.querySelector(id)),
             courses: document.querySelectorAll('#courses article').length,
           };
         });
         assert.deepEqual(report.overflow, [], JSON.stringify(report.overflow));
+        assert.deepEqual(report.clippedText, [], JSON.stringify(report.clippedText));
         assert.deepEqual(report.missingAnchors, []);
         assert.equal(report.courses, 7);
         for (const c of report.contrast) assert.ok(c.ratio >= c.min, `${mode} ${c.fg} on ${c.bg}: ${c.ratio}`);
         const name = `${mode}-${viewport.width}${viewport.large ? '-large' : ''}`;
-        await page.screenshot({ path: path.join(output, name + '.png') });
+        await page.screenshot({ path: path.join(output, name + '.png'), fullPage: true });
+        await page.screenshot({ path: path.join(output, name + '-top.png') });
         const summary = await page.$('.recall-demo summary');
         await summary.evaluate(el => el.scrollIntoView({ block: 'center' }));
         await summary.focus();

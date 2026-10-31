@@ -30,10 +30,10 @@
         ]
       },
       {
-        "//": "site.css has no content hash in its name, so it cannot be cached hard.",
+        "//": "site.css has no content hash; revalidate it with each page update.",
         "source": "/site.css",
         "headers": [
-          { "key": "Cache-Control", "value": "public, max-age=3600" }
+          { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
         ]
       },
       {

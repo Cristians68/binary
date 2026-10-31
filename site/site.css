@@ -129,6 +129,7 @@ body {
   text-rendering: optimizeLegibility;
   min-height: 100dvh; /* dvh, not vh — vh is wrong under mobile browser chrome */
   overflow-x: hidden; /* belt and braces; no element should overflow anyway */
+  overflow-wrap: anywhere;
 }
 
 img,
@@ -313,6 +314,7 @@ ul, ol { padding-left: 1.25em; }
   font-size: var(--step--1);
   font-weight: 500;
   border-radius: 8px;
+  min-height: 44px;
   transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
 }
 
@@ -370,7 +372,7 @@ ul, ol { padding-left: 1.25em; }
 .btn--secondary:hover { background: var(--surface); color: var(--text); }
 
 .btn--sm {
-  min-height: 40px;
+  min-height: 44px;
   padding: var(--sp-2) var(--sp-4);
   font-size: var(--step--1);
 }
@@ -381,7 +383,31 @@ ul, ol { padding-left: 1.25em; }
   gap: var(--sp-3);
 }
 
+.trial-panel {
+  display: grid;
+  gap: var(--sp-8);
+  padding: clamp(1.25rem, 4vw, 3rem);
+  background: var(--card);
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-lg);
+}
+
+.trial-panel h2 { margin-block: var(--sp-4); }
+.trial-panel__steps { margin-bottom: var(--sp-6); }
+.trial-panel__steps li + li { margin-top: var(--sp-3); }
+.trial-panel__note { margin-top: var(--sp-4); color: var(--subtext); font-size: var(--step--1); }
+.price__status { margin-block: var(--sp-4) var(--sp-2); font-weight: 600; color: var(--accent-text); }
+
+@media (min-width: 900px) {
+  .trial-panel { grid-template-columns: 1fr 1fr; align-items: center; }
+}
+
+section[id] { scroll-margin-top: 6rem; }
+
 @media (max-width: 479px) {
+  .site-header { position: relative; }
+  .site-header__inner { flex-wrap: wrap; }
+  .nav { max-width: 100%; }
   /* Full-width stacked buttons on the smallest phones, where two side by side
      would each be too narrow to read. */
   .btn-row .btn { width: 100%; }
@@ -615,6 +641,7 @@ details > *:not(summary) {
   color: var(--subtext);
   text-decoration: none;
   font-size: var(--step--1);
+  min-height: 44px;
 }
 
 .footer-list a:hover { color: var(--text); text-decoration: underline; }

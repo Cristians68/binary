@@ -4,6 +4,21 @@ Read this first. It records what is live, what is waiting on the owner, and
 the traps that cost real time. Older detail lives in `docs/AUTH-FIXES.md`,
 `docs/IOS-GOOGLE-SIGNIN-AUDIT.md`, `docs/SECURITY.md` and `docs/RELEASE.md`.
 
+## 2026-10-31 — website current and deployed
+
+Updated the homepage, support, privacy, terms and accessibility pages to match
+the current app: prominent one-course seven-day trial, all seven courses,
+search/recall/practice, adaptive layouts, feedback, downloads and exact profile
+routes. Paid iOS checkout is clearly marked as pending; removed unverified
+prices from the public page and structured data. Updated web/PWA metadata and
+CSS cache revalidation. Fixed small-screen header/word clipping at doubled text.
+
+Rebuilt the browser app and deployed Firebase Hosting. All website layout,
+palette, keyboard/JavaScript-disabled checks and seven app-link tests pass.
+At 16:04 UTC, 22 live file/hash checks across `binaryapp.org` and the Firebase
+domain match the verified local output. Details and limits are in
+[WEBSITE-UPDATE-2026-10-31.md](WEBSITE-UPDATE-2026-10-31.md).
+
 ## 2026-10-31 — repair Codemagic build 29
 
 Build 29 from `1728cee` failed in RevenueCat's Swift `PaywallColor` initializer
@@ -14,8 +29,8 @@ metadata. Details are in `RELEASE.md`.
 
 Verified: all **729 Flutter tests**, **9 iOS verifier tests**, **56 backend
 tests**, **22 Firestore emulator tests**, clean Flutter analysis/backend lint,
-and **zero production npm
-vulnerabilities**. Learning-content validation and all 14 fault checks pass.
+and **zero production npm vulnerabilities**. Learning-content validation and
+all 14 fault checks pass.
 The JavaScript release build succeeds; its Wasm dry run also succeeds with the
 new SDK. These checks do not prove native archive or real StoreKit behavior.
 
